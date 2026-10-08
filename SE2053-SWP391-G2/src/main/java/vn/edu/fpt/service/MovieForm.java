@@ -1,26 +1,23 @@
-package vn.edu.fpt.model;
+package vn.edu.fpt.service;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Movie {
+// Dữ liệu thô (chuỗi) từ form để Service tự validate và hiển thị lại khi có lỗi
+public class MovieForm {
     private int movieId;
-    private String title;
-    private String synopsis;
-    private String director;
-    private String cast;
-    private int durationMinutes;
-    private String ageRating;
-    private LocalDate releaseDate;
-    private String posterUrl;
-    private String trailerUrl;
-    private String formats;
-    private String status;
-    private List<Genre> genres = new ArrayList<>();
-
-    public Movie() {
-    }
+    private String title = "";
+    private String synopsis = "";
+    private String director = "";
+    private String cast = "";
+    private String duration = "";
+    private String ageRating = "";
+    private String releaseDate = "";
+    private String posterUrl = "";
+    private String trailerUrl = "";
+    private String status = "";
+    private List<String> formats = new ArrayList<>();
+    private List<Integer> genreIds = new ArrayList<>();
 
     public int getMovieId() {
         return movieId;
@@ -62,12 +59,12 @@ public class Movie {
         this.cast = cast;
     }
 
-    public int getDurationMinutes() {
-        return durationMinutes;
+    public String getDuration() {
+        return duration;
     }
 
-    public void setDurationMinutes(int durationMinutes) {
-        this.durationMinutes = durationMinutes;
+    public void setDuration(String duration) {
+        this.duration = duration;
     }
 
     public String getAgeRating() {
@@ -78,11 +75,11 @@ public class Movie {
         this.ageRating = ageRating;
     }
 
-    public LocalDate getReleaseDate() {
+    public String getReleaseDate() {
         return releaseDate;
     }
 
-    public void setReleaseDate(LocalDate releaseDate) {
+    public void setReleaseDate(String releaseDate) {
         this.releaseDate = releaseDate;
     }
 
@@ -110,19 +107,19 @@ public class Movie {
         this.status = status;
     }
 
-    public String getFormats() {
+    public List<String> getFormats() {
         return formats;
     }
 
-    public void setFormats(String formats) {
+    public void setFormats(List<String> formats) {
         this.formats = formats;
     }
 
-    public List<Genre> getGenres() {
-        return genres;
+    public List<Integer> getGenreIds() {
+        return genreIds;
     }
 
-    public void setGenres(List<Genre> genres) {
-        this.genres = genres;
+    public void setGenreIds(List<Integer> genreIds) {
+        this.genreIds = genreIds;
     }
 }
