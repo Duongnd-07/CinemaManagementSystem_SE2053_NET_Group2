@@ -6,7 +6,7 @@
 <c:set var="statusLabels" value="${{'Now Showing':'Đang chiếu','Coming Soon':'Sắp chiếu','Ended':'Đã kết thúc','Hidden':'Đã ẩn'}}"/>
 <c:set var="statusStyles" value="${{'Now Showing':'bg-emerald-500/15 text-emerald-400 border-emerald-500/30','Coming Soon':'bg-amber-500/15 text-amber-400 border-amber-500/30','Ended':'bg-surface-bright text-outline border-white/10','Hidden':'bg-error/10 text-error border-error/30'}}"/>
 <c:set var="statusDots" value="${{'Now Showing':'bg-emerald-400 animate-pulse','Coming Soon':'bg-amber-400','Ended':'bg-outline','Hidden':'bg-error'}}"/>
-<c:set var="inputClass" value="w-full bg-surface-container-high text-on-surface px-4 py-2.5 rounded-lg border border-white/10 focus:border-primary outline-none"/>
+<c:set var="inputClass" value="form-input bg-surface-container-high text-on-surface px-4 rounded-lg border border-white/10 focus:border-primary outline-none"/>
 <!DOCTYPE html>
 <html lang="vi" class="dark">
 <head>
@@ -204,7 +204,7 @@
 
 <%-- Form thêm/sửa phim --%>
 <c:if test="${showForm}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" id="movie-modal">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" id="movie-modal" data-modal>
         <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-3xl p-space-xl shadow-2xl relative my-8">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
                href="${ctx}/manager/movies${listQuery}" title="Đóng">
@@ -216,7 +216,7 @@
             </h3>
 
             <c:if test="${not empty errors.general}">
-                <div class="mb-space-md px-4 py-3 rounded-lg bg-error-container/60 text-on-error-container text-body-sm"><c:out value="${errors.general}"/></div>
+                <div class="mb-space-md form-error-banner"><c:out value="${errors.general}"/></div>
             </c:if>
 
             <form method="post" action="${ctx}/manager/movies${listQuery}" enctype="multipart/form-data" novalidate class="space-y-space-md">
@@ -224,50 +224,50 @@
                 <input type="hidden" name="movieId" value="${form.movieId}"/>
 
                 <div>
-                    <label class="block text-label-md text-on-surface-variant mb-1" for="title">Tên phim <span class="text-error">*</span></label>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="title">Tên phim <span class="req">*</span></label>
                     <input class="${inputClass}" id="title" name="title" type="text" maxlength="200"
                            value="<c:out value='${form.title}'/>" placeholder="VD: Avatar: The Way of Water"/>
-                    <c:if test="${not empty errors.title}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.title}"/></p></c:if>
+                    <c:if test="${not empty errors.title}"><p class="form-error"><c:out value="${errors.title}"/></p></c:if>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
                     <div>
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="duration">Thời lượng (phút) <span class="text-error">*</span></label>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="duration">Thời lượng (phút) <span class="req">*</span></label>
                         <input class="${inputClass}" id="duration" name="duration" type="number" min="1" step="1"
                                value="<c:out value='${form.duration}'/>" placeholder="120"/>
-                        <c:if test="${not empty errors.duration}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.duration}"/></p></c:if>
+                        <c:if test="${not empty errors.duration}"><p class="form-error"><c:out value="${errors.duration}"/></p></c:if>
                     </div>
                     <div>
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="ageRating">Phân loại tuổi <span class="text-error">*</span></label>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="ageRating">Phân loại tuổi <span class="req">*</span></label>
                         <select class="${inputClass}" id="ageRating" name="ageRating">
                             <option value="">-- Chọn --</option>
-                            <option value="P" ${form.ageRating == 'P' ? 'selected' : ''}>P - Phổ biến mọi lứa tuổi</option>
-                            <option value="C13" ${form.ageRating == 'C13' ? 'selected' : ''}>C13 - Cấm dưới 13 tuổi</option>
-                            <option value="C16" ${form.ageRating == 'C16' ? 'selected' : ''}>C16 - Cấm dưới 16 tuổi</option>
-                            <option value="C18" ${form.ageRating == 'C18' ? 'selected' : ''}>C18 - Cấm dưới 18 tuổi</option>
+                            <option value="P" ${form.ageRating == 'P' ? 'selected' : ''}>P - Mọi lứa tuổi</option>
+                            <option value="C13" ${form.ageRating == 'C13' ? 'selected' : ''}>C13 - Từ 13 tuổi</option>
+                            <option value="C16" ${form.ageRating == 'C16' ? 'selected' : ''}>C16 - Từ 16 tuổi</option>
+                            <option value="C18" ${form.ageRating == 'C18' ? 'selected' : ''}>C18 - Từ 18 tuổi</option>
                         </select>
-                        <c:if test="${not empty errors.ageRating}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.ageRating}"/></p></c:if>
+                        <c:if test="${not empty errors.ageRating}"><p class="form-error"><c:out value="${errors.ageRating}"/></p></c:if>
                     </div>
                     <div>
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="releaseDate">Ngày khởi chiếu <span class="text-error">*</span></label>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="releaseDate">Ngày khởi chiếu <span class="req">*</span></label>
                         <input class="${inputClass}" id="releaseDate" name="releaseDate" type="date"
                                value="<c:out value='${form.releaseDate}'/>"/>
-                        <c:if test="${not empty errors.releaseDate}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.releaseDate}"/></p></c:if>
+                        <c:if test="${not empty errors.releaseDate}"><p class="form-error"><c:out value="${errors.releaseDate}"/></p></c:if>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="director">Đạo diễn</label>
-                        <input class="${inputClass}" id="director" name="director" type="text" maxlength="150"
+                        <input class="${inputClass}" id="director" name="director" type="text" maxlength="100"
                                value="<c:out value='${form.director}'/>"/>
-                        <c:if test="${not empty errors.director}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.director}"/></p></c:if>
+                        <c:if test="${not empty errors.director}"><p class="form-error"><c:out value="${errors.director}"/></p></c:if>
                     </div>
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="cast">Diễn viên</label>
                         <input class="${inputClass}" id="cast" name="cast" type="text" maxlength="500"
                                value="<c:out value='${form.cast}'/>" placeholder="Ngăn cách bằng dấu phẩy"/>
-                        <c:if test="${not empty errors.cast}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.cast}"/></p></c:if>
+                        <c:if test="${not empty errors.cast}"><p class="form-error"><c:out value="${errors.cast}"/></p></c:if>
                     </div>
                 </div>
 
@@ -289,7 +289,7 @@
                             </label>
                         </c:forEach>
                     </div>
-                    <c:if test="${not empty errors.genres}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.genres}"/></p></c:if>
+                    <c:if test="${not empty errors.genres}"><p class="form-error"><c:out value="${errors.genres}"/></p></c:if>
                 </div>
 
                 <div>
@@ -305,33 +305,36 @@
                             </label>
                         </c:forEach>
                     </div>
-                    <c:if test="${not empty errors.formats}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.formats}"/></p></c:if>
+                    <c:if test="${not empty errors.formats}"><p class="form-error"><c:out value="${errors.formats}"/></p></c:if>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="posterFile">Poster (tải ảnh lên)</label>
-                        <input class="${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-primary file:text-on-primary file:px-3 file:py-1 text-body-sm"
-                               id="posterFile" name="posterFile" type="file" accept="image/jpeg,image/png,image/webp"/>
-                        <label class="block text-label-md text-on-surface-variant mt-space-sm mb-1" for="posterUrl">hoặc URL ảnh poster</label>
-                        <input class="${inputClass}" id="posterUrl" name="posterUrl" type="text" maxlength="500"
-                               value="<c:out value='${form.posterUrl}'/>" placeholder="https://..."/>
-                        <c:if test="${not empty errors.poster}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.poster}"/></p></c:if>
-                        <p class="text-outline text-body-sm mt-1">Chọn file sẽ thay thế URL. Tối đa 5MB (JPG, PNG, WEBP).</p>
+                        <input class="${inputClass}" id="posterFile" name="posterFile" type="file" accept="image/jpeg,image/png,image/webp"/>
+                        <c:if test="${not empty errors.poster}"><p class="form-error"><c:out value="${errors.poster}"/></p></c:if>
                     </div>
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="trailerUrl">Trailer (YouTube)</label>
                         <input class="${inputClass}" id="trailerUrl" name="trailerUrl" type="text" maxlength="500"
                                value="<c:out value='${form.trailerUrl}'/>" placeholder="https://www.youtube.com/watch?v=..."/>
-                        <c:if test="${not empty errors.trailer}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.trailer}"/></p></c:if>
-                        <label class="block text-label-md text-on-surface-variant mt-space-sm mb-1" for="movieStatus">Trạng thái chiếu <span class="text-error">*</span></label>
+                        <c:if test="${not empty errors.trailer}"><p class="form-error"><c:out value="${errors.trailer}"/></p></c:if>
+                    </div>
+                    <div>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="posterUrl">hoặc URL ảnh poster</label>
+                        <input class="${inputClass}" id="posterUrl" name="posterUrl" type="text" maxlength="500"
+                               value="<c:out value='${form.posterUrl}'/>" placeholder="https://..."/>
+                    </div>
+                    <div>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="movieStatus">Trạng thái chiếu <span class="req">*</span></label>
                         <select class="${inputClass}" id="movieStatus" name="movieStatus">
                             <c:forEach var="st" items="${statuses}">
                                 <option value="${st}" ${form.status == st ? 'selected' : ''}><c:out value="${statusLabels[st]}"/></option>
                             </c:forEach>
                         </select>
-                        <c:if test="${not empty errors.status}"><p class="text-error text-body-sm mt-1"><c:out value="${errors.status}"/></p></c:if>
+                        <c:if test="${not empty errors.status}"><p class="form-error"><c:out value="${errors.status}"/></p></c:if>
                     </div>
+                    <p class="md:col-span-2 -mt-2 text-outline text-body-sm">Chọn file sẽ thay thế URL. Tối đa 5MB (JPG, PNG, WEBP).</p>
                 </div>
 
                 <div class="flex items-center justify-end gap-space-md pt-space-md">
@@ -347,6 +350,6 @@
     </div>
 </c:if>
 
-<script src="${ctx}/assets/js/manager-movies.js"></script>
+<script src="${ctx}/assets/js/manager-common.js"></script>
 </body>
 </html>

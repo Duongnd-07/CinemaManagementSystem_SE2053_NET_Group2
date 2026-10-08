@@ -1,3 +1,4 @@
+D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\controller\manager\GenreManagementServlet.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\controller\manager\MovieManagementServlet.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\dao\GenreDAO.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\dao\MovieDAO.java
@@ -19,6 +20,8 @@ D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\ja
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\model\Ticket.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\model\User.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\model\Voucher.java
+D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\service\GenrePage.java
+D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\service\GenreService.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\service\MovieForm.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\service\MoviePage.java
 D:\Ky9\SWP\CinemaManagementSystem_SE2053_NET_Group2\SE2053-SWP391-G2\src\main\java\vn\edu\fpt\service\MovieService.java

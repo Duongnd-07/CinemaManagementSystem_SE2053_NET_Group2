@@ -1,6 +1,8 @@
+vn\edu\fpt\controller\manager\GenreManagementServlet.class
 vn\edu\fpt\model\Concession.class
 vn\edu\fpt\model\Showtime.class
 vn\edu\fpt\model\Room.class
+vn\edu\fpt\service\GenreService.class
 vn\edu\fpt\controller\manager\MovieManagementServlet.class
 vn\edu\fpt\model\Ticket.class
 vn\edu\fpt\model\EquipmentReport.class
@@ -20,6 +22,7 @@ vn\edu\fpt\model\MovieStatus.class
 vn\edu\fpt\model\Voucher.class
 vn\edu\fpt\service\MoviePage.class
 vn\edu\fpt\model\Review.class
+vn\edu\fpt\service\GenrePage.class
 vn\edu\fpt\util\PosterStorage.class
 vn\edu\fpt\util\DBContext.class
 vn\edu\fpt\dao\MovieDAO.class
