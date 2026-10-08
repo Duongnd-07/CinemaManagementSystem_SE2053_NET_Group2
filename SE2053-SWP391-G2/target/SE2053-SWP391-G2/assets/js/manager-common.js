@@ -17,7 +17,7 @@ var posterFile = document.getElementById('posterFile');
 if (posterFile) {
     var MAX_POSTER_BYTES = 5 * 1024 * 1024;
     var posterError = document.createElement('p');
-    posterError.className = 'text-error text-body-sm mt-1';
+    posterError.className = 'form-error';
     posterError.hidden = true;
     posterError.textContent = 'Poster vượt quá dung lượng tối đa 5MB.';
     posterFile.insertAdjacentElement('afterend', posterError);
@@ -39,7 +39,7 @@ if (toast) {
 }
 
 document.addEventListener('keydown', function (event) {
-    var closeLink = document.querySelector('#movie-modal a[title="Đóng"]');
+    var closeLink = document.querySelector('[data-modal] a[title="Đóng"]');
     if (event.key === 'Escape' && closeLink) {
         window.location.href = closeLink.href;
     }

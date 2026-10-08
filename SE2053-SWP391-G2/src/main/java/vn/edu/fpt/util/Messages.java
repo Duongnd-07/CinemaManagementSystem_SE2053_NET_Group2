@@ -25,6 +25,14 @@ public final class Messages {
     public static final String MOVIE_TRAILER_URL_INVALID = "Trailer phải là đường dẫn YouTube hợp lệ.";
     public static final String MOVIE_HAS_ACTIVE_SHOWTIMES =
             "Phim có suất chiếu đang/sắp diễn ra đã có vé đặt, không thể ẩn.";
+    // UC-34 Manage Movie Genres
+    public static final String GENRE_SAVED = "Thể loại lưu lại thành công!";
+    public static final String GENRE_DELETED = "Đã xóa thể loại.";
+    public static final String GENRE_NOT_FOUND = "Không tìm thấy thể loại.";
+    public static final String GENRE_NAME_DUPLICATE = "Tên thể loại đã tồn tại trong hệ thống.";
+    public static final String GENRE_IN_USE =
+            "Thể loại đang được gán cho {0} phim, không thể xóa. Hãy gỡ thể loại khỏi các phim đó trước.";
+
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
     private Messages() {

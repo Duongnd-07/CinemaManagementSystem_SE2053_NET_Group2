@@ -3,6 +3,7 @@ package vn.edu.fpt.model;
 public class Genre {
     private int genreId;
     private String genreName;
+    private int movieCount;
 
     public Genre() {
     }
@@ -21,5 +22,13 @@ public class Genre {
 
     public void setGenreName(String genreName) {
         this.genreName = genreName;
+    }
+
+    public int getMovieCount() {
+        return movieCount;
+    }
+
+    public void setMovieCount(int movieCount) {
+        this.movieCount = movieCount;
     }
 }

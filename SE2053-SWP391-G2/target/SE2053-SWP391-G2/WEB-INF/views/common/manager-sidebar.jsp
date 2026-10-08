@@ -22,6 +22,9 @@
         <a class="${itemBase} ${active == 'movies' ? itemActive : itemIdle}" href="${ctx}/manager/movies">
             <span class="material-symbols-outlined mr-space-md">movie</span>Phim
         </a>
+        <a class="${itemBase} ${active == 'genres' ? itemActive : itemIdle}" href="${ctx}/manager/genres">
+            <span class="material-symbols-outlined mr-space-md">category</span>Thể loại phim
+        </a>
         <a class="${itemBase} ${active == 'showtimes' ? itemActive : itemIdle}" href="${ctx}/manager/showtimes">
             <span class="material-symbols-outlined mr-space-md">schedule</span>Suất chiếu
         </a>

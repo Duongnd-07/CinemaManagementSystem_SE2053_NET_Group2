@@ -26,7 +26,7 @@ public class MovieService {
     public static final List<String> FORMATS = List.of("2D", "3D", "IMAX");
 
     private static final int MAX_TITLE = 200;
-    private static final int MAX_DIRECTOR = 150;
+    private static final int MAX_DIRECTOR = 100;
     private static final int MAX_CAST = 500;
     private static final int MAX_URL = 500;
     private static final int SQL_UNIQUE_VIOLATION = 2627;
