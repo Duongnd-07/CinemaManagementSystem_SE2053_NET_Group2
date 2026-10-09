@@ -183,3 +183,7 @@ CREATE TABLE Equipment_Report (
     ResolvedDate DATETIME NULL
 );
 GO
+
+IF COL_LENGTH('Movie', 'Formats') IS NULL
+    ALTER TABLE Movie ADD Formats NVARCHAR(100) NULL;
+GO
