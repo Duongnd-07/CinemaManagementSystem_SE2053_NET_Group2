@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="inputClass" value="form-input bg-surface-container-high text-on-surface px-4 rounded-lg border border-white/10 focus:border-primary outline-none"/>
 <!DOCTYPE html>
@@ -60,7 +61,7 @@
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5 text-body-md text-on-surface">
-                <c:forEach var="genre" items="${genrePage.genres}">
+                <c:forEach var="genre" items="${genrePage.items}">
                     <tr class="hover:bg-surface-container transition-colors">
                         <td class="py-4 px-6 text-outline font-label-sm">#GN-${genre.genreId}</td>
                         <td class="py-4 px-6 font-headline-sm"><c:out value="${genre.genreName}"/></td>
@@ -85,38 +86,17 @@
                         </td>
                     </tr>
                 </c:forEach>
-                <c:if test="${empty genrePage.genres}">
+                <c:if test="${empty genrePage.items}">
                     <tr><td colspan="4" class="py-12 px-6 text-center text-on-surface-variant"><c:out value="${msgNoResult}"/></td></tr>
                 </c:if>
                 </tbody>
             </table>
         </div>
 
-        <div class="flex items-center justify-between p-4 bg-surface-container border-t border-white/5 text-body-sm text-on-surface-variant">
-            <div>Hiển thị ${genrePage.fromItem}-${genrePage.toItem} trong tổng số ${genrePage.totalItems} thể loại</div>
-            <div class="flex items-center gap-2">
-                <c:url var="pageBase" value="/manager/genres">
-                    <c:if test="${not empty keyword}"><c:param name="q" value="${keyword}"/></c:if>
-                </c:url>
-                <c:set var="sep" value="${fn:contains(pageBase, '?') ? '&' : '?'}"/>
-                <c:choose>
-                    <c:when test="${genrePage.page > 1}">
-                        <a class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright" href="${pageBase}${sep}page=${genrePage.page - 1}">Trước</a>
-                    </c:when>
-                    <c:otherwise><span class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface opacity-50">Trước</span></c:otherwise>
-                </c:choose>
-                <c:forEach var="p" begin="1" end="${genrePage.totalPages}">
-                    <a class="px-3 py-1.5 rounded ${p == genrePage.page ? 'bg-primary text-on-primary font-bold' : 'bg-surface-container-high text-on-surface hover:bg-surface-bright'}"
-                       href="${pageBase}${sep}page=${p}">${p}</a>
-                </c:forEach>
-                <c:choose>
-                    <c:when test="${genrePage.page < genrePage.totalPages}">
-                        <a class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright" href="${pageBase}${sep}page=${genrePage.page + 1}">Sau</a>
-                    </c:when>
-                    <c:otherwise><span class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface opacity-50">Sau</span></c:otherwise>
-                </c:choose>
-            </div>
-        </div>
+        <c:url var="pageBase" value="/manager/genres">
+            <c:if test="${not empty keyword}"><c:param name="q" value="${keyword}"/></c:if>
+        </c:url>
+        <ui:pagination pageData="${genrePage}" baseUrl="${pageBase}" label="thể loại"/>
     </div>
 </div>
 </main>

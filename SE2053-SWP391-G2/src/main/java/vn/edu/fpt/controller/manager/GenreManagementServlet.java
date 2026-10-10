@@ -17,11 +17,11 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.model.Genre;
-import vn.edu.fpt.service.GenrePage;
 import vn.edu.fpt.service.GenreService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
+import vn.edu.fpt.util.Page;
 
 // UC-34: Manage Movie Genres
 @WebServlet("/manager/genres")
@@ -103,7 +103,7 @@ public class GenreManagementServlet extends HttpServlet {
     private void render(HttpServletRequest request, HttpServletResponse response, boolean showForm, int genreId,
                         String name, Map<String, String> errors) throws SQLException, ServletException, IOException {
         String keyword = trim(request.getParameter("q"));
-        GenrePage page = genreService.list(keyword, parseInt(request.getParameter("page")));
+        Page<Genre> page = genreService.list(keyword, parseInt(request.getParameter("page")));
 
         HttpSession session = request.getSession();
         for (String key : List.of(FLASH_SUCCESS, FLASH_ERROR)) {
