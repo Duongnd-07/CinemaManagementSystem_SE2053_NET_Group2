@@ -12,6 +12,7 @@ public class EquipmentReport {
     private String status;
     private LocalDateTime reportDate;
     private LocalDateTime resolvedDate;
+    private Integer seatId;
 
     public EquipmentReport() {
     }
@@ -86,5 +87,13 @@ public class EquipmentReport {
 
     public void setResolvedDate(LocalDateTime resolvedDate) {
         this.resolvedDate = resolvedDate;
+    }
+
+    public Integer getSeatId() {
+        return seatId;
+    }
+
+    public void setSeatId(Integer seatId) {
+        this.seatId = seatId;
     }
 }
