@@ -18,6 +18,7 @@ import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.util.DBContext;
 import vn.edu.fpt.util.Messages;
+import vn.edu.fpt.util.Page;
 import vn.edu.fpt.util.PosterStorage;
 
 public class MovieService {
@@ -38,15 +39,17 @@ public class MovieService {
     private final MovieDAO movieDAO = new MovieDAO();
     private final GenreDAO genreDAO = new GenreDAO();
 
-    public MoviePage list(String keyword, String status, String sort, int page) throws SQLException {
+    public Page<Movie> list(String keyword, String status, String sort, int page) throws SQLException {
         String kw = keyword == null ? "" : keyword.trim();
         String statusFilter = MovieStatus.isValid(status) ? status : null;
-        int total = movieDAO.count(kw, statusFilter);
-        int totalPages = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
-        int currentPage = Math.min(Math.max(page, 1), totalPages);
-        List<Movie> movies = movieDAO.search(kw, statusFilter, orderBy(sort), (currentPage - 1) * PAGE_SIZE,
-                PAGE_SIZE);
-        return new MoviePage(movies, currentPage, PAGE_SIZE, total, movieDAO.countByStatus(kw));
+        String orderBy = orderBy(sort);
+        return Page.of(page, PAGE_SIZE, movieDAO.count(kw, statusFilter),
+                (offset, limit) -> movieDAO.search(kw, statusFilter, orderBy, offset, limit));
+    }
+
+    // Số phim theo từng trạng thái (hiển thị ở các tab lọc), tính theo từ khóa tìm kiếm
+    public Map<String, Integer> countByStatus(String keyword) throws SQLException {
+        return movieDAO.countByStatus(keyword == null ? "" : keyword.trim());
     }
 
     public Movie findById(int movieId) throws SQLException {

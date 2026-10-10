@@ -2,11 +2,11 @@ package vn.edu.fpt.service;
 
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import vn.edu.fpt.dao.GenreDAO;
 import vn.edu.fpt.model.Genre;
 import vn.edu.fpt.util.Messages;
+import vn.edu.fpt.util.Page;
 
 public class GenreService {
     public static final int PAGE_SIZE = 10;
@@ -16,13 +16,10 @@ public class GenreService {
 
     private final GenreDAO genreDAO = new GenreDAO();
 
-    public GenrePage list(String keyword, int page) throws SQLException {
+    public Page<Genre> list(String keyword, int page) throws SQLException {
         String kw = keyword == null ? "" : keyword.trim();
-        int total = genreDAO.count(kw);
-        int totalPages = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
-        int currentPage = Math.min(Math.max(page, 1), totalPages);
-        List<Genre> genres = genreDAO.search(kw, (currentPage - 1) * PAGE_SIZE, PAGE_SIZE);
-        return new GenrePage(genres, currentPage, PAGE_SIZE, total);
+        return Page.of(page, PAGE_SIZE, genreDAO.count(kw),
+                (offset, limit) -> genreDAO.search(kw, offset, limit));
     }
 
     public Genre findById(int genreId) throws SQLException {

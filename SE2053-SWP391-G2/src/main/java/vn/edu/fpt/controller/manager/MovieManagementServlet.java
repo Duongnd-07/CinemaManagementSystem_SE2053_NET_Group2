@@ -23,11 +23,11 @@ import vn.edu.fpt.model.AgeRating;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.service.MovieForm;
-import vn.edu.fpt.service.MoviePage;
 import vn.edu.fpt.service.MovieService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
+import vn.edu.fpt.util.Page;
 import vn.edu.fpt.util.PosterStorage;
 
 // UC-23: Manage Movies
@@ -140,11 +140,14 @@ public class MovieManagementServlet extends HttpServlet {
         String keyword = trim(request.getParameter("q"));
         String status = trim(request.getParameter("status"));
         String sort = trim(request.getParameter("sort"));
-        MoviePage page = movieService.list(keyword, status, sort, parseInt(request.getParameter("page")));
+        Page<Movie> page = movieService.list(keyword, status, sort, parseInt(request.getParameter("page")));
+        Map<String, Integer> statusCounts = movieService.countByStatus(keyword);
 
         HttpSession session = request.getSession();
         moveFlashToRequest(session, request);
         request.setAttribute("moviePage", page);
+        request.setAttribute("statusCounts", statusCounts);
+        request.setAttribute("allCount", statusCounts.values().stream().mapToInt(Integer::intValue).sum());
         request.setAttribute("keyword", keyword);
         request.setAttribute("statusFilter", MovieStatus.isValid(status) ? status : "");
         request.setAttribute("sort", sort);

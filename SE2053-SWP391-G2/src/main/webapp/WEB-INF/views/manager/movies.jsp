@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="statusLabels" value="${{'Now Showing':'Đang chiếu','Coming Soon':'Sắp chiếu','Ended':'Đã kết thúc','Hidden':'Đã ẩn'}}"/>
 <c:set var="statusStyles" value="${{'Now Showing':'bg-emerald-500/15 text-emerald-400 border-emerald-500/30','Coming Soon':'bg-amber-500/15 text-amber-400 border-amber-500/30','Ended':'bg-surface-bright text-outline border-white/10','Hidden':'bg-error/10 text-error border-error/30'}}"/>
@@ -65,9 +66,9 @@
                 <c:if test="${not empty sort}"><c:param name="sort" value="${sort}"/></c:if>
             </c:url>
             <a class="px-4 py-2 rounded-lg font-label-lg text-sm transition-all ${empty statusFilter ? tabOn : tabOff}"
-               href="${fn:escapeXml(allTabUrl)}">Tất cả (${moviePage.allCount})</a>
+               href="${fn:escapeXml(allTabUrl)}">Tất cả (${allCount})</a>
             <c:forEach var="st" items="${statuses}">
-                <c:set var="cnt" value="${moviePage.statusCounts[st]}"/>
+                <c:set var="cnt" value="${statusCounts[st]}"/>
                 <c:url var="tabUrl" value="/manager/movies">
                     <c:param name="status" value="${st}"/>
                     <c:if test="${not empty keyword}"><c:param name="q" value="${keyword}"/></c:if>
@@ -107,7 +108,7 @@
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5 text-body-md text-on-surface">
-                <c:forEach var="movie" items="${moviePage.movies}">
+                <c:forEach var="movie" items="${moviePage.items}">
                     <tr class="hover:bg-surface-container transition-colors">
                         <td class="py-4 px-6">
                             <div class="flex items-center gap-space-md">
@@ -164,40 +165,19 @@
                         </td>
                     </tr>
                 </c:forEach>
-                <c:if test="${empty moviePage.movies}">
+                <c:if test="${empty moviePage.items}">
                     <tr><td colspan="6" class="py-12 px-6 text-center text-on-surface-variant"><c:out value="${msgNoResult}"/></td></tr>
                 </c:if>
                 </tbody>
             </table>
         </div>
 
-        <div class="flex items-center justify-between p-4 bg-surface-container border-t border-white/5 text-body-sm text-on-surface-variant">
-            <div>Hiển thị ${moviePage.fromItem}-${moviePage.toItem} trong tổng số ${moviePage.totalItems} phim</div>
-            <div class="flex items-center gap-2">
-                <c:url var="pageBase" value="/manager/movies">
-                    <c:if test="${not empty keyword}"><c:param name="q" value="${keyword}"/></c:if>
-                    <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
-                    <c:if test="${not empty sort}"><c:param name="sort" value="${sort}"/></c:if>
-                </c:url>
-                <c:set var="sep" value="${fn:contains(pageBase, '?') ? '&' : '?'}"/>
-                <c:choose>
-                    <c:when test="${moviePage.page > 1}">
-                        <a class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright" href="${pageBase}${sep}page=${moviePage.page - 1}">Trước</a>
-                    </c:when>
-                    <c:otherwise><span class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface opacity-50">Trước</span></c:otherwise>
-                </c:choose>
-                <c:forEach var="p" begin="1" end="${moviePage.totalPages}">
-                    <a class="px-3 py-1.5 rounded ${p == moviePage.page ? 'bg-primary text-on-primary font-bold' : 'bg-surface-container-high text-on-surface hover:bg-surface-bright'}"
-                       href="${pageBase}${sep}page=${p}">${p}</a>
-                </c:forEach>
-                <c:choose>
-                    <c:when test="${moviePage.page < moviePage.totalPages}">
-                        <a class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright" href="${pageBase}${sep}page=${moviePage.page + 1}">Sau</a>
-                    </c:when>
-                    <c:otherwise><span class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface opacity-50">Sau</span></c:otherwise>
-                </c:choose>
-            </div>
-        </div>
+        <c:url var="pageBase" value="/manager/movies">
+            <c:if test="${not empty keyword}"><c:param name="q" value="${keyword}"/></c:if>
+            <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+            <c:if test="${not empty sort}"><c:param name="sort" value="${sort}"/></c:if>
+        </c:url>
+        <ui:pagination pageData="${moviePage}" baseUrl="${pageBase}" label="phim"/>
     </div>
 </div>
 </main>
