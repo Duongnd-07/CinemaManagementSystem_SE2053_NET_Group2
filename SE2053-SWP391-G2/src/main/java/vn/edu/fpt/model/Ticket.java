@@ -10,6 +10,9 @@ public class Ticket {
     private String ticketCode;
     private String qrCode;
     private String status;
+    private Integer showtimeId;
+    private BigDecimal refundAmount;
+    private Integer refundShiftId;
 
     public Ticket() {
     }
@@ -68,5 +71,29 @@ public class Ticket {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Integer getShowtimeId() {
+        return showtimeId;
+    }
+
+    public void setShowtimeId(Integer showtimeId) {
+        this.showtimeId = showtimeId;
+    }
+
+    public BigDecimal getRefundAmount() {
+        return refundAmount;
+    }
+
+    public void setRefundAmount(BigDecimal refundAmount) {
+        this.refundAmount = refundAmount;
+    }
+
+    public Integer getRefundShiftId() {
+        return refundShiftId;
+    }
+
+    public void setRefundShiftId(Integer refundShiftId) {
+        this.refundShiftId = refundShiftId;
     }
 }

@@ -6,6 +6,8 @@ import java.text.MessageFormat;
 public final class Messages {
     public static final String MSG01 = "Không có kết quả tìm kiếm.";
     public static final String MSG02 = "Trường {0} là bắt buộc.";
+    public static final String MSG03 = "Cập nhật {0} thành công.";
+    public static final String MSG04 = "Thêm {0} thành công.";
     public static final String MSG08 = "Vượt quá độ dài tối đa {0} ký tự.";
 
     // UC-23 Manage Movies
@@ -32,6 +34,14 @@ public final class Messages {
     public static final String GENRE_NAME_DUPLICATE = "Tên thể loại đã tồn tại trong hệ thống.";
     public static final String GENRE_IN_USE =
             "Thể loại đang được gán cho {0} phim, không thể xóa. Hãy gỡ thể loại khỏi các phim đó trước.";
+    // UC-27 Manage Concession Items
+    public static final String CONCESSION_HIDDEN = "Món đã được chuyển sang trạng thái Ẩn.";
+    public static final String CONCESSION_NOT_FOUND = "Không tìm thấy món.";
+    public static final String CONCESSION_NAME_DUPLICATE = "Tên món đã tồn tại trong hệ thống.";
+    public static final String CONCESSION_PRICE_INVALID = "Giá bán phải là số nguyên không âm (VND).";
+    public static final String CONCESSION_STOCK_INVALID = "Tồn kho phải là số nguyên không âm.";
+    public static final String CONCESSION_IMAGE_URL_INVALID = "Đường dẫn ảnh phải là URL http/https hợp lệ.";
+    public static final String CONCESSION_STATUS_INVALID = "Trạng thái không hợp lệ.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

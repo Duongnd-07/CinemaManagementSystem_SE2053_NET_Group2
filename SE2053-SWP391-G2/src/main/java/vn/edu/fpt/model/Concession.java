@@ -8,6 +8,8 @@ public class Concession {
     private BigDecimal price;
     private int stockQuantity;
     private String status;
+    private String description;
+    private String imageUrl;
 
     public Concession() {
     }
@@ -50,5 +52,21 @@ public class Concession {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }
