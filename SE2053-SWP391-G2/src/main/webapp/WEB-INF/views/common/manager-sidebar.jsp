@@ -34,6 +34,9 @@
         <a class="${itemBase} ${active == 'concessions' ? itemActive : itemIdle}" href="${ctx}/manager/concessions">
             <span class="material-symbols-outlined mr-space-md">local_convenience_store</span>Đồ ăn &amp; Thức uống
         </a>
+        <a class="${itemBase} ${active == 'vouchers' ? itemActive : itemIdle}" href="${ctx}/manager/vouchers">
+            <span class="material-symbols-outlined mr-space-md">confirmation_number</span>Voucher &amp; khuyến mãi
+        </a>
         <a class="${itemBase} ${active == 'equipment-reports' ? itemActive : itemIdle}" href="${ctx}/manager/equipment-reports">
             <span class="material-symbols-outlined mr-space-md">build</span>Sự cố thiết bị
         </a>
