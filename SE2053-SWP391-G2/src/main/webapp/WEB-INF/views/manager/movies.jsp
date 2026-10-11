@@ -45,7 +45,7 @@
                 <c:if test="${not empty sort}"><input type="hidden" name="sort" value="${fn:escapeXml(sort)}"/></c:if>
                 <span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[20px]">search</span>
                 <input class="w-full bg-surface-container-high text-on-surface text-body-md pl-10 pr-4 py-2 rounded-md outline-none focus:ring-2 focus:ring-primary/40 border border-white/10"
-                       type="text" name="q" value="<c:out value='${keyword}'/>" maxlength="100"
+                       type="text" name="q" value="<c:out value='${keyword}'/>" maxlength="${maxKeyword}"
                        placeholder="Tìm theo tên, đạo diễn, diễn viên..."/>
             </form>
             <a href="${ctx}/manager/movies?add=1"
@@ -158,7 +158,7 @@
                                     <input type="hidden" name="movieId" value="${movie.movieId}"/>
                                     <button type="submit" title="Ẩn phim" ${movie.status == 'Hidden' ? 'disabled' : ''}
                                             class="p-2 rounded-lg bg-error/10 hover:bg-error/20 text-error transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        <span class="material-symbols-outlined text-[18px]">visibility_off</span>
                                     </button>
                                 </form>
                             </div>
@@ -213,7 +213,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="duration">Thời lượng (phút) <span class="req">*</span></label>
-                        <input class="${inputClass}" id="duration" name="duration" type="number" min="1" step="1"
+                        <input class="${inputClass}" id="duration" name="duration" type="number" min="1" max="${maxDuration}" step="1"
                                value="<c:out value='${form.duration}'/>" placeholder="120"/>
                         <c:if test="${not empty errors.duration}"><p class="form-error"><c:out value="${errors.duration}"/></p></c:if>
                     </div>
@@ -253,7 +253,8 @@
 
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="synopsis">Nội dung phim</label>
-                    <textarea class="${inputClass}" id="synopsis" name="synopsis" rows="3"><c:out value="${form.synopsis}"/></textarea>
+                    <textarea class="${inputClass}" id="synopsis" name="synopsis" rows="3" maxlength="${maxSynopsis}"><c:out value="${form.synopsis}"/></textarea>
+                    <c:if test="${not empty errors.synopsis}"><p class="form-error"><c:out value="${errors.synopsis}"/></p></c:if>
                 </div>
 
                 <div>
@@ -314,7 +315,7 @@
                         </select>
                         <c:if test="${not empty errors.status}"><p class="form-error"><c:out value="${errors.status}"/></p></c:if>
                     </div>
-                    <p class="md:col-span-2 -mt-2 text-outline text-body-sm">Chọn file sẽ thay thế URL. Tối đa 5MB (JPG, PNG, WEBP).</p>
+                    <p class="md:col-span-2 -mt-2 text-outline text-body-sm">Chọn file sẽ thay thế URL. Tối đa 5MB (JPG, PNG, WEBP). Nếu form báo lỗi, cần chọn lại file.</p>
                 </div>
 
                 <div class="flex items-center justify-end gap-space-md pt-space-md">

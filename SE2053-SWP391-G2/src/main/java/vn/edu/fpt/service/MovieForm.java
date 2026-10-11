@@ -15,6 +15,8 @@ public class MovieForm {
     private String releaseDate = "";
     private String posterUrl = "";
     private String trailerUrl = "";
+    // Đường dẫn file poster vừa upload (do server sinh); khác rỗng thì thay cho posterUrl người dùng nhập
+    private String uploadedPoster = "";
     private String status = "";
     private List<String> formats = new ArrayList<>();
     private List<Integer> genreIds = new ArrayList<>();
@@ -97,6 +99,14 @@ public class MovieForm {
 
     public void setTrailerUrl(String trailerUrl) {
         this.trailerUrl = trailerUrl;
+    }
+
+    public String getUploadedPoster() {
+        return uploadedPoster;
+    }
+
+    public void setUploadedPoster(String uploadedPoster) {
+        this.uploadedPoster = uploadedPoster;
     }
 
     public String getStatus() {
