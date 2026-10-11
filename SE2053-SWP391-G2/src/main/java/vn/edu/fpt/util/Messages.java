@@ -53,6 +53,31 @@ public final class Messages {
     public static final String CONCESSION_IMAGE_URL_INVALID = "Đường dẫn ảnh phải là URL http/https hợp lệ.";
     public static final String CONCESSION_STATUS_INVALID = "Trạng thái không hợp lệ.";
 
+    // UC-01 Register Account
+    public static final String REGISTER_SUCCESS = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";
+    public static final String REGISTER_OTP_SENT = "Email xác nhận kèm mã OTP đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư.";
+    public static final String REGISTER_OTP_RESENT = "Mã xác thực mới đã được gửi lại tới email của bạn.";
+    public static final String REGISTER_OTP_INVALID = "Mã xác thực không chính xác hoặc đã hết hạn.";
+    public static final String REGISTER_OTP_EXPIRED = "Mã xác thực đã hết hạn. Vui lòng bấm Gửi lại mã.";
+    public static final String REGISTER_EMAIL_DUPLICATE = "Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập!";
+    public static final String REGISTER_PHONE_DUPLICATE = "Số điện thoại này đã được sử dụng bởi một tài khoản khác.";
+    public static final String REGISTER_PHONE_INVALID = "Số điện thoại không hợp lệ (gồm 10 chữ số bắt đầu bằng số 0).";
+    public static final String REGISTER_EMAIL_INVALID = "Địa chỉ email không đúng định dạng.";
+    public static final String REGISTER_PASSWORD_LENGTH = "Mật khẩu phải từ {0} đến {1} ký tự.";
+    public static final String REGISTER_PASSWORD_WEAK = "Mật khẩu phải chứa ít nhất 1 chữ thường, 1 chữ hoa và 1 chữ số.";
+    public static final String REGISTER_PASSWORD_MISMATCH = "Mật khẩu xác nhận không khớp.";
+    public static final String REGISTER_TERMS_REQUIRED = "Bạn cần tích chọn đồng ý với Điều khoản và Chính sách để đăng ký.";
+    public static final String REGISTER_SESSION_EXPIRED = "Phiên đăng ký đã hết hạn. Vui lòng thực hiện lại từ đầu.";
+
+    // UC-02 Login & Logout
+    public static final String LOGIN_REQUIRED_IDENTIFIER = "Vui lòng nhập Email hoặc Số điện thoại.";
+    public static final String LOGIN_REQUIRED_PASSWORD = "Vui lòng nhập mật khẩu.";
+    public static final String LOGIN_FAILED = "Email/Số điện thoại hoặc mật khẩu không chính xác.";
+    public static final String LOGIN_ACCOUNT_INACTIVE = "Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt. Vui lòng liên hệ ban quản trị.";
+    public static final String LOGIN_SUCCESS = "Đăng nhập thành công! Chào mừng {0}.";
+    public static final String LOGOUT_SUCCESS = "Bạn đã đăng xuất an toàn khỏi hệ thống.";
+    public static final String ACCESS_DENIED = "Bạn không có quyền truy cập vào khu vực này.";
+
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
     private Messages() {
