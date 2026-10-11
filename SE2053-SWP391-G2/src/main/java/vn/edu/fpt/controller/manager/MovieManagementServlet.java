@@ -11,12 +11,13 @@ import jakarta.servlet.http.Part;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.model.AgeRating;
@@ -31,10 +32,11 @@ import vn.edu.fpt.util.Page;
 import vn.edu.fpt.util.PosterStorage;
 
 // UC-23: Manage Movies
+// Không đặt maxFileSize: file 5-10MB vẫn tới được PosterStorage.validate để báo lỗi ngay dưới ô nhập
 @WebServlet("/manager/movies")
-@MultipartConfig(maxFileSize = 5 * 1024 * 1024, maxRequestSize = MovieManagementServlet.MAX_REQUEST_SIZE)
+@MultipartConfig(maxRequestSize = MovieManagementServlet.MAX_REQUEST_SIZE)
 public class MovieManagementServlet extends HttpServlet {
-    static final int MAX_REQUEST_SIZE = 6 * 1024 * 1024;
+    static final int MAX_REQUEST_SIZE = 10 * 1024 * 1024;
     private static final Logger LOGGER = Logger.getLogger(MovieManagementServlet.class.getName());
     private static final String VIEW = "/WEB-INF/views/manager/movies.jsp";
     private static final String FLASH_SUCCESS = "flashSuccess";
@@ -89,39 +91,50 @@ public class MovieManagementServlet extends HttpServlet {
     private void save(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, ServletException, IOException {
         MovieForm form = readForm(request);
-        Map<String, String> errors = new LinkedHashMap<>(movieService.validate(form));
 
         Part poster = request.getPart("posterFile");
-        boolean hasUpload = PosterStorage.hasFile(poster);
-        if (hasUpload) {
+        if (PosterStorage.hasFile(poster)) {
             String uploadError = PosterStorage.validate(poster);
+            if (uploadError == null) {
+                uploadError = storePoster(poster, form);
+            }
             if (uploadError != null) {
+                // Vẫn hiển thị lỗi của các trường khác cùng lúc với lỗi file
+                Map<String, String> errors = new LinkedHashMap<>(movieService.validate(form));
                 errors.put("poster", uploadError);
+                render(request, response, form, errors);
+                return;
             }
         }
-        if (!errors.isEmpty()) {
-            render(request, response, form, errors);
-            return;
-        }
 
-        Path webappRoot = Path.of(getServletContext().getRealPath("/"));
-        String storedPoster = null;
-        if (hasUpload) {
-            storedPoster = PosterStorage.store(poster, webappRoot);
-            form.setPosterUrl(storedPoster);
-        }
         try {
             movieService.save(form);
         } catch (ValidationException e) {
-            PosterStorage.deleteQuietly(storedPoster, webappRoot);
+            discardUploadedPoster(form);
             render(request, response, form, e.getErrors());
             return;
-        } catch (SQLException e) {
-            PosterStorage.deleteQuietly(storedPoster, webappRoot);
+        } catch (SQLException | RuntimeException e) {
+            discardUploadedPoster(form);
             throw e;
         }
         flash(request, FLASH_SUCCESS, Messages.MOVIE_SAVED);
-        response.sendRedirect(request.getContextPath() + "/manager/movies");
+        response.sendRedirect(request.getContextPath() + "/manager/movies" + listQuery(request));
+    }
+
+    // Trả về thông báo lỗi nếu không ghi được file, null nếu thành công
+    private String storePoster(Part poster, MovieForm form) {
+        try {
+            form.setUploadedPoster(PosterStorage.store(poster));
+            return null;
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Không lưu được file poster", e);
+            return Messages.MOVIE_POSTER_SAVE_FAILED;
+        }
+    }
+
+    private void discardUploadedPoster(MovieForm form) {
+        PosterStorage.deleteQuietly(form.getUploadedPoster());
+        form.setUploadedPoster("");
     }
 
     private void archive(HttpServletRequest request, HttpServletResponse response)
@@ -156,6 +169,9 @@ public class MovieManagementServlet extends HttpServlet {
         request.setAttribute("ageRatings", AgeRating.ALL);
         request.setAttribute("statuses", MovieStatus.ALL);
         request.setAttribute("formats", MovieService.FORMATS);
+        request.setAttribute("maxDuration", MovieService.MAX_DURATION);
+        request.setAttribute("maxSynopsis", MovieService.MAX_SYNOPSIS);
+        request.setAttribute("maxKeyword", MovieService.MAX_KEYWORD);
         request.setAttribute("csrfToken", CsrfToken.get(session));
         request.setAttribute("activeMenu", "movies");
         request.setAttribute("msgNoResult", Messages.MSG01);
@@ -180,18 +196,23 @@ public class MovieManagementServlet extends HttpServlet {
         form.setPosterUrl(trim(request.getParameter("posterUrl")));
         form.setTrailerUrl(trim(request.getParameter("trailerUrl")));
         form.setStatus(trim(request.getParameter("movieStatus")));
-        String[] formats = request.getParameterValues("formats");
-        if (formats != null) {
-            form.setFormats(new ArrayList<>(List.of(formats)));
+        // Bỏ giá trị gửi trùng (checkbox bị lặp) để không lưu "2D,2D" hay chèn trùng Movie_Genre
+        Set<String> formats = new LinkedHashSet<>();
+        String[] formatValues = request.getParameterValues("formats");
+        if (formatValues != null) {
+            for (String format : formatValues) {
+                formats.add(trim(format));
+            }
         }
-        List<Integer> genreIds = new ArrayList<>();
+        form.setFormats(new ArrayList<>(formats));
+        Set<Integer> genreIds = new LinkedHashSet<>();
         String[] genres = request.getParameterValues("genreIds");
         if (genres != null) {
             for (String genre : genres) {
                 genreIds.add(parseInt(genre));
             }
         }
-        form.setGenreIds(genreIds);
+        form.setGenreIds(new ArrayList<>(genreIds));
         return form;
     }
 
