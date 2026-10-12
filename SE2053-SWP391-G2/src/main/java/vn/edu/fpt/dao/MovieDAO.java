@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import vn.edu.fpt.model.Genre;
 import vn.edu.fpt.model.Movie;
+import vn.edu.fpt.model.ShowtimeStatus;
+import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.util.DBContext;
 
 public class MovieDAO {
@@ -80,8 +82,9 @@ public class MovieDAO {
         }
     }
 
+    // So sánh theo collation của cột (CI) để khớp đúng ràng buộc UNIQUE(Title)
     public boolean existsByTitle(String title, int excludeMovieId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Movie WHERE LOWER(Title) = LOWER(?) AND MovieID <> ?";
+        String sql = "SELECT COUNT(*) FROM Movie WHERE Title = ? AND MovieID <> ?";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, title);
             ps.setInt(2, excludeMovieId);
@@ -91,14 +94,30 @@ public class MovieDAO {
         }
     }
 
-    // BR-MOV-04: suất chiếu chưa kết thúc đã có vé xác nhận
+    // BR-MOV-04: suất chiếu chưa kết thúc (không tính suất đã hủy) đã có vé xác nhận
     public boolean hasActiveBookedShowtimes(int movieId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM Showtime s "
                 + "JOIN Booking b ON b.ShowtimeID = s.ShowtimeID "
                 + "JOIN Ticket t ON t.BookingID = b.BookingID "
-                + "WHERE s.MovieID = ? AND s.EndTime > GETDATE() AND t.Status = 'Upcoming'";
+                + "WHERE s.MovieID = ? AND s.EndTime > GETDATE() AND (s.Status IS NULL OR s.Status <> ?) "
+                + "AND t.Status = ?";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, movieId);
+            ps.setString(2, ShowtimeStatus.CANCELLED);
+            ps.setString(3, TicketStatus.UPCOMING);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    // GB-08: EndTime của suất chiếu tính theo thời lượng phim, nên còn suất chưa kết thúc thì không đổi thời lượng
+    public boolean hasUnfinishedShowtimes(int movieId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Showtime "
+                + "WHERE MovieID = ? AND EndTime > GETDATE() AND (Status IS NULL OR Status <> ?)";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, movieId);
+            ps.setString(2, ShowtimeStatus.CANCELLED);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }
@@ -172,7 +191,7 @@ public class MovieDAO {
     private int bindFilter(PreparedStatement ps, String keyword, String status) throws SQLException {
         int idx = 1;
         if (keyword != null && !keyword.isEmpty()) {
-            String pattern = "%" + keyword + "%";
+            String pattern = "%" + escapeLike(keyword) + "%";
             ps.setString(idx++, pattern);
             ps.setString(idx++, pattern);
             ps.setString(idx++, pattern);
@@ -181,6 +200,11 @@ public class MovieDAO {
             ps.setString(idx++, status);
         }
         return idx;
+    }
+
+    // Ký tự đại diện của LIKE trong SQL Server được bọc [] để tìm đúng chuỗi người dùng nhập
+    private String escapeLike(String value) {
+        return value.replace("[", "[[]").replace("%", "[%]").replace("_", "[_]");
     }
 
     private int bindMovie(PreparedStatement ps, Movie movie) throws SQLException {

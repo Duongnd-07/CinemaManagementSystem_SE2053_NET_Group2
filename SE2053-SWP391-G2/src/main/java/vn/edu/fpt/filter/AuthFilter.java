@@ -20,7 +20,7 @@ import vn.edu.fpt.util.AppConfig;
 public class AuthFilter implements Filter {
     public static final String SESSION_USER = "user";
     private static final String ACTIVE = "Active";
-    private static final List<String> STAFF_ROLES = List.of(Role.STAFF);
+    private static final List<String> STAFF_ROLES = List.of(Role.STAFF, Role.MANAGER, Role.ADMIN);
     private static final List<String> MANAGER_ROLES = List.of(Role.MANAGER, Role.ADMIN);
 
     @Override
@@ -35,8 +35,8 @@ public class AuthFilter implements Filter {
         User user = session == null ? null : (User) session.getAttribute(SESSION_USER);
         boolean allowed = user != null && ACTIVE.equals(user.getStatus()) && allowedRoles.contains(user.getRole());
 
-        if (!AppConfig.getBoolean("auth.enabled", false)) {
-            // Chưa có chức năng đăng nhập (UC-02): gắn user dev để các UC lấy được mã nhân viên/quản lý
+        if (!AppConfig.getBoolean("auth.enabled", true)) {
+            // Khi cấu hình auth.enabled=false: gắn user dev để các UC lấy được mã nhân viên/quản lý
             if (!allowed) {
                 req.getSession().setAttribute(SESSION_USER, devUser(staffArea));
             }
@@ -44,11 +44,15 @@ public class AuthFilter implements Filter {
             return;
         }
         if (user == null) {
-            resp.sendRedirect(req.getContextPath() + "/login");
+            String returnUrl = req.getRequestURI();
+            if (req.getQueryString() != null) {
+                returnUrl += "?" + req.getQueryString();
+            }
+            resp.sendRedirect(req.getContextPath() + "/login?returnUrl=" + java.net.URLEncoder.encode(returnUrl, java.nio.charset.StandardCharsets.UTF_8));
             return;
         }
         if (!allowed) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập vào khu vực này.");
             return;
         }
         chain.doFilter(request, response);
