@@ -78,6 +78,15 @@ public final class Messages {
     public static final String LOGOUT_SUCCESS = "Bạn đã đăng xuất an toàn khỏi hệ thống.";
     public static final String ACCESS_DENIED = "Bạn không có quyền truy cập vào khu vực này.";
 
+    // UC-09 View Real-Time Seat Map
+    public static final String SEAT_MAP_SHOWTIME_NOT_FOUND = "Suất chiếu không tồn tại hoặc không còn mở bán.";
+    public static final String SEAT_MAP_SHOWTIME_STARTED =
+            "Suất chiếu đã bắt đầu hoặc đã kết thúc. Vui lòng chọn suất chiếu khác.";
+    public static final String SEAT_MAP_ROOM_MAINTENANCE =
+            "Phòng chiếu đang tạm khóa để bảo dưỡng thiết bị. Vui lòng chọn suất chiếu khác.";
+    public static final String SEAT_MAP_NO_SEATS = "Phòng chiếu chưa được cấu hình sơ đồ ghế.";
+    public static final String SEAT_MAP_FULLY_BOOKED = "Suất chiếu này đã hết ghế trống.";
+
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
     private Messages() {
