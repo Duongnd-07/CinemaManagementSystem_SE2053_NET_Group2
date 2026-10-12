@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ public class MovieService {
     public static final int MAX_DURATION = 600;
     public static final int MAX_SYNOPSIS = 4000;
     public static final int MAX_KEYWORD = 100;
+    public static final int SUGGEST_LIMIT = 8;
     public static final List<String> FORMATS = List.of("2D", "3D", "IMAX");
 
     private static final int MAX_TITLE = 200;
@@ -64,6 +66,62 @@ public class MovieService {
 
     public Movie findById(int movieId) throws SQLException {
         return movieDAO.findById(movieId);
+    }
+
+    // UC-04: phim công khai nhóm theo trạng thái (Đang chiếu, Sắp chiếu); nhóm không có phim là danh sách rỗng
+    public Map<String, List<Movie>> listPublicMovies() throws SQLException {
+        return searchPublicMovies(new MovieSearchForm());
+    }
+
+    // UC-05: như UC-04 nhưng chỉ lấy phim khớp mọi tiêu chí của form (AND); form rỗng trả về toàn bộ
+    public Map<String, List<Movie>> searchPublicMovies(MovieSearchForm form) throws SQLException {
+        normalize(form);
+        Integer genreId = form.getGenreId().isEmpty() ? null : Integer.valueOf(form.getGenreId());
+        Map<String, List<Movie>> groups = new LinkedHashMap<>();
+        for (String status : MovieStatus.PUBLIC) {
+            groups.put(status, new ArrayList<>());
+        }
+        for (Movie movie : movieDAO.findByStatuses(MovieStatus.PUBLIC, form.getKeyword(), genreId,
+                form.getDirector(), form.getCast(), form.getAgeRating())) {
+            groups.get(publicStatusOf(movie)).add(movie);
+        }
+        return groups;
+    }
+
+    // SQL Server so khớp Status không phân biệt hoa thường và bỏ khoảng trắng cuối, nên DB có thể trả về
+    // "now showing " cho điều kiện IN ('Now Showing'); quy về đúng hằng số để không làm hỏng việc nhóm phim
+    private String publicStatusOf(Movie movie) {
+        String status = movie.getStatus() == null ? "" : movie.getStatus().trim();
+        for (String publicStatus : MovieStatus.PUBLIC) {
+            if (publicStatus.equalsIgnoreCase(status)) {
+                return publicStatus;
+            }
+        }
+        throw new IllegalStateException("Trạng thái phim không thuộc nhóm công khai: " + movie.getStatus());
+    }
+
+    // UC-05: gợi ý tên phim khi người dùng đang gõ; chỉ phim công khai
+    public List<Movie> suggestPublicMovies(String keyword) throws SQLException {
+        return movieDAO.suggestByTitle(MovieStatus.PUBLIC, normalizeKeyword(keyword), SUGGEST_LIMIT);
+    }
+
+    // Cắt khoảng trắng, giới hạn độ dài; thể loại/nhãn tuổi không hợp lệ thì bỏ qua bộ lọc đó
+    private void normalize(MovieSearchForm form) {
+        form.setKeyword(normalizeKeyword(form.getKeyword()));
+        form.setDirector(normalizeKeyword(form.getDirector()));
+        form.setCast(normalizeKeyword(form.getCast()));
+        String rating = form.getAgeRating() == null ? "" : form.getAgeRating().trim();
+        form.setAgeRating(AgeRating.isValid(rating) ? rating : "");
+        String genre = form.getGenreId() == null ? "" : form.getGenreId().trim();
+        form.setGenreId(parsePositiveInt(genre) > 0 ? genre : "");
+    }
+
+    private int parsePositiveInt(String value) {
+        try {
+            return Math.max(Integer.parseInt(value), 0);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     public List<Genre> listGenres() throws SQLException {
