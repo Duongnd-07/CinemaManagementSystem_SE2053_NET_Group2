@@ -140,6 +140,16 @@ IF COL_LENGTH('Equipment_Report', 'SeatID') IS NULL
     ALTER TABLE Equipment_Report ADD SeatID INT NULL CONSTRAINT FK_EquipmentReport_Seat FOREIGN KEY REFERENCES Seat(SeatID);
 GO
 
+-- UC-21: một ghế / một loại thiết bị của phòng chỉ có một báo cáo chưa xử lý xong (chặn hai nhân viên gửi cùng lúc)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_EquipmentReport_OpenSeat')
+    CREATE UNIQUE INDEX UX_EquipmentReport_OpenSeat ON Equipment_Report (SeatID)
+        WHERE SeatID IS NOT NULL AND Status IN ('Pending', 'In Progress');
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_EquipmentReport_OpenEquipment')
+    CREATE UNIQUE INDEX UX_EquipmentReport_OpenEquipment ON Equipment_Report (RoomID, EquipmentCategory)
+        WHERE SeatID IS NULL AND Status IN ('Pending', 'In Progress')
+            AND EquipmentCategory IN ('Projector', 'Sound System', 'Air Conditioning');
+GO
+
 -- Nhật ký xử lý sự cố: ai đổi trạng thái gì, lúc nào
 IF OBJECT_ID('EquipmentReportLog', 'U') IS NULL
     CREATE TABLE EquipmentReportLog (

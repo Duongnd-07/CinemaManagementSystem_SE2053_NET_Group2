@@ -115,6 +115,20 @@ public class EquipmentReportDAO {
         }
     }
 
+    // Mã báo cáo chưa xử lý xong của một loại thiết bị (không phải ghế) trong phòng, null nếu không có
+    public Integer findOpenReportIdByEquipment(int roomId, String category) throws SQLException {
+        String sql = "SELECT TOP 1 ReportID FROM Equipment_Report WHERE RoomID = ? AND EquipmentCategory = ? "
+                + "AND SeatID IS NULL AND Status <> ? ORDER BY ReportID";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ps.setString(2, category);
+            ps.setString(3, ReportStatus.RESOLVED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        }
+    }
+
     // Chỉ cập nhật khi trạng thái hiện tại vẫn là expectedStatus; trả về false nếu đã có người đổi trước
     public boolean updateStatus(Connection conn, int reportId, String expectedStatus, String newStatus)
             throws SQLException {
@@ -135,6 +149,19 @@ public class EquipmentReportDAO {
         String sql = "SELECT COUNT(*) FROM Equipment_Report WHERE SeatID = ? AND ReportID <> ? AND Status <> ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, seatId);
+            ps.setInt(2, excludeReportId);
+            ps.setString(3, ReportStatus.RESOLVED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    // Số báo cáo khác chưa xử lý xong của cùng một phòng (mọi loại thiết bị, kể cả ghế)
+    public int countOtherOpenByRoom(Connection conn, int roomId, int excludeReportId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Equipment_Report WHERE RoomID = ? AND ReportID <> ? AND Status <> ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
             ps.setInt(2, excludeReportId);
             ps.setString(3, ReportStatus.RESOLVED);
             try (ResultSet rs = ps.executeQuery()) {

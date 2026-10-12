@@ -25,6 +25,11 @@ public class EquipmentReportService {
     public static final int PAGE_SIZE = 10;
     private static final int MAX_DESCRIPTION = 1000;
     private static final int MAX_NOTE = 500;
+    private static final int SQL_UNIQUE_INDEX_VIOLATION = 2601;
+    private static final String LOG_ROOM_AUTO_UNLOCKED =
+            "Tự động mở khóa phòng chiếu: không còn sự cố nào chưa xử lý.";
+    private static final String EQUIPMENT_DUPLICATE =
+            "Thiết bị này của phòng đã có báo cáo #SC-{0} chưa xử lý xong, không cần báo lại.";
 
     private final EquipmentReportDAO reportDAO = new EquipmentReportDAO();
     private final EquipmentReportLogDAO logDAO = new EquipmentReportLogDAO();
@@ -87,6 +92,14 @@ public class EquipmentReportService {
                     }
                 }
             }
+        } else if (!EquipmentCategory.OTHER.equals(form.getCategory())
+                && !errors.containsKey("category") && !errors.containsKey("roomId")) {
+            // Mỗi phòng có một máy chiếu/âm thanh/điều hòa nên chỉ một báo cáo đang mở cho mỗi loại;
+            // "Khác" không xác định được thiết bị cụ thể nên không chặn
+            Integer openReportId = reportDAO.findOpenReportIdByEquipment(roomId, form.getCategory());
+            if (openReportId != null) {
+                errors.put("category", Messages.format(EQUIPMENT_DUPLICATE, String.valueOf(openReportId)));
+            }
         }
 
         if (form.getUrgency().isEmpty()) {
@@ -123,6 +136,13 @@ public class EquipmentReportService {
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
+                // Hai nhân viên gửi cùng lúc: unique index chặn bản thứ hai, validate lại để báo đúng mã báo cáo trùng
+                if (e.getErrorCode() == SQL_UNIQUE_INDEX_VIOLATION) {
+                    Map<String, String> duplicate = validate(form);
+                    if (!duplicate.isEmpty()) {
+                        throw new ValidationException(duplicate);
+                    }
+                }
                 throw e;
             }
         }
@@ -185,7 +205,6 @@ public class EquipmentReportService {
         String newStatus = resolveNewStatus(report, form);
         String note = form.getNote().trim();
         boolean statusChanged = !newStatus.equals(oldStatus);
-        boolean lockChanged = form.isLockRoom() != isRoomLocked(report);
         UpdateResult result = new UpdateResult();
 
         try (Connection conn = DBContext.getConnection()) {
@@ -197,13 +216,18 @@ public class EquipmentReportService {
                 if (statusChanged || !note.isEmpty()) {
                     writeLog(conn, reportId, managerId, oldStatus, newStatus, note.isEmpty() ? null : note);
                 }
-                if (lockChanged) {
+                // Phòng tự mở khóa khi sự cố cuối cùng của phòng xử lý xong; còn sự cố dở thì chỉ mở khi quản lý bỏ tích
+                boolean autoUnlock = statusChanged && ReportStatus.RESOLVED.equals(newStatus)
+                        && reportDAO.countOtherOpenByRoom(conn, report.getRoomId(), reportId) == 0;
+                boolean lockRoom = form.isLockRoom() && !autoUnlock;
+                if (lockRoom != isRoomLocked(report)) {
                     roomDAO.updateStatus(conn, report.getRoomId(),
-                            form.isLockRoom() ? RoomStatus.MAINTENANCE : RoomStatus.ACTIVE);
-                    writeLog(conn, reportId, managerId, newStatus, newStatus, form.isLockRoom()
-                            ? Messages.REPORT_LOG_ROOM_LOCKED : Messages.REPORT_LOG_ROOM_UNLOCKED);
-                    result.roomLocked = form.isLockRoom();
-                    result.roomUnlocked = !form.isLockRoom();
+                            lockRoom ? RoomStatus.MAINTENANCE : RoomStatus.ACTIVE);
+                    writeLog(conn, reportId, managerId, newStatus, newStatus, lockRoom
+                            ? Messages.REPORT_LOG_ROOM_LOCKED
+                            : autoUnlock ? LOG_ROOM_AUTO_UNLOCKED : Messages.REPORT_LOG_ROOM_UNLOCKED);
+                    result.roomLocked = lockRoom;
+                    result.roomUnlocked = !lockRoom;
                 }
                 // Ghế chỉ mở lại khi không còn báo cáo nào khác của ghế đó đang dở
                 if (statusChanged && ReportStatus.RESOLVED.equals(newStatus) && report.getSeatId() != null

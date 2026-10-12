@@ -183,7 +183,7 @@
                     <input type="checkbox" name="lockRoom" value="1" class="mt-1" ${form.lockRoom ? 'checked' : ''}/>
                     <span>
                         <span class="text-on-surface font-label-lg">Khóa <c:out value="${report.roomName}"/> để sửa chữa</span>
-                        <span class="block text-body-sm text-on-surface-variant">Phòng bị khóa sẽ không xếp được suất chiếu mới. Bỏ tích để mở khóa phòng.</span>
+                        <span class="block text-body-sm text-on-surface-variant">Phòng bị khóa sẽ không xếp được suất chiếu mới. Bỏ tích để mở khóa phòng; phòng tự mở khóa khi mọi sự cố của phòng đã xử lý xong.</span>
                     </span>
                 </label>
                 <div class="flex items-center justify-end gap-space-md pt-space-sm">
