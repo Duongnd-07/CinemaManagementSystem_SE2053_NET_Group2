@@ -71,13 +71,13 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                 <tr class="bg-surface-container border-b border-white/10 text-on-surface-variant text-label-md uppercase tracking-wider">
-                    <th class="py-4 px-5">Mã</th>
-                    <th class="py-4 px-5">Thiết bị</th>
-                    <th class="py-4 px-5">Vị trí</th>
-                    <th class="py-4 px-5">Mô tả</th>
-                    <th class="py-4 px-5">Mức khẩn cấp</th>
-                    <th class="py-4 px-5">Trạng thái</th>
-                    <th class="py-4 px-5">Thời gian gửi</th>
+                    <th class="py-4 px-5 whitespace-nowrap">Mã</th>
+                    <th class="py-4 px-5 whitespace-nowrap">Thiết bị</th>
+                    <th class="py-4 px-5 whitespace-nowrap">Vị trí</th>
+                    <th class="py-4 px-5 whitespace-nowrap">Mô tả</th>
+                    <th class="py-4 px-5 whitespace-nowrap">Mức khẩn cấp</th>
+                    <th class="py-4 px-5 whitespace-nowrap">Trạng thái</th>
+                    <th class="py-4 px-5 whitespace-nowrap">Thời gian gửi</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5 text-body-md text-on-surface">
@@ -177,6 +177,21 @@
                         </select>
                         <c:if test="${not empty errors.seatId}"><p class="form-error"><c:out value="${errors.seatId}"/></p></c:if>
                     </div>
+                </div>
+                <%-- Sự cố đang mở của phòng đã chọn (equipment-report.js lọc theo phòng) để nhân viên không báo trùng --%>
+                <div id="openReports" class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-space-md" hidden>
+                    <div class="text-amber-300 font-label-lg mb-1">Phòng này đang có sự cố chưa xử lý. Nếu trùng thì không cần gửi lại.</div>
+                    <ul class="text-body-sm text-on-surface space-y-1">
+                        <c:forEach var="open" items="${openReports}">
+                            <li data-room="${open.roomId}">
+                                <span class="text-on-surface-variant">#SC-${open.reportId}</span>
+                                • ${categoryLabels[open.equipmentCategory]}<c:if test="${not empty open.seatLabel}"> <c:out value="${open.seatLabel}"/></c:if>
+                                • ${urgencyLabels[open.urgencyLevel]}
+                                • ${statusLabels[open.status]}:
+                                <span class="text-on-surface-variant"><c:out value="${fn:length(open.description) > 80 ? fn:substring(open.description, 0, 80).concat('…') : open.description}"/></span>
+                            </li>
+                        </c:forEach>
+                    </ul>
                 </div>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="description">Mô tả sự cố <span class="req">*</span></label>

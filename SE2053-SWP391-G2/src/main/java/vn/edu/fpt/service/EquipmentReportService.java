@@ -6,10 +6,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import vn.edu.fpt.dao.EquipmentReportDAO;
+import vn.edu.fpt.dao.EquipmentReportLogDAO;
 import vn.edu.fpt.dao.RoomDAO;
 import vn.edu.fpt.dao.SeatDAO;
 import vn.edu.fpt.model.EquipmentCategory;
 import vn.edu.fpt.model.EquipmentReport;
+import vn.edu.fpt.model.EquipmentReportLog;
 import vn.edu.fpt.model.ReportStatus;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.RoomStatus;
@@ -22,8 +24,10 @@ import vn.edu.fpt.util.Page;
 public class EquipmentReportService {
     public static final int PAGE_SIZE = 10;
     private static final int MAX_DESCRIPTION = 1000;
+    private static final int MAX_NOTE = 500;
 
     private final EquipmentReportDAO reportDAO = new EquipmentReportDAO();
+    private final EquipmentReportLogDAO logDAO = new EquipmentReportLogDAO();
     private final RoomDAO roomDAO = new RoomDAO();
     private final SeatDAO seatDAO = new SeatDAO();
 
@@ -43,6 +47,11 @@ public class EquipmentReportService {
 
     public List<Seat> listSeats() throws SQLException {
         return seatDAO.findAll();
+    }
+
+    // Sự cố chưa xử lý xong của mọi nhân viên, form hiển thị theo phòng để tránh báo trùng
+    public List<EquipmentReport> listOpenReports() throws SQLException {
+        return reportDAO.findOpen();
     }
 
     // E1: trả về toàn bộ lỗi theo từng trường; map rỗng nghĩa là hợp lệ
@@ -69,6 +78,13 @@ public class EquipmentReportService {
                 Seat seat = seatDAO.findById(parseId(form.getSeatId()));
                 if (seat == null || seat.getRoomId() != roomId) {
                     errors.put("seatId", Messages.REPORT_SEAT_INVALID);
+                } else {
+                    // Một ghế chỉ có một báo cáo đang mở, tránh nhiều nhân viên báo trùng
+                    Integer openReportId = reportDAO.findOpenReportIdBySeat(seat.getSeatId());
+                    if (openReportId != null) {
+                        errors.put("seatId", Messages.format(Messages.REPORT_SEAT_DUPLICATE,
+                                seat.getRowName() + seat.getColNumber(), String.valueOf(openReportId)));
+                    }
                 }
             }
         }
@@ -111,6 +127,146 @@ public class EquipmentReportService {
             }
         }
         return report.getSeatId() == null ? 0 : seatDAO.countUpcomingTickets(report.getSeatId());
+    }
+
+    // ----- UC-26: quản lý xử lý báo cáo -----
+
+    public Page<EquipmentReport> listAll(String status, int page) throws SQLException {
+        String statusFilter = ReportStatus.isValid(status) ? status : null;
+        return Page.of(page, PAGE_SIZE, reportDAO.countAll(statusFilter),
+                (offset, limit) -> reportDAO.searchAll(statusFilter, offset, limit));
+    }
+
+    public Map<String, Integer> countAllByStatus() throws SQLException {
+        return reportDAO.countAllByStatus();
+    }
+
+    public EquipmentReport findById(int reportId) throws SQLException {
+        return reportDAO.findById(reportId);
+    }
+
+    public List<EquipmentReportLog> listLogs(int reportId) throws SQLException {
+        return logDAO.findByReport(reportId);
+    }
+
+    // Vòng đời chỉ đi tới: từ trạng thái hiện tại trở về sau
+    public List<String> allowedStatuses(String currentStatus) {
+        int from = Math.max(0, ReportStatus.ALL.indexOf(currentStatus));
+        return ReportStatus.ALL.subList(from, ReportStatus.ALL.size());
+    }
+
+    public Map<String, String> validateUpdate(EquipmentReport report, EquipmentReportUpdateForm form) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        String newStatus = resolveNewStatus(report, form);
+        if (!ReportStatus.isValid(newStatus)) {
+            errors.put("newStatus", Messages.REPORT_STATUS_INVALID);
+        } else if (!allowedStatuses(report.getStatus()).contains(newStatus)) {
+            errors.put("newStatus", Messages.REPORT_STATUS_BACKWARD);
+        }
+        if (form.getNote().trim().length() > MAX_NOTE) {
+            errors.put("note", Messages.format(Messages.MSG08, MAX_NOTE));
+        }
+        if (errors.isEmpty() && newStatus.equals(report.getStatus()) && form.getNote().trim().isEmpty()
+                && form.isLockRoom() == isRoomLocked(report)) {
+            errors.put("general", Messages.REPORT_NO_CHANGE);
+        }
+        return errors;
+    }
+
+    // Đổi trạng thái, ghi chú tiến độ, khóa/mở phòng; mọi thao tác đều ghi EquipmentReportLog
+    public UpdateResult process(EquipmentReport report, EquipmentReportUpdateForm form, int managerId)
+            throws SQLException, ValidationException {
+        Map<String, String> errors = validateUpdate(report, form);
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+        int reportId = report.getReportId();
+        String oldStatus = report.getStatus();
+        String newStatus = resolveNewStatus(report, form);
+        String note = form.getNote().trim();
+        boolean statusChanged = !newStatus.equals(oldStatus);
+        boolean lockChanged = form.isLockRoom() != isRoomLocked(report);
+        UpdateResult result = new UpdateResult();
+
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                if (statusChanged && !reportDAO.updateStatus(conn, reportId, oldStatus, newStatus)) {
+                    throw new ValidationException(Map.of("general", Messages.REPORT_CHANGED));
+                }
+                if (statusChanged || !note.isEmpty()) {
+                    writeLog(conn, reportId, managerId, oldStatus, newStatus, note.isEmpty() ? null : note);
+                }
+                if (lockChanged) {
+                    roomDAO.updateStatus(conn, report.getRoomId(),
+                            form.isLockRoom() ? RoomStatus.MAINTENANCE : RoomStatus.ACTIVE);
+                    writeLog(conn, reportId, managerId, newStatus, newStatus, form.isLockRoom()
+                            ? Messages.REPORT_LOG_ROOM_LOCKED : Messages.REPORT_LOG_ROOM_UNLOCKED);
+                    result.roomLocked = form.isLockRoom();
+                    result.roomUnlocked = !form.isLockRoom();
+                }
+                // Ghế chỉ mở lại khi không còn báo cáo nào khác của ghế đó đang dở
+                if (statusChanged && ReportStatus.RESOLVED.equals(newStatus) && report.getSeatId() != null
+                        && reportDAO.countOtherOpenBySeat(conn, report.getSeatId(), reportId) == 0) {
+                    seatDAO.updateStatus(conn, report.getSeatId(), RoomStatus.ACTIVE);
+                    writeLog(conn, reportId, managerId, newStatus, newStatus,
+                            Messages.format(Messages.REPORT_LOG_SEAT_REOPENED, report.getSeatLabel()));
+                    result.seatReopened = true;
+                }
+                conn.commit();
+            } catch (SQLException | ValidationException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
+        if (result.roomLocked) {
+            result.upcomingShowtimes = roomDAO.countUpcomingShowtimes(report.getRoomId());
+        }
+        return result;
+    }
+
+    public boolean isRoomLocked(EquipmentReport report) {
+        return RoomStatus.MAINTENANCE.equals(report.getRoomStatus());
+    }
+
+    // Form của báo cáo đã xử lý xong không gửi trạng thái, khi đó giữ nguyên
+    private String resolveNewStatus(EquipmentReport report, EquipmentReportUpdateForm form) {
+        return form.getNewStatus().isEmpty() ? report.getStatus() : form.getNewStatus();
+    }
+
+    private void writeLog(Connection conn, int reportId, int managerId, String oldStatus, String newStatus,
+                          String note) throws SQLException {
+        EquipmentReportLog log = new EquipmentReportLog();
+        log.setReportId(reportId);
+        log.setManagerId(managerId);
+        log.setOldStatus(oldStatus);
+        log.setNewStatus(newStatus);
+        log.setNote(note);
+        logDAO.insert(conn, log);
+    }
+
+    // Kết quả xử lý để Controller dựng thông báo
+    public static final class UpdateResult {
+        private boolean roomLocked;
+        private boolean roomUnlocked;
+        private boolean seatReopened;
+        private int upcomingShowtimes;
+
+        public boolean isRoomLocked() {
+            return roomLocked;
+        }
+
+        public boolean isRoomUnlocked() {
+            return roomUnlocked;
+        }
+
+        public boolean isSeatReopened() {
+            return seatReopened;
+        }
+
+        public int getUpcomingShowtimes() {
+            return upcomingShowtimes;
+        }
     }
 
     private EquipmentReport toReport(EquipmentReportForm form, int staffId) {

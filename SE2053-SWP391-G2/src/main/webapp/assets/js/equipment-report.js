@@ -30,6 +30,24 @@
         if (seat.selectedIndex < 0) {
             seat.selectedIndex = 0;
         }
+        refreshOpenReports();
+    }
+
+    // Chỉ hiện các sự cố đang mở của phòng đã chọn; ẩn cả khối nếu phòng không có sự cố nào
+    function refreshOpenReports() {
+        var box = document.getElementById('openReports');
+        if (!box) {
+            return;
+        }
+        var visible = 0;
+        Array.prototype.forEach.call(box.querySelectorAll('li'), function (item) {
+            var match = room.value !== '' && item.dataset.room === room.value;
+            item.hidden = !match;
+            if (match) {
+                visible++;
+            }
+        });
+        box.hidden = visible === 0;
     }
 
     category.addEventListener('change', refresh);

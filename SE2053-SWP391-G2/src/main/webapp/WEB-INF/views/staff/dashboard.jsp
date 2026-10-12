@@ -107,7 +107,8 @@
             </div>
 
             <!-- 4. Báo cáo sự cố thiết bị -->
-            <div class="bg-[#171b26] border border-white/10 hover:border-purple-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
+            <a href="${pageContext.request.contextPath}/staff/equipment-reports"
+               class="block bg-[#171b26] border border-white/10 hover:border-purple-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
                 <div class="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
                     <span class="material-symbols-outlined text-2xl">build</span>
                 </div>
@@ -116,7 +117,7 @@
                 <span class="text-xs font-semibold text-purple-400 flex items-center gap-1 group-hover:underline">
                     Báo sự cố <span class="material-symbols-outlined text-xs">arrow_forward</span>
                 </span>
-            </div>
+            </a>
         </div>
     </main>
 

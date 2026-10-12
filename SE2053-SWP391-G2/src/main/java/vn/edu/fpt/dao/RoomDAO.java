@@ -29,4 +29,24 @@ public class RoomDAO {
         }
         return rooms;
     }
+
+    public void updateStatus(Connection conn, int roomId, String status) throws SQLException {
+        String sql = "UPDATE Room SET Status = ? WHERE RoomID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, roomId);
+            ps.executeUpdate();
+        }
+    }
+
+    // Số suất chiếu còn hiệu lực chưa kết thúc của phòng
+    public int countUpcomingShowtimes(int roomId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Showtime WHERE RoomID = ? AND Status = 'Active' AND EndTime > GETDATE()";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
 }

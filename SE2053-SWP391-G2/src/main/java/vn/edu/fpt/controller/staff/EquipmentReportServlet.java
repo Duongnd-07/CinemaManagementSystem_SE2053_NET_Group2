@@ -102,6 +102,7 @@ public class EquipmentReportServlet extends HttpServlet {
             request.setAttribute("urgencyLevels", UrgencyLevel.ALL);
             request.setAttribute("rooms", reportService.listRooms());
             request.setAttribute("seats", reportService.listSeats());
+            request.setAttribute("openReports", reportService.listOpenReports());
         }
         request.getRequestDispatcher(VIEW).forward(request, response);
     }

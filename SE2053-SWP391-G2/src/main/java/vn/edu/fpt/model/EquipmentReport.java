@@ -16,6 +16,8 @@ public class EquipmentReport {
     // Tên phòng và nhãn ghế (vd. C5) lấy kèm khi truy vấn danh sách, không phải cột của bảng
     private String roomName;
     private String seatLabel;
+    private String staffName;
+    private String roomStatus;
 
     public EquipmentReport() {
     }
@@ -114,5 +116,21 @@ public class EquipmentReport {
 
     public void setSeatLabel(String seatLabel) {
         this.seatLabel = seatLabel;
+    }
+
+    public String getStaffName() {
+        return staffName;
+    }
+
+    public void setStaffName(String staffName) {
+        this.staffName = staffName;
+    }
+
+    public String getRoomStatus() {
+        return roomStatus;
+    }
+
+    public void setRoomStatus(String roomStatus) {
+        this.roomStatus = roomStatus;
     }
 }

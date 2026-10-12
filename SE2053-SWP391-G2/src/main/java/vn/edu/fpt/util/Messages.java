@@ -64,6 +64,21 @@ public final class Messages {
     public static final String REPORT_SEAT_LOCKED = "Ghế đã được khóa bảo trì.";
     public static final String REPORT_SEAT_HAS_TICKETS =
             "Ghế đã được khóa bảo trì và đang có {0} vé cho suất sắp chiếu, cần đổi ghế cho khách.";
+    public static final String REPORT_SEAT_DUPLICATE = "Ghế {0} đã có báo cáo #SC-{1} chưa xử lý xong.";
+    // UC-26 Process Equipment Reports
+    public static final String REPORT_NOT_FOUND = "Không tìm thấy báo cáo sự cố.";
+    public static final String REPORT_STATUS_INVALID = "Trạng thái không hợp lệ.";
+    public static final String REPORT_STATUS_BACKWARD = "Không thể chuyển báo cáo về trạng thái trước đó.";
+    public static final String REPORT_NO_CHANGE = "Chưa có thay đổi nào để lưu.";
+    public static final String REPORT_CHANGED = "Báo cáo vừa được người khác cập nhật, vui lòng mở lại.";
+    public static final String REPORT_ROOM_LOCKED = "Đã khóa {0} để sửa chữa.";
+    public static final String REPORT_ROOM_LOCKED_SHOWTIMES =
+            "Đã khóa {0} để sửa chữa; phòng còn {1} suất chiếu sắp tới cần xử lý.";
+    public static final String REPORT_ROOM_UNLOCKED = "Đã mở khóa {0}.";
+    public static final String REPORT_SEAT_REOPENED = "Ghế {0} đã được mở lại.";
+    public static final String REPORT_LOG_ROOM_LOCKED = "Khóa phòng chiếu để sửa chữa.";
+    public static final String REPORT_LOG_ROOM_UNLOCKED = "Mở khóa phòng chiếu.";
+    public static final String REPORT_LOG_SEAT_REOPENED = "Mở lại ghế {0}.";
     // UC-28 Manage Vouchers & Promotions
     public static final String VOUCHER_SAVED = "Mã khuyến mãi đã được tạo.";
     public static final String VOUCHER_CODE_INVALID = "Mã chỉ gồm chữ in hoa, chữ số, dấu gạch ngang; dài 4-32 ký tự.";

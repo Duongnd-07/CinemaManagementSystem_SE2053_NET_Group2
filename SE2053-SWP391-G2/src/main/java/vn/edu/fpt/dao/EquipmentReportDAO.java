@@ -12,16 +12,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import vn.edu.fpt.model.EquipmentReport;
+import vn.edu.fpt.model.ReportStatus;
 import vn.edu.fpt.util.DBContext;
 
 public class EquipmentReportDAO {
 
     private static final String SELECT_WITH_PLACE = "SELECT r.ReportID, r.StaffID, r.RoomID, r.SeatID, "
             + "r.EquipmentCategory, r.Description, r.UrgencyLevel, r.Status, r.ReportDate, r.ResolvedDate, "
-            + "rm.RoomName, s.RowName, s.ColNumber "
+            + "rm.RoomName, rm.Status AS RoomStatus, s.RowName, s.ColNumber, u.FullName AS StaffName "
             + "FROM Equipment_Report r "
             + "JOIN Room rm ON rm.RoomID = r.RoomID "
-            + "LEFT JOIN Seat s ON s.SeatID = r.SeatID ";
+            + "LEFT JOIN Seat s ON s.SeatID = r.SeatID "
+            + "LEFT JOIN [User] u ON u.UserID = r.StaffID ";
+
+    // UC-26: việc chưa xong đứng trước, trong cùng trạng thái thì khẩn cấp hơn đứng trước
+    private static final String ORDER_FOR_MANAGER = "ORDER BY "
+            + "CASE r.Status WHEN 'Pending' THEN 0 WHEN 'In Progress' THEN 1 ELSE 2 END, "
+            + "CASE r.UrgencyLevel WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, "
+            + "r.ReportDate DESC, r.ReportID DESC ";
 
     public int insert(Connection conn, EquipmentReport report) throws SQLException {
         String sql = "INSERT INTO Equipment_Report (StaffID, RoomID, SeatID, EquipmentCategory, Description, "
@@ -47,11 +55,102 @@ public class EquipmentReportDAO {
 
     public List<EquipmentReport> searchByStaff(int staffId, String status, int offset, int limit)
             throws SQLException {
-        String sql = SELECT_WITH_PLACE + buildStaffWhere(status)
-                + "ORDER BY r.ReportDate DESC, r.ReportID DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        return search(staffId, status, "ORDER BY r.ReportDate DESC, r.ReportID DESC ", offset, limit);
+    }
+
+    public int countByStaff(int staffId, String status) throws SQLException {
+        return count(staffId, status);
+    }
+
+    public Map<String, Integer> countByStatusForStaff(int staffId) throws SQLException {
+        return countByStatus(staffId);
+    }
+
+    public List<EquipmentReport> searchAll(String status, int offset, int limit) throws SQLException {
+        return search(null, status, ORDER_FOR_MANAGER, offset, limit);
+    }
+
+    public int countAll(String status) throws SQLException {
+        return count(null, status);
+    }
+
+    public Map<String, Integer> countAllByStatus() throws SQLException {
+        return countByStatus(null);
+    }
+
+    public EquipmentReport findById(int reportId) throws SQLException {
+        String sql = SELECT_WITH_PLACE + "WHERE r.ReportID = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reportId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapRow(rs) : null;
+            }
+        }
+    }
+
+    // Báo cáo chưa xử lý xong của mọi nhân viên, dùng để cảnh báo trùng khi gửi báo cáo mới
+    public List<EquipmentReport> findOpen() throws SQLException {
+        String sql = SELECT_WITH_PLACE + "WHERE r.Status <> ? " + ORDER_FOR_MANAGER;
         List<EquipmentReport> reports = new ArrayList<>();
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            int idx = bindStaffFilter(ps, staffId, status);
+            ps.setString(1, ReportStatus.RESOLVED);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    reports.add(mapRow(rs));
+                }
+            }
+        }
+        return reports;
+    }
+
+    // Mã báo cáo chưa xử lý xong của ghế, null nếu không có
+    public Integer findOpenReportIdBySeat(int seatId) throws SQLException {
+        String sql = "SELECT TOP 1 ReportID FROM Equipment_Report WHERE SeatID = ? AND Status <> ? ORDER BY ReportID";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, seatId);
+            ps.setString(2, ReportStatus.RESOLVED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        }
+    }
+
+    // Chỉ cập nhật khi trạng thái hiện tại vẫn là expectedStatus; trả về false nếu đã có người đổi trước
+    public boolean updateStatus(Connection conn, int reportId, String expectedStatus, String newStatus)
+            throws SQLException {
+        String sql = "UPDATE Equipment_Report SET Status = ?, "
+                + "ResolvedDate = CASE WHEN ? = 1 THEN GETDATE() ELSE ResolvedDate END "
+                + "WHERE ReportID = ? AND Status = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newStatus);
+            ps.setInt(2, ReportStatus.RESOLVED.equals(newStatus) ? 1 : 0);
+            ps.setInt(3, reportId);
+            ps.setString(4, expectedStatus);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    // Số báo cáo khác chưa xử lý xong của cùng một ghế
+    public int countOtherOpenBySeat(Connection conn, int seatId, int excludeReportId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Equipment_Report WHERE SeatID = ? AND ReportID <> ? AND Status <> ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, seatId);
+            ps.setInt(2, excludeReportId);
+            ps.setString(3, ReportStatus.RESOLVED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    // staffId null nghĩa là lấy báo cáo của mọi nhân viên
+    private List<EquipmentReport> search(Integer staffId, String status, String orderBy, int offset, int limit)
+            throws SQLException {
+        String sql = SELECT_WITH_PLACE + buildWhere(staffId, status) + orderBy
+                + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        List<EquipmentReport> reports = new ArrayList<>();
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            int idx = bindFilter(ps, staffId, status);
             ps.setInt(idx++, offset);
             ps.setInt(idx, limit);
             try (ResultSet rs = ps.executeQuery()) {
@@ -63,21 +162,22 @@ public class EquipmentReportDAO {
         return reports;
     }
 
-    public int countByStaff(int staffId, String status) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Equipment_Report r " + buildStaffWhere(status);
+    private int count(Integer staffId, String status) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Equipment_Report r " + buildWhere(staffId, status);
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            bindStaffFilter(ps, staffId, status);
+            bindFilter(ps, staffId, status);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : 0;
             }
         }
     }
 
-    public Map<String, Integer> countByStatusForStaff(int staffId) throws SQLException {
-        String sql = "SELECT Status, COUNT(*) AS Total FROM Equipment_Report WHERE StaffID = ? GROUP BY Status";
+    private Map<String, Integer> countByStatus(Integer staffId) throws SQLException {
+        String sql = "SELECT r.Status, COUNT(*) AS Total FROM Equipment_Report r " + buildWhere(staffId, null)
+                + "GROUP BY r.Status";
         Map<String, Integer> result = new HashMap<>();
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, staffId);
+            bindFilter(ps, staffId, null);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     result.put(rs.getString("Status"), rs.getInt("Total"));
@@ -87,13 +187,22 @@ public class EquipmentReportDAO {
         return result;
     }
 
-    private String buildStaffWhere(String status) {
-        return status == null || status.isEmpty() ? "WHERE r.StaffID = ? " : "WHERE r.StaffID = ? AND r.Status = ? ";
+    private String buildWhere(Integer staffId, String status) {
+        List<String> conditions = new ArrayList<>();
+        if (staffId != null) {
+            conditions.add("r.StaffID = ?");
+        }
+        if (status != null && !status.isEmpty()) {
+            conditions.add("r.Status = ?");
+        }
+        return conditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", conditions) + " ";
     }
 
-    private int bindStaffFilter(PreparedStatement ps, int staffId, String status) throws SQLException {
+    private int bindFilter(PreparedStatement ps, Integer staffId, String status) throws SQLException {
         int idx = 1;
-        ps.setInt(idx++, staffId);
+        if (staffId != null) {
+            ps.setInt(idx++, staffId);
+        }
         if (status != null && !status.isEmpty()) {
             ps.setString(idx++, status);
         }
@@ -115,8 +224,10 @@ public class EquipmentReportDAO {
         Timestamp resolvedDate = rs.getTimestamp("ResolvedDate");
         report.setResolvedDate(resolvedDate == null ? null : resolvedDate.toLocalDateTime());
         report.setRoomName(rs.getString("RoomName"));
+        report.setRoomStatus(rs.getString("RoomStatus"));
         String rowName = rs.getString("RowName");
         report.setSeatLabel(rowName == null ? null : rowName + rs.getInt("ColNumber"));
+        report.setStaffName(rs.getString("StaffName"));
         return report;
     }
 }
