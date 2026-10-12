@@ -83,9 +83,21 @@ public class MovieService {
         }
         for (Movie movie : movieDAO.findByStatuses(MovieStatus.PUBLIC, form.getKeyword(), genreId,
                 form.getDirector(), form.getCast(), form.getAgeRating())) {
-            groups.get(movie.getStatus()).add(movie);
+            groups.get(publicStatusOf(movie)).add(movie);
         }
         return groups;
+    }
+
+    // SQL Server so khớp Status không phân biệt hoa thường và bỏ khoảng trắng cuối, nên DB có thể trả về
+    // "now showing " cho điều kiện IN ('Now Showing'); quy về đúng hằng số để không làm hỏng việc nhóm phim
+    private String publicStatusOf(Movie movie) {
+        String status = movie.getStatus() == null ? "" : movie.getStatus().trim();
+        for (String publicStatus : MovieStatus.PUBLIC) {
+            if (publicStatus.equalsIgnoreCase(status)) {
+                return publicStatus;
+            }
+        }
+        throw new IllegalStateException("Trạng thái phim không thuộc nhóm công khai: " + movie.getStatus());
     }
 
     // UC-05: gợi ý tên phim khi người dùng đang gõ; chỉ phim công khai
