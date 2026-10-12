@@ -85,6 +85,16 @@
     color: #af8782;
 }
 
+.cl-pill--info {
+    color: #60a5fa;
+    border-color: rgba(96, 165, 250, 0.35);
+}
+
+.cl-pill--danger {
+    color: #ff6b6d;
+    border-color: rgba(255, 77, 79, 0.45);
+}
+
 /* Món đang ẩn hoặc hết hàng hiển thị mờ hơn */
 .cl-card--dimmed .cl-thumb img,
 .cl-card--dimmed .cl-thumb .material-symbols-outlined {
