@@ -2,4 +2,7 @@ target/
 .idea/
 *.iml
 .vscode/
-uploads/
+
+# Machine-specific application configuration; use the committed .example templates.
+SE2053-SWP391-G2/src/main/resources/ConnectDB.properties
+SE2053-SWP391-G2/src/main/resources/config.properties

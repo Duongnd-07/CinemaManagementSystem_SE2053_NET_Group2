@@ -37,6 +37,10 @@ public final class Messages {
             "Trailer phải là đường dẫn YouTube hợp lệ (https://www.youtube.com/watch?v=...).";
     public static final String MOVIE_HAS_ACTIVE_SHOWTIMES =
             "Phim có suất chiếu đang/sắp diễn ra đã có vé đặt, không thể ẩn hoặc chuyển sang Đã kết thúc.";
+    // UC-04 View Movie List
+    public static final String MOVIE_LIST_EMPTY = "Hiện tại chưa có phim nào trong danh mục này.";
+    // UC-05 Search & Filter Movies
+    public static final String MOVIE_SEARCH_NO_RESULT = "Không tìm thấy phim phù hợp với từ khóa/bộ lọc của bạn.";
     // UC-34 Manage Movie Genres
     public static final String GENRE_SAVED = "Thể loại lưu lại thành công!";
     public static final String GENRE_DELETED = "Đã xóa thể loại.";
@@ -52,6 +56,16 @@ public final class Messages {
     public static final String CONCESSION_STOCK_INVALID = "Tồn kho phải là số nguyên không âm.";
     public static final String CONCESSION_IMAGE_URL_INVALID = "Đường dẫn ảnh phải là URL http/https hợp lệ.";
     public static final String CONCESSION_STATUS_INVALID = "Trạng thái không hợp lệ.";
+    // UC-28 Manage Vouchers & Promotions
+    public static final String VOUCHER_SAVED = "Mã khuyến mãi đã được tạo.";
+    public static final String VOUCHER_CODE_INVALID = "Mã chỉ gồm chữ in hoa, chữ số, dấu gạch ngang; dài 4-32 ký tự.";
+    public static final String VOUCHER_CODE_DUPLICATE = "Mã voucher đã tồn tại trong hệ thống.";
+    public static final String VOUCHER_DISCOUNT_TYPE_INVALID = "Loại giảm giá không hợp lệ.";
+    public static final String VOUCHER_DISCOUNT_VALUE_INVALID =
+            "Mức giảm phải lớn hơn 0; giảm theo phần trăm không vượt quá 100%, giảm tiền phải là số nguyên.";
+    public static final String VOUCHER_MIN_ORDER_INVALID = "Giá trị đơn tối thiểu phải là số nguyên không âm.";
+    public static final String VOUCHER_NUMBER_INVALID = "Giá trị phải là số hợp lệ.";
+    public static final String VOUCHER_EXPIRY_INVALID = "Hạn sử dụng phải là thời điểm trong tương lai.";
 
     // UC-01 Register Account
     public static final String REGISTER_SUCCESS = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";

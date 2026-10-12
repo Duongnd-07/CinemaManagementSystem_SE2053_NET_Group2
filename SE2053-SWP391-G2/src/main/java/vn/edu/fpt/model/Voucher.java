@@ -11,6 +11,9 @@ public class Voucher {
     private LocalDateTime expiryDate;
     private Integer ownerUserId;
     private String status;
+    private String voucherType;
+    private BigDecimal minOrderAmount;
+    private Integer createdByUserId;
 
     public Voucher() {
     }
@@ -69,5 +72,29 @@ public class Voucher {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getVoucherType() {
+        return voucherType;
+    }
+
+    public void setVoucherType(String voucherType) {
+        this.voucherType = voucherType;
+    }
+
+    public BigDecimal getMinOrderAmount() {
+        return minOrderAmount;
+    }
+
+    public void setMinOrderAmount(BigDecimal minOrderAmount) {
+        this.minOrderAmount = minOrderAmount;
+    }
+
+    public Integer getCreatedByUserId() {
+        return createdByUserId;
+    }
+
+    public void setCreatedByUserId(Integer createdByUserId) {
+        this.createdByUserId = createdByUserId;
     }
 }
