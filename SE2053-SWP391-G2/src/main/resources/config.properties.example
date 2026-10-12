@@ -1,0 +1,8 @@
+# Local development only. Enable real authentication before any shared deployment.
+auth.enabled=false
+auth.dev.staffId=1
+auth.dev.managerId=1
+db.driver=com.microsoft.sqlserver.jdbc.SQLServerDriver
+db.url=jdbc:sqlserver://localhost:1433;databaseName=cinemaDB;encrypt=true;trustServerCertificate=true
+db.user=YOUR_DB_USER
+db.password=CHANGE_ME
