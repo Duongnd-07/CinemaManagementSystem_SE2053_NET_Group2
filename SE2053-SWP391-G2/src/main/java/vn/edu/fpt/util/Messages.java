@@ -37,6 +37,10 @@ public final class Messages {
             "Trailer phải là đường dẫn YouTube hợp lệ (https://www.youtube.com/watch?v=...).";
     public static final String MOVIE_HAS_ACTIVE_SHOWTIMES =
             "Phim có suất chiếu đang/sắp diễn ra đã có vé đặt, không thể ẩn hoặc chuyển sang Đã kết thúc.";
+    // UC-04 View Movie List
+    public static final String MOVIE_LIST_EMPTY = "Hiện tại chưa có phim nào trong danh mục này.";
+    // UC-05 Search & Filter Movies
+    public static final String MOVIE_SEARCH_NO_RESULT = "Không tìm thấy phim phù hợp với từ khóa/bộ lọc của bạn.";
     // UC-34 Manage Movie Genres
     public static final String GENRE_SAVED = "Thể loại lưu lại thành công!";
     public static final String GENRE_DELETED = "Đã xóa thể loại.";

@@ -22,6 +22,8 @@ public class MovieDAO {
 
     private static final String SELECT_COLUMNS = "SELECT MovieID, Title, Synopsis, Director, [Cast], DurationMinutes, "
             + "AgeRating, ReleaseDate, PosterUrl, TrailerUrl, Formats, Status FROM Movie ";
+    // CI: không phân biệt hoa thường, AI: không phân biệt dấu
+    private static final String SEARCH_COLLATION = "Latin1_General_CI_AI";
 
     public List<Movie> search(String keyword, String status, String orderBy, int offset, int limit)
             throws SQLException {
@@ -65,6 +67,73 @@ public class MovieDAO {
             }
         }
         return result;
+    }
+
+    // UC-04/UC-05: phim theo các trạng thái cho trước, kèm bộ lọc (null/rỗng = bỏ qua, các điều kiện kết hợp AND).
+    // Chữ được so khớp một phần, không phân biệt hoa thường và dấu ("lat mat" khớp "Lật Mặt"). Mới khởi chiếu xếp trước.
+    public List<Movie> findByStatuses(List<String> statuses, String title, Integer genreId, String director,
+            String cast, String ageRating) throws SQLException {
+        List<Movie> movies = new ArrayList<>();
+        if (statuses.isEmpty()) {
+            return movies;
+        }
+        List<String> conditions = new ArrayList<>();
+        List<Object> params = new ArrayList<>(statuses);
+        conditions.add("Status IN (" + String.join(",", Collections.nCopies(statuses.size(), "?")) + ")");
+        addContains(conditions, params, "Title", title);
+        addContains(conditions, params, "Director", director);
+        addContains(conditions, params, "[Cast]", cast);
+        if (ageRating != null && !ageRating.isEmpty()) {
+            conditions.add("AgeRating = ?");
+            params.add(ageRating);
+        }
+        if (genreId != null) {
+            conditions.add("EXISTS (SELECT 1 FROM Movie_Genre mg WHERE mg.MovieID = Movie.MovieID AND mg.GenreID = ?)");
+            params.add(genreId);
+        }
+        String sql = SELECT_COLUMNS + "WHERE " + String.join(" AND ", conditions) + " ORDER BY ReleaseDate DESC, Title";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    movies.add(mapRow(rs));
+                }
+            }
+            loadGenres(conn, movies);
+        }
+        return movies;
+    }
+
+    // UC-05 gợi ý khi gõ: tối đa limit phim có tên chứa từ khóa (không phân biệt hoa thường/dấu),
+    // tên bắt đầu bằng từ khóa xếp trước; không nạp thể loại cho nhẹ
+    public List<Movie> suggestByTitle(List<String> statuses, String keyword, int limit) throws SQLException {
+        List<Movie> movies = new ArrayList<>();
+        if (statuses.isEmpty() || keyword == null || keyword.isEmpty()) {
+            return movies;
+        }
+        String escaped = escapeLike(keyword);
+        String titleMatch = "Title COLLATE " + SEARCH_COLLATION + " LIKE ?";
+        String sql = "SELECT TOP (?) " + SELECT_COLUMNS.substring("SELECT ".length())
+                + "WHERE Status IN (" + String.join(",", Collections.nCopies(statuses.size(), "?")) + ") "
+                + "AND " + titleMatch + " "
+                + "ORDER BY CASE WHEN " + titleMatch + " THEN 0 ELSE 1 END, ReleaseDate DESC, Title";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            int idx = 1;
+            ps.setInt(idx++, limit);
+            for (String status : statuses) {
+                ps.setString(idx++, status);
+            }
+            ps.setString(idx++, "%" + escaped + "%");
+            ps.setString(idx, escaped + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    movies.add(mapRow(rs));
+                }
+            }
+        }
+        return movies;
     }
 
     public Movie findById(int movieId) throws SQLException {
@@ -200,6 +269,13 @@ public class MovieDAO {
             ps.setString(idx++, status);
         }
         return idx;
+    }
+
+    private void addContains(List<String> conditions, List<Object> params, String column, String value) {
+        if (value != null && !value.isEmpty()) {
+            conditions.add(column + " COLLATE " + SEARCH_COLLATION + " LIKE ?");
+            params.add("%" + escapeLike(value) + "%");
+        }
     }
 
     // Ký tự đại diện của LIKE trong SQL Server được bọc [] để tìm đúng chuỗi người dùng nhập
