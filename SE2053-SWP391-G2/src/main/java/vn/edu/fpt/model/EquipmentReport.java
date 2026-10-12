@@ -13,6 +13,9 @@ public class EquipmentReport {
     private LocalDateTime reportDate;
     private LocalDateTime resolvedDate;
     private Integer seatId;
+    // Tên phòng và nhãn ghế (vd. C5) lấy kèm khi truy vấn danh sách, không phải cột của bảng
+    private String roomName;
+    private String seatLabel;
 
     public EquipmentReport() {
     }
@@ -95,5 +98,21 @@ public class EquipmentReport {
 
     public void setSeatId(Integer seatId) {
         this.seatId = seatId;
+    }
+
+    public String getRoomName() {
+        return roomName;
+    }
+
+    public void setRoomName(String roomName) {
+        this.roomName = roomName;
+    }
+
+    public String getSeatLabel() {
+        return seatLabel;
+    }
+
+    public void setSeatLabel(String seatLabel) {
+        this.seatLabel = seatLabel;
     }
 }

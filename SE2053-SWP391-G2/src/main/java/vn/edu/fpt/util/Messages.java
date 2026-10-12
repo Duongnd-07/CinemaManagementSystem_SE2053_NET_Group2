@@ -56,6 +56,14 @@ public final class Messages {
     public static final String CONCESSION_STOCK_INVALID = "Tồn kho phải là số nguyên không âm.";
     public static final String CONCESSION_IMAGE_URL_INVALID = "Đường dẫn ảnh phải là URL http/https hợp lệ.";
     public static final String CONCESSION_STATUS_INVALID = "Trạng thái không hợp lệ.";
+    // UC-21 Report Equipment Issue
+    public static final String REPORT_CATEGORY_INVALID = "Loại thiết bị không hợp lệ.";
+    public static final String REPORT_ROOM_INVALID = "Phòng chiếu không tồn tại.";
+    public static final String REPORT_SEAT_INVALID = "Ghế không thuộc phòng chiếu đã chọn.";
+    public static final String REPORT_URGENCY_INVALID = "Mức khẩn cấp không hợp lệ.";
+    public static final String REPORT_SEAT_LOCKED = "Ghế đã được khóa bảo trì.";
+    public static final String REPORT_SEAT_HAS_TICKETS =
+            "Ghế đã được khóa bảo trì và đang có {0} vé cho suất sắp chiếu, cần đổi ghế cho khách.";
     // UC-28 Manage Vouchers & Promotions
     public static final String VOUCHER_SAVED = "Mã khuyến mãi đã được tạo.";
     public static final String VOUCHER_CODE_INVALID = "Mã chỉ gồm chữ in hoa, chữ số, dấu gạch ngang; dài 4-32 ký tự.";
