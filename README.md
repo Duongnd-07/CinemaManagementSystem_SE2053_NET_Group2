@@ -148,8 +148,8 @@ Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `Serv
 ## 10. Chạy dự án
 
 1. Cài JDK 21, Maven, Tomcat (10.x nếu dùng `jakarta.servlet`), SQL Server.
-2. Tạo database `cinemaDB` bằng script schema lõi của nhóm, sau đó chạy các migration nghiệp vụ cần dùng (bao gồm `SE2053-SWP391-G2/sql/UC28_vouchers.sql` cho UC-28). Sao chép `ConnectDB.properties.example` thành `ConnectDB.properties` và `config.properties.example` thành `config.properties` trong `SE2053-SWP391-G2/src/main/resources/`, rồi điền cấu hình local; không commit hai file `.properties` này.
-3. Build: `mvn clean package` (cần thêm `<packaging>war</packaging>` và dependency Servlet/JSTL `provided` vào `pom.xml` khi bắt đầu viết controller).
+2. Tạo database bằng `SE2053-SWP391-G2/sql/cinemaDB.sql`, chạy các migration nghiệp vụ cần dùng (bao gồm `SE2053-SWP391-G2/sql/UC28_vouchers.sql` cho UC-28), rồi mới nạp dữ liệu mẫu bằng `SE2053-SWP391-G2/sql/cinemaDB_data.sql`. Thứ tự này bảo đảm dữ liệu voucher dùng đúng các cột và giá trị được bổ sung bởi migration UC-28. Sao chép `ConnectDB.properties.example` thành `ConnectDB.properties` và `config.properties.example` thành `config.properties` trong `SE2053-SWP391-G2/src/main/resources/`, rồi điền cấu hình local; không commit hai file `.properties` này.
+3. Build trong thư mục `SE2053-SWP391-G2`: `mvn clean package`.
 4. Deploy WAR lên Tomcat và mở `http://localhost:8080/<context>/`.
 5. Kiểm tra kết nối DB nhanh bằng cách chạy `main` của `vn.edu.fpt.util.DBContext`.
 
