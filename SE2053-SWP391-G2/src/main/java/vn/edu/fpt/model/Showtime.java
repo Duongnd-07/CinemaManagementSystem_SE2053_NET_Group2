@@ -11,6 +11,8 @@ public class Showtime {
     private LocalDateTime endTime;
     private BigDecimal basePrice;
     private String status;
+    // Phòng chiếu của suất (nạp kèm khi cần hiển thị tên phòng/định dạng, ví dụ UC-08)
+    private Room room;
 
     public Showtime() {
     }
@@ -69,5 +71,13 @@ public class Showtime {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Room getRoom() {
+        return room;
+    }
+
+    public void setRoom(Room room) {
+        this.room = room;
     }
 }

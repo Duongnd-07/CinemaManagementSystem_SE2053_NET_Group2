@@ -74,7 +74,7 @@
             <div class="relative flex-1">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8e919f]">search</span>
                 <input type="search" id="home-search" name="q" maxlength="100" placeholder="Tìm phim theo tên..." aria-label="Tên phim"
-                       data-movie-suggest="${ctx}/movies/suggest"
+                       data-movie-suggest="${ctx}/movies/suggest" data-movie-detail="${ctx}/movies/detail?id="
                        class="w-full h-11 pl-10 pr-4 rounded-xl bg-[#0f131d] border border-white/10 text-sm text-white placeholder-[#8e919f] focus:border-[#e50914] focus:outline-none transition"/>
             </div>
             <button type="submit" class="h-11 px-6 rounded-xl bg-[#e50914] hover:bg-[#b80710] text-white text-sm font-bold transition">

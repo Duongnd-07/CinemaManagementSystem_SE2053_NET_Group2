@@ -40,6 +40,7 @@
 
     function setup(input) {
         var url = input.getAttribute('data-movie-suggest');
+        var detailUrl = input.getAttribute('data-movie-detail');
         var form = input.form;
         var list = document.createElement('ul');
         var items = [];
@@ -80,11 +81,15 @@
             }
         }
 
-        // Chọn gợi ý: điền đúng tên phim rồi tìm kiếm
+        // Chọn gợi ý: mở trang chi tiết phim (UC-06) nếu có data-movie-detail, không thì tìm theo đúng tên phim
         function choose(movie) {
             input.value = movie.title;
             close();
-            form.submit();
+            if (detailUrl) {
+                window.location.href = detailUrl + encodeURIComponent(movie.id);
+            } else {
+                form.submit();
+            }
         }
 
         function render(movies, keyword) {

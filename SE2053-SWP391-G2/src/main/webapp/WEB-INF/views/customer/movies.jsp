@@ -25,6 +25,15 @@
     <jsp:include page="/WEB-INF/views/common/public-header.jsp"/>
 
     <main class="flex-1 max-w-7xl w-full mx-auto p-6 sm:p-10 space-y-6">
+        <%-- UC-06 E1: phim được chọn không còn xem được, chuyển về đây kèm thông báo --%>
+        <c:if test="${not empty sessionScope.flashError}">
+            <div class="p-4 bg-red-950/80 border border-red-500/40 rounded-xl text-red-300 text-sm flex items-center gap-3" role="alert">
+                <span class="material-symbols-outlined text-red-400 text-xl">error</span>
+                <span><c:out value="${sessionScope.flashError}"/></span>
+            </div>
+            <c:remove var="flashError" scope="session"/>
+        </c:if>
+
         <div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-white">Phim</h1>
             <p class="text-sm text-[#8e919f] mt-1">Danh sách phim đang chiếu và sắp chiếu tại CineLuxe.</p>
@@ -35,7 +44,7 @@
             <div class="relative">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8e919f]">search</span>
                 <input type="search" id="movie-search" name="q" maxlength="100" value="<c:out value='${search.keyword}'/>"
-                       data-movie-suggest="${ctx}/movies/suggest"
+                       data-movie-suggest="${ctx}/movies/suggest" data-movie-detail="${ctx}/movies/detail?id="
                        placeholder="Nhập tên phim cần tìm..." aria-label="Tên phim"
                        class="${inputClass} pl-10"/>
             </div>

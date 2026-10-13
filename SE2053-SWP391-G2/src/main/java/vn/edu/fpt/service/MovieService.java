@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import vn.edu.fpt.dao.GenreDAO;
@@ -47,6 +48,9 @@ public class MovieService {
     private static final Pattern YOUTUBE = Pattern.compile(
             "^https?://(www\\.|m\\.)?(youtube\\.com/(watch\\?(.*&)?v=|embed/|shorts/)|youtu\\.be/)[\\w-]{11}([?&#].*)?$",
             Pattern.CASE_INSENSITIVE);
+    // Lấy mã video từ các dạng link mà YOUTUBE chấp nhận
+    private static final Pattern YOUTUBE_ID = Pattern.compile(
+            "(?:[?&]v=|/embed/|/shorts/|youtu\\.be/)([\\w-]{11})", Pattern.CASE_INSENSITIVE);
 
     private final MovieDAO movieDAO = new MovieDAO();
     private final GenreDAO genreDAO = new GenreDAO();
@@ -88,16 +92,44 @@ public class MovieService {
         return groups;
     }
 
+    // UC-06: phim để xem chi tiết; null nếu không tồn tại hoặc không còn công khai (Ended/Hidden) - E1
+    public Movie findPublicMovie(int movieId) throws SQLException {
+        Movie movie = movieId > 0 ? movieDAO.findById(movieId) : null;
+        if (movie == null || matchPublicStatus(movie.getStatus()) == null) {
+            return null;
+        }
+        movie.setStatus(matchPublicStatus(movie.getStatus()));
+        return movie;
+    }
+
+    // UC-06: mã video YouTube (11 ký tự) để nhúng trình phát; null nếu không phải link YouTube hợp lệ
+    public String youtubeVideoId(String trailerUrl) {
+        String url = trailerUrl == null ? "" : trailerUrl.trim();
+        if (url.isEmpty() || !URL_CHARS.matcher(url).matches() || !YOUTUBE.matcher(url).matches()) {
+            return null;
+        }
+        Matcher matcher = YOUTUBE_ID.matcher(url);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
     // SQL Server so khớp Status không phân biệt hoa thường và bỏ khoảng trắng cuối, nên DB có thể trả về
     // "now showing " cho điều kiện IN ('Now Showing'); quy về đúng hằng số để không làm hỏng việc nhóm phim
     private String publicStatusOf(Movie movie) {
-        String status = movie.getStatus() == null ? "" : movie.getStatus().trim();
+        String status = matchPublicStatus(movie.getStatus());
+        if (status == null) {
+            throw new IllegalStateException("Trạng thái phim không thuộc nhóm công khai: " + movie.getStatus());
+        }
+        return status;
+    }
+
+    private String matchPublicStatus(String status) {
+        String value = status == null ? "" : status.trim();
         for (String publicStatus : MovieStatus.PUBLIC) {
-            if (publicStatus.equalsIgnoreCase(status)) {
+            if (publicStatus.equalsIgnoreCase(value)) {
                 return publicStatus;
             }
         }
-        throw new IllegalStateException("Trạng thái phim không thuộc nhóm công khai: " + movie.getStatus());
+        return null;
     }
 
     // UC-05: gợi ý tên phim khi người dùng đang gõ; chỉ phim công khai
