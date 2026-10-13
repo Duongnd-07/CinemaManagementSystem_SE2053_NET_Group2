@@ -39,6 +39,10 @@ public final class Messages {
             "Phim có suất chiếu đang/sắp diễn ra đã có vé đặt, không thể ẩn hoặc chuyển sang Đã kết thúc.";
     // UC-04 View Movie List
     public static final String MOVIE_LIST_EMPTY = "Hiện tại chưa có phim nào trong danh mục này.";
+    // UC-06 View Movie Details
+    public static final String MOVIE_DETAIL_UNAVAILABLE = "Phim này không còn tồn tại hoặc đã ngừng chiếu.";
+    // UC-08 View Showtimes
+    public static final String SHOWTIME_NONE_FOR_DATE = "Không có suất chiếu nào cho ngày này. Vui lòng chọn ngày khác.";
     // UC-05 Search & Filter Movies
     public static final String MOVIE_SEARCH_NO_RESULT = "Không tìm thấy phim phù hợp với từ khóa/bộ lọc của bạn.";
     // UC-34 Manage Movie Genres

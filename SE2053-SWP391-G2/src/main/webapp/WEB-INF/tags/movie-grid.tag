@@ -18,7 +18,7 @@
     <c:otherwise>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             <c:forEach var="movie" items="${movies}" end="${empty limit ? fn:length(movies) - 1 : limit - 1}">
-                <article class="movie-card">
+                <a class="movie-card" href="${ctx}/movies/detail?id=${movie.movieId}">
                     <div class="movie-poster">
                         <%-- Biểu tượng nằm dưới ảnh: hiện ra khi phim chưa có poster hoặc ảnh tải lỗi --%>
                         <span class="material-symbols-outlined text-5xl text-[#8e919f]">image</span>
@@ -51,7 +51,7 @@
                             </span>
                         </div>
                     </div>
-                </article>
+                </a>
             </c:forEach>
         </div>
     </c:otherwise>
