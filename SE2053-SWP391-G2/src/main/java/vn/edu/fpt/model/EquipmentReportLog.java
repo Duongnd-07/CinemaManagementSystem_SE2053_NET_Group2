@@ -10,8 +10,17 @@ public class EquipmentReportLog {
     private String newStatus;
     private String note;
     private LocalDateTime createdAt;
+    private String managerName;
 
     public EquipmentReportLog() {
+    }
+
+    public String getManagerName() {
+        return managerName;
+    }
+
+    public void setManagerName(String managerName) {
+        this.managerName = managerName;
     }
 
     public int getLogId() {

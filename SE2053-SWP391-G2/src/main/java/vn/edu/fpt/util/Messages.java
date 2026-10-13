@@ -60,6 +60,29 @@ public final class Messages {
     public static final String CONCESSION_STOCK_INVALID = "Tồn kho phải là số nguyên không âm.";
     public static final String CONCESSION_IMAGE_URL_INVALID = "Đường dẫn ảnh phải là URL http/https hợp lệ.";
     public static final String CONCESSION_STATUS_INVALID = "Trạng thái không hợp lệ.";
+    // UC-21 Report Equipment Issue
+    public static final String REPORT_CATEGORY_INVALID = "Loại thiết bị không hợp lệ.";
+    public static final String REPORT_ROOM_INVALID = "Phòng chiếu không tồn tại.";
+    public static final String REPORT_SEAT_INVALID = "Ghế không thuộc phòng chiếu đã chọn.";
+    public static final String REPORT_URGENCY_INVALID = "Mức khẩn cấp không hợp lệ.";
+    public static final String REPORT_SEAT_LOCKED = "Ghế đã được khóa bảo trì.";
+    public static final String REPORT_SEAT_HAS_TICKETS =
+            "Ghế đã được khóa bảo trì và đang có {0} vé cho suất sắp chiếu, cần đổi ghế cho khách.";
+    public static final String REPORT_SEAT_DUPLICATE = "Ghế {0} đã có báo cáo #SC-{1} chưa xử lý xong.";
+    // UC-26 Process Equipment Reports
+    public static final String REPORT_NOT_FOUND = "Không tìm thấy báo cáo sự cố.";
+    public static final String REPORT_STATUS_INVALID = "Trạng thái không hợp lệ.";
+    public static final String REPORT_STATUS_BACKWARD = "Không thể chuyển báo cáo về trạng thái trước đó.";
+    public static final String REPORT_NO_CHANGE = "Chưa có thay đổi nào để lưu.";
+    public static final String REPORT_CHANGED = "Báo cáo vừa được người khác cập nhật, vui lòng mở lại.";
+    public static final String REPORT_ROOM_LOCKED = "Đã khóa {0} để sửa chữa.";
+    public static final String REPORT_ROOM_LOCKED_SHOWTIMES =
+            "Đã khóa {0} để sửa chữa; phòng còn {1} suất chiếu sắp tới cần xử lý.";
+    public static final String REPORT_ROOM_UNLOCKED = "Đã mở khóa {0}.";
+    public static final String REPORT_SEAT_REOPENED = "Ghế {0} đã được mở lại.";
+    public static final String REPORT_LOG_ROOM_LOCKED = "Khóa phòng chiếu để sửa chữa.";
+    public static final String REPORT_LOG_ROOM_UNLOCKED = "Mở khóa phòng chiếu.";
+    public static final String REPORT_LOG_SEAT_REOPENED = "Mở lại ghế {0}.";
     // UC-28 Manage Vouchers & Promotions
     public static final String VOUCHER_SAVED = "Mã khuyến mãi đã được tạo.";
     public static final String VOUCHER_CODE_INVALID = "Mã chỉ gồm chữ in hoa, chữ số, dấu gạch ngang; dài 4-32 ký tự.";
@@ -95,6 +118,15 @@ public final class Messages {
     public static final String LOGIN_SUCCESS = "Đăng nhập thành công! Chào mừng {0}.";
     public static final String LOGOUT_SUCCESS = "Bạn đã đăng xuất an toàn khỏi hệ thống.";
     public static final String ACCESS_DENIED = "Bạn không có quyền truy cập vào khu vực này.";
+
+    // UC-09 View Real-Time Seat Map
+    public static final String SEAT_MAP_SHOWTIME_NOT_FOUND = "Suất chiếu không tồn tại hoặc không còn mở bán.";
+    public static final String SEAT_MAP_SHOWTIME_STARTED =
+            "Suất chiếu đã bắt đầu hoặc đã kết thúc. Vui lòng chọn suất chiếu khác.";
+    public static final String SEAT_MAP_ROOM_MAINTENANCE =
+            "Phòng chiếu đang tạm khóa để bảo dưỡng thiết bị. Vui lòng chọn suất chiếu khác.";
+    public static final String SEAT_MAP_NO_SEATS = "Phòng chiếu chưa được cấu hình sơ đồ ghế.";
+    public static final String SEAT_MAP_FULLY_BOOKED = "Suất chiếu này đã hết ghế trống.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
