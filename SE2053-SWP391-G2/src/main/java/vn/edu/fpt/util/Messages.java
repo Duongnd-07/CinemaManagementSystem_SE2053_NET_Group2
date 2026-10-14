@@ -128,6 +128,13 @@ public final class Messages {
     public static final String SEAT_MAP_NO_SEATS = "Phòng chiếu chưa được cấu hình sơ đồ ghế.";
     public static final String SEAT_MAP_FULLY_BOOKED = "Suất chiếu này đã hết ghế trống.";
 
+    // UC-10 Manage Profile
+    public static final String PROFILE_UPDATED = "Cập nhật thông tin thành công!";
+    public static final String PROFILE_PASSWORD_CHANGED = "Đổi mật khẩu thành công!";
+    public static final String PROFILE_CURRENT_PASSWORD_WRONG = "Mật khẩu hiện tại không chính xác.";
+    public static final String PROFILE_PASSWORD_SAME_AS_OLD = "Mật khẩu mới không được trùng với mật khẩu hiện tại.";
+    public static final String PROFILE_NOT_FOUND = "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.";
+
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
     private Messages() {

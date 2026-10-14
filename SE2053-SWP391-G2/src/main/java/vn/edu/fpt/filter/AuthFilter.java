@@ -15,13 +15,14 @@ import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.util.AppConfig;
 
-// RBAC theo tiền tố URL: /staff/* cho Staff, /manager/* cho Manager và Admin
-@WebFilter({"/staff/*", "/manager/*"})
+// RBAC theo tiền tố URL: /staff/* cho Staff, /manager/* cho Manager và Admin, /customer/* cho Customer
+@WebFilter({"/staff/*", "/manager/*", "/customer/*"})
 public class AuthFilter implements Filter {
     public static final String SESSION_USER = "user";
     private static final String ACTIVE = "Active";
     private static final List<String> STAFF_ROLES = List.of(Role.STAFF, Role.MANAGER, Role.ADMIN);
     private static final List<String> MANAGER_ROLES = List.of(Role.MANAGER, Role.ADMIN);
+    private static final List<String> CUSTOMER_ROLES = List.of(Role.CUSTOMER);
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -29,13 +30,15 @@ public class AuthFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
         boolean staffArea = req.getServletPath().startsWith("/staff");
-        List<String> allowedRoles = staffArea ? STAFF_ROLES : MANAGER_ROLES;
+        boolean customerArea = req.getServletPath().startsWith("/customer");
+        List<String> allowedRoles = customerArea ? CUSTOMER_ROLES : staffArea ? STAFF_ROLES : MANAGER_ROLES;
 
         HttpSession session = req.getSession(false);
         User user = session == null ? null : (User) session.getAttribute(SESSION_USER);
         boolean allowed = user != null && ACTIVE.equals(user.getStatus()) && allowedRoles.contains(user.getRole());
 
-        if (!AppConfig.getBoolean("auth.enabled", true)) {
+        // Khu vực khách hàng luôn bắt buộc đăng nhập thật vì các UC ở đây thao tác trên chính tài khoản đó
+        if (!customerArea && !AppConfig.getBoolean("auth.enabled", true)) {
             // Khi cấu hình auth.enabled=false: gắn user dev để các UC lấy được mã nhân viên/quản lý
             if (!allowed) {
                 req.getSession().setAttribute(SESSION_USER, devUser(staffArea));
