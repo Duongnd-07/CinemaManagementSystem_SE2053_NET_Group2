@@ -52,6 +52,13 @@
                         Nghiệp vụ
                     </a>
                 </c:if>
+                <c:if test="${sessionScope.user.role == 'Customer'}">
+                    <a href="${ctx}/customer/profile"
+                       class="px-3 py-1.5 ${activeNav == 'profile' ? 'bg-[#e50914]/20 text-white border-[#e50914]/40' : 'bg-white/5 hover:bg-white/10 text-gray-300 border-white/10'} border rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                        <span class="material-symbols-outlined text-sm">account_circle</span>
+                        Hồ sơ
+                    </a>
+                </c:if>
 
                 <!-- Đăng xuất -->
                 <a href="${ctx}/logout"

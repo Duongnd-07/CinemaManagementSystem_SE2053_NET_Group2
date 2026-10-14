@@ -155,6 +155,35 @@ public class UserDAO {
         }
     }
 
+    /**
+     * UC-10: Kiểm tra Số điện thoại đã thuộc về một tài khoản khác (bỏ qua chính tài khoản đang sửa).
+     */
+    public boolean existsByPhoneExceptUser(String phone, int userId) throws SQLException {
+        String sql = "SELECT 1 FROM [User] WHERE Phone = ? AND UserID <> ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, phone == null ? "" : phone.trim());
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /**
+     * UC-10: Cập nhật Họ tên và Số điện thoại. Email không nằm trong câu lệnh vì là định danh bất biến (BR-PROF-01).
+     */
+    public boolean updateProfile(int userId, String fullName, String phone) throws SQLException {
+        String sql = "UPDATE [User] SET FullName = ?, Phone = ? WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fullName);
+            ps.setString(2, phone);
+            ps.setInt(3, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     private User mapUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setUserId(rs.getInt("UserID"));
