@@ -64,6 +64,39 @@ public class VoucherDAO {
         return totals;
     }
 
+    public List<Voucher> findWalletForOwner(int ownerUserId) throws SQLException {
+        String sql = SELECT_COLUMNS
+                + "WHERE OwnerUserID = ? ORDER BY CASE WHEN Status = 'Active' THEN 0 "
+                + "WHEN Status = 'Used' THEN 1 ELSE 2 END, ExpiryDate DESC, VoucherID DESC";
+        List<Voucher> vouchers = new ArrayList<>();
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ownerUserId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    vouchers.add(mapRow(rs));
+                }
+            }
+        }
+        return vouchers;
+    }
+
+    public void insertRefundVoucher(Connection conn, Voucher voucher) throws SQLException {
+        String sql = "INSERT INTO Voucher (VoucherCode, DiscountValue, DiscountType, ExpiryDate, OwnerUserID, "
+                + "Status, VoucherType, MinOrderAmount, CreatedByUserID) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, voucher.getVoucherCode());
+            ps.setBigDecimal(2, voucher.getDiscountValue());
+            ps.setString(3, voucher.getDiscountType());
+            ps.setTimestamp(4, Timestamp.valueOf(voucher.getExpiryDate()));
+            ps.setInt(5, voucher.getOwnerUserId());
+            ps.setString(6, voucher.getStatus());
+            ps.setString(7, voucher.getVoucherType());
+            ps.setBigDecimal(8, voucher.getMinOrderAmount());
+            ps.executeUpdate();
+        }
+    }
+
     public boolean existsByCode(String voucherCode) throws SQLException {
         String sql = "SELECT COUNT(*) FROM Voucher WHERE VoucherCode = ?";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {

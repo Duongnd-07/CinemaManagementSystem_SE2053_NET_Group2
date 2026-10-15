@@ -148,10 +148,16 @@ Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `Serv
 ## 10. Chạy dự án
 
 1. Cài JDK 21, Maven, Tomcat (10.x nếu dùng `jakarta.servlet`), SQL Server.
-2. Tạo database bằng `SE2053-SWP391-G2/sql/cinemaDB.sql`, chạy các migration nghiệp vụ cần dùng (bao gồm `SE2053-SWP391-G2/sql/UC28_vouchers.sql` cho UC-28), rồi mới nạp dữ liệu mẫu bằng `SE2053-SWP391-G2/sql/cinemaDB_data.sql`. Thứ tự này bảo đảm dữ liệu voucher dùng đúng các cột và giá trị được bổ sung bởi migration UC-28. Sao chép `ConnectDB.properties.example` thành `ConnectDB.properties` và `config.properties.example` thành `config.properties` trong `SE2053-SWP391-G2/src/main/resources/`, rồi điền cấu hình local; không commit hai file `.properties` này.
+2. Tạo database bằng `SE2053-SWP391-G2/sql/cinemaDB.sql`, sau đó chạy các migration theo thứ tự `UC19-29_staff_ops.sql`, `UC28_vouchers.sql`, `UC11_12_15_16_18_customer_ops.sql`, rồi mới nạp dữ liệu mẫu bằng `SE2053-SWP391-G2/sql/cinemaDB_data.sql`. Các UC khách hàng dùng cột do UC-19 bổ sung, voucher UC-16 dùng schema UC-28, và script customer tạo cấu hình thời hạn voucher cùng bảng thông báo. Sao chép `ConnectDB.properties.example` thành `ConnectDB.properties` và `config.properties.example` thành `config.properties` trong `SE2053-SWP391-G2/src/main/resources/`, rồi điền cấu hình local; không commit hai file `.properties` này.
 3. Build trong thư mục `SE2053-SWP391-G2`: `mvn clean package`.
 4. Deploy WAR lên Tomcat và mở `http://localhost:8080/<context>/`.
 5. Kiểm tra kết nối DB nhanh bằng cách chạy `main` của `vn.edu.fpt.util.DBContext`.
+
+### Use case đang chờ phụ thuộc
+
+- **UC-14 Make Online Payment** chưa khởi tạo thanh toán cho tới khi UC-13 tạo đơn Pending và luồng giữ ghế được tích hợp. Khung adapter `PaymentGateway`, `PaymentRequest`, `PaymentSession` và `VerifiedPayment` nằm trong `vn.edu.fpt.service.payment`; khi nối UC-14, chỉ cho phép thanh toán đơn của customer đang đăng nhập, xác minh chữ ký callback, xử lý callback idempotent, rồi cập nhật đơn/vé trong transaction. Không xác nhận đơn hoặc phát hành vé dựa trên kết quả trả về từ trình duyệt.
+- Phần gửi email nhắc suất chiếu của **UC-18** cần JOB-02 và các đơn/vé được tạo từ luồng UC-13; trang thông báo và lưu trạng thái đọc đã hoạt động độc lập.
+- UC-11 đọc số dư từ `User.PointBalance`; migration tạo ledger append-only `LoyaltyPointHistory` và nạp giao dịch điểm từ các đơn đã thanh toán hiện có. Các luồng đặt vé sau này cần append giao dịch vào ledger trong cùng transaction với cập nhật điểm; không tạo hạng thành viên vì GB-04 quy định loyalty không phân hạng.
 
 ## 11. Checklist trước khi tạo Pull Request
 

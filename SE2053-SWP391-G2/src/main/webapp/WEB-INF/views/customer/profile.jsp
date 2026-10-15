@@ -53,6 +53,26 @@
                         <span class="material-symbols-outlined text-[#e50914]">account_circle</span>
                         Thông tin cá nhân
                     </a>
+                    <a href="${ctx}/customer/loyalty"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#262a35] hover:text-white text-sm font-semibold">
+                        <span class="material-symbols-outlined text-[#ffb95f]">stars</span>
+                        Điểm thành viên
+                    </a>
+                    <a href="${ctx}/customer/vouchers"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#262a35] hover:text-white text-sm font-semibold">
+                        <span class="material-symbols-outlined text-[#ffb95f]">confirmation_number</span>
+                        Ví voucher
+                    </a>
+                    <a href="${ctx}/customer/bookings"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#262a35] hover:text-white text-sm font-semibold">
+                        <span class="material-symbols-outlined text-[#ffb95f]">receipt_long</span>
+                        Lịch sử đặt vé
+                    </a>
+                    <a href="${ctx}/customer/notifications"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#262a35] hover:text-white text-sm font-semibold">
+                        <span class="material-symbols-outlined text-[#ffb95f]">notifications</span>
+                        Thông báo
+                    </a>
                 </nav>
                 <div class="h-px bg-white/5 my-2"></div>
                 <a href="${ctx}/logout"
