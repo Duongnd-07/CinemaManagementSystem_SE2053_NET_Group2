@@ -21,17 +21,17 @@ INSERT INTO Movie_Genre (MovieID, GenreID) VALUES (1, 3), (1, 4), (2, 1), (2, 2)
 
 -- 5. Insert Room
 INSERT INTO Room (RoomName, Format, TotalSeats, Status) VALUES 
-(N'Phòng chiếu 1', '2D', 100, 'Active'), 
+(N'Phòng chiếu 1', '2D', 8, 'Active'), -- TotalSeats = sức chứa (ghế đôi tính 2)
 (N'Phòng chiếu 2', '3D', 80, 'Active');
 
--- 6. Insert Seat (Tạo mẫu vài ghế cho Phòng 1)
+-- 6. Insert Seat (Tạo mẫu vài ghế cho Phòng 1; ghế đôi Sweetbox chiếm 2 cột: H1 = cột 1-2, H3 = cột 3-4)
 INSERT INTO Seat (RoomID, RowName, ColNumber, SeatType, Status) VALUES
 (1, 'A', 1, 'Standard', 'Active'),
 (1, 'A', 2, 'Standard', 'Active'),
 (1, 'D', 1, 'VIP', 'Active'),
 (1, 'D', 2, 'VIP', 'Active'),
 (1, 'H', 1, 'Sweetbox', 'Active'),
-(1, 'H', 2, 'Sweetbox', 'Maintenance'); -- Một ghế đôi đang bảo trì
+(1, 'H', 3, 'Sweetbox', 'Maintenance'); -- Một ghế đôi đang bảo trì
 
 -- 7. Insert Showtime (Suất chiếu)
 INSERT INTO Showtime (MovieID, RoomID, StartTime, EndTime, BasePrice, Status) VALUES

@@ -32,14 +32,17 @@ public class AnalyticsDAO {
             + "FROM Booking_Concession bc WHERE bc.BookingID = b.BookingID) cs "
             + "WHERE b.Status = ? AND b.BookingTime >= ? AND b.BookingTime < ? ";
 
-    // Mỗi suất chiếu trong kỳ kèm sức chứa phòng và số vé còn hiệu lực của đơn đã thanh toán.
+    // Mỗi suất chiếu trong kỳ kèm sức chứa phòng và số chỗ đã bán (vé còn hiệu lực của đơn đã thanh toán).
+    // Sức chứa và số chỗ tính theo người: ghế đôi (Sweetbox) = 2 (UC-25, giống SeatType.capacityOf).
     // Phòng chưa khai báo ghế thì lấy Room.TotalSeats. Tham số: trạng thái đơn, trạng thái vé (2), suất hủy, từ, đến
+    private static final String SEAT_CAPACITY = "CASE WHEN %s.SeatType = 'Sweetbox' THEN 2 ELSE 1 END";
     private static final String SHOWTIME_SALES = "FROM Showtime s "
             + "JOIN Movie m ON m.MovieID = s.MovieID "
             + "JOIN Room r ON r.RoomID = s.RoomID "
-            + "OUTER APPLY (SELECT COUNT(*) AS Seats FROM Seat st WHERE st.RoomID = s.RoomID) sc "
-            + "OUTER APPLY (SELECT COUNT(*) AS Sold, SUM(t.Price) AS Revenue FROM Ticket t "
-            + "JOIN Booking b ON b.BookingID = t.BookingID "
+            + "OUTER APPLY (SELECT SUM(" + String.format(SEAT_CAPACITY, "st") + ") AS Seats "
+            + "FROM Seat st WHERE st.RoomID = s.RoomID) sc "
+            + "OUTER APPLY (SELECT SUM(" + String.format(SEAT_CAPACITY, "se") + ") AS Sold, SUM(t.Price) AS Revenue "
+            + "FROM Ticket t JOIN Booking b ON b.BookingID = t.BookingID LEFT JOIN Seat se ON se.SeatID = t.SeatID "
             + "WHERE t.ShowtimeID = s.ShowtimeID AND b.Status = ? AND t.Status IN (?, ?)) tk "
             + "WHERE s.Status <> ? AND s.StartTime >= ? AND s.StartTime < ? ";
 

@@ -167,9 +167,16 @@
     --seat-type: var(--seat-vip);
 }
 
+/* Ghế đôi là một ghế chiếm 2 cột của lưới (UC-25) */
 .seat--sweetbox {
     --seat-type: var(--seat-sweetbox);
     border-radius: 12px 12px 5px 5px;
+    grid-column: span 2;
+    width: auto;
+}
+
+.seat--legend.seat--sweetbox {
+    width: calc(var(--seat-size) * 2 + var(--seat-gap));
 }
 
 .seat.is-available:hover {

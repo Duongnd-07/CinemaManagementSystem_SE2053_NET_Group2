@@ -43,6 +43,31 @@ public final class Messages {
     public static final String MOVIE_DETAIL_UNAVAILABLE = "Phim này không còn tồn tại hoặc đã ngừng chiếu.";
     // UC-08 View Showtimes
     public static final String SHOWTIME_NONE_FOR_DATE = "Không có suất chiếu nào cho ngày này. Vui lòng chọn ngày khác.";
+    // UC-25 Manage Rooms & Seat Layout
+    public static final String ROOM_SAVED = "Đã lưu phòng chiếu và sơ đồ ghế.";
+    public static final String ROOM_NOT_FOUND = "Không tìm thấy phòng chiếu.";
+    public static final String ROOM_NAME_DUPLICATE = "Tên phòng đã tồn tại trong hệ thống.";
+    public static final String ROOM_FORMAT_INVALID = "Định dạng chiếu chỉ gồm 2D, 3D hoặc IMAX.";
+    public static final String ROOM_SIZE_INVALID = "Số hàng phải từ 1 đến {0} và số cột từ 1 đến {1}.";
+    public static final String ROOM_LAYOUT_INVALID =
+            "Sơ đồ ghế không hợp lệ (sai kích thước, có ô không xác định hoặc ghế đôi không chiếm đủ 2 ô liền nhau). "
+            + "Vui lòng tạo lại lưới ghế.";
+    public static final String ROOM_LAYOUT_EMPTY = "Sơ đồ phải có ít nhất một ghế đang sử dụng được.";
+    public static final String ROOM_LAYOUT_UNSUPPORTED =
+            "Sơ đồ ghế hiện tại có vị trí ngoài phạm vi hỗ trợ (hàng A-Z, cột 1-{0}) hoặc có ghế chồng lên nhau "
+            + "(ghế đôi kiểu cũ chiếm 1 ô - hãy chạy sql/UC25_sweetbox_two_cells.sql) nên không chỉnh sửa được tại đây.";
+    public static final String ROOM_LAYOUT_CHANGED =
+            "Sơ đồ ghế vừa phát sinh vé hoặc giữ chỗ mới trong lúc lưu. Vui lòng tải lại trang và thử lại.";
+    public static final String ROOM_FORMAT_LOCKED =
+            "Phòng đang có {0} suất chiếu sắp tới nên không thể đổi định dạng chiếu.";
+    public static final String ROOM_SEAT_REMOVE_LOCKED =
+            "Ghế {0} đã có lịch sử vé, giữ chỗ hoặc báo cáo sự cố nên không thể xóa khỏi sơ đồ. Hãy khóa ghế thay vì xóa.";
+    public static final String ROOM_SEAT_DISABLE_LOCKED =
+            "Ghế {0} đã bán vé cho suất chiếu sắp tới nên không thể khóa.";
+    public static final String ROOM_SEAT_TYPE_LOCKED =
+            "Ghế {0} đã bán vé cho suất chiếu sắp tới nên không thể đổi loại ghế.";
+    public static final String ROOM_SEAT_REPORT_LOCKED =
+            "Ghế {0} đang có báo cáo sự cố chưa xử lý xong nên phải giữ trạng thái khóa.";
     // UC-05 Search & Filter Movies
     public static final String MOVIE_SEARCH_NO_RESULT = "Không tìm thấy phim phù hợp với từ khóa/bộ lọc của bạn.";
     // UC-34 Manage Movie Genres
