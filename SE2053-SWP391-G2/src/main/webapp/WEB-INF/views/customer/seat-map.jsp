@@ -129,7 +129,7 @@
                                                     <span class="seat-gap"></span>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    <c:set var="typeLabel" value="${seat.seatType == 'VIP' ? 'Ghế VIP' : seat.seatType == 'Sweetbox' ? 'Ghế đôi (Sweetbox)' : 'Ghế thường'}"/>
+                                                    <c:set var="typeLabel" value="${seat.seatType == 'VIP' ? 'Ghế VIP' : seat.seatType == 'Sweetbox' ? 'Ghế đôi (2 người)' : 'Ghế thường'}"/>
                                                     <c:set var="statusLabel" value="${seat.status == 'PENDING' ? 'Đang giữ' : seat.status == 'SOLD' ? 'Đã bán' : seat.status == 'MAINTENANCE' ? 'Bảo trì' : 'Trống'}"/>
                                                     <span class="seat seat--${fn:toLowerCase(seat.seatType)} is-${fn:toLowerCase(seat.status)}"
                                                           data-seat-id="${seat.seatId}"
@@ -161,7 +161,7 @@
                             <ul class="legend-list">
                                 <li><span class="seat seat--legend seat--standard is-available"></span>Ghế thường</li>
                                 <li><span class="seat seat--legend seat--vip is-available"></span>Ghế VIP</li>
-                                <li><span class="seat seat--legend seat--sweetbox is-available"></span>Ghế đôi (Sweetbox)</li>
+                                <li><span class="seat seat--legend seat--sweetbox is-available"></span>Ghế đôi (Sweetbox, 2 người)</li>
                             </ul>
                         </div>
                     </div>

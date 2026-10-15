@@ -148,7 +148,7 @@ Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `Serv
 ## 10. Chạy dự án
 
 1. Cài JDK 21, Maven, Tomcat (10.x nếu dùng `jakarta.servlet`), SQL Server.
-2. Tạo database bằng `SE2053-SWP391-G2/sql/cinemaDB.sql`, chạy các migration nghiệp vụ cần dùng (bao gồm `SE2053-SWP391-G2/sql/UC28_vouchers.sql` cho UC-28), rồi mới nạp dữ liệu mẫu bằng `SE2053-SWP391-G2/sql/cinemaDB_data.sql`. Thứ tự này bảo đảm dữ liệu voucher dùng đúng các cột và giá trị được bổ sung bởi migration UC-28. Sao chép `ConnectDB.properties.example` thành `ConnectDB.properties` và `config.properties.example` thành `config.properties` trong `SE2053-SWP391-G2/src/main/resources/`, rồi điền cấu hình local; không commit hai file `.properties` này.
+2. Tạo database bằng `SE2053-SWP391-G2/sql/cinemaDB.sql`, chạy các migration nghiệp vụ cần dùng (bao gồm `SE2053-SWP391-G2/sql/UC28_vouchers.sql` cho UC-28), rồi mới nạp dữ liệu mẫu bằng `SE2053-SWP391-G2/sql/cinemaDB_data.sql`. Thứ tự này bảo đảm dữ liệu voucher dùng đúng các cột và giá trị được bổ sung bởi migration UC-28. Thứ tự đầy đủ đang dùng: `cinemaDB.sql` → `UC01_email_verification.sql` → `UC23_add_movie_formats.sql` → `UC19-29_staff_ops.sql` → `UC28_vouchers.sql` → `UC05_movie_search_indexes.sql` → `UC25_sweetbox_two_cells.sql` → `cinemaDB_data.sql` → `UC02_seed_passwords.sql` (→ `UC09_seed_seat_map.sql` nếu cần dữ liệu test sơ đồ ghế). Khi chạy bằng `sqlcmd` nhớ thêm cờ `-I` (bật `QUOTED_IDENTIFIER` như SSMS). **DB đã có sẵn** thì chỉ cần chạy thêm migration mới, ví dụ `UC25_sweetbox_two_cells.sql` (ghế đôi Sweetbox chiếm 2 cột, sức chứa tính 2 người - xem mục 12). Sao chép `ConnectDB.properties.example` thành `ConnectDB.properties` và `config.properties.example` thành `config.properties` trong `SE2053-SWP391-G2/src/main/resources/`, rồi điền cấu hình local; không commit hai file `.properties` này.
 3. Build trong thư mục `SE2053-SWP391-G2`: `mvn clean package`.
 4. Deploy WAR lên Tomcat và mở `http://localhost:8080/<context>/`.
 5. Kiểm tra kết nối DB nhanh bằng cách chạy `main` của `vn.edu.fpt.util.DBContext`.
@@ -165,3 +165,12 @@ Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `Serv
 - [ ] Không còn `System.out.println`, `printStackTrace`, import thừa, code comment-out
 - [ ] Không commit mật khẩu/khóa bí mật, file `target/`
 - [ ] Commit message đúng quy ước, PR mô tả rõ UC/GB liên quan
+
+## 12. Ghế đôi (Sweetbox)
+
+- Ghế đôi là **một** bản ghi `Seat` chiếm **2 cột liền nhau**; `ColNumber` là cột bên trái (ghế đôi `H1` chiếm cột 1–2, ghế kế tiếp trong hàng bắt đầu từ cột 3). Không tạo bản ghi cho cột bên phải.
+- Một vé ghế đôi dành cho 2 người: **giá = giá 2 ghế thường**; ghế VIP = giá suất chiếu + phụ thu `SEAT_SURCHARGE_VIP`. Dùng chung `vn.edu.fpt.service.TicketPricing.priceOf(...)` khi đặt vé (UC-13) và bán tại quầy (UC-19), không tự tính lại.
+- **Sức chứa** tính theo người: ghế đôi = 2 (`SeatType.capacityOf`). `Room.TotalSeats` lưu sức chứa; tỷ lệ lấp đầy (UC-29) tính số chỗ đã bán và sức chứa theo cùng quy tắc.
+- Số cột ghế chiếm trên sơ đồ: `SeatType.widthOf` (UC-09 cho ghế đôi trải 2 cột, UC-25 thiết kế theo ô).
+- Ghế đã bán vé cho suất chưa kết thúc không được đổi loại, khóa hay xóa (UC-25).
+- DB tạo trước quy ước này: chạy `SE2053-SWP391-G2/sql/UC25_sweetbox_two_cells.sql` (an toàn khi chạy lại).
