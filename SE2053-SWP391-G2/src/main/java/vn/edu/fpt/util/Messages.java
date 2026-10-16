@@ -36,7 +36,7 @@ public final class Messages {
     public static final String MOVIE_TRAILER_URL_INVALID =
             "Trailer phải là đường dẫn YouTube hợp lệ (https://www.youtube.com/watch?v=...).";
     public static final String MOVIE_HAS_ACTIVE_SHOWTIMES =
-            "Phim có suất chiếu đang/sắp diễn ra đã có vé đặt, không thể ẩn hoặc chuyển sang Đã kết thúc.";
+            "Phim còn suất chiếu chưa kết thúc. Vui lòng hủy các suất chiếu trước khi ẩn hoặc chuyển sang Đã kết thúc.";
     // UC-04 View Movie List
     public static final String MOVIE_LIST_EMPTY = "Hiện tại chưa có phim nào trong danh mục này.";
     // UC-06 View Movie Details
@@ -159,6 +159,8 @@ public final class Messages {
     public static final String PROFILE_CURRENT_PASSWORD_WRONG = "Mật khẩu hiện tại không chính xác.";
     public static final String PROFILE_PASSWORD_SAME_AS_OLD = "Mật khẩu mới không được trùng với mật khẩu hiện tại.";
     public static final String PROFILE_NOT_FOUND = "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.";
+    public static final String PROFILE_SESSION_REVOKED =
+            "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

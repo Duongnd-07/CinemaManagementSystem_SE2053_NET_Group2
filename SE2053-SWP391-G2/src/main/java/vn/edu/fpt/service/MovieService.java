@@ -226,7 +226,7 @@ public class MovieService {
             return;
         }
         // BR-MOV-04
-        if (movieDAO.hasActiveBookedShowtimes(movieId)) {
+        if (movieDAO.hasUnfinishedShowtimes(movieId)) {
             throw new ValidationException(Map.of("general", Messages.MOVIE_HAS_ACTIVE_SHOWTIMES));
         }
         movieDAO.updateStatus(movieId, MovieStatus.HIDDEN);
@@ -347,10 +347,10 @@ public class MovieService {
                 return;
             }
         }
-        // BR-MOV-04: không ẩn/kết thúc phim khi còn suất chiếu chưa diễn ra đã bán vé
+        // BR-MOV-04: suất chưa hủy vẫn chiếm lịch phòng và tính vào dashboard, nên phải hủy suất trước khi ẩn/kết thúc
         boolean closing = MovieStatus.HIDDEN.equals(status) || MovieStatus.ENDED.equals(status);
         if (closing && current != null && !status.equals(current.getStatus())
-                && movieDAO.hasActiveBookedShowtimes(current.getMovieId())) {
+                && movieDAO.hasUnfinishedShowtimes(current.getMovieId())) {
             errors.put("status", Messages.MOVIE_HAS_ACTIVE_SHOWTIMES);
         }
     }
