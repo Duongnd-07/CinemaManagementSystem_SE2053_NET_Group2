@@ -10,10 +10,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ProfileService;
 import vn.edu.fpt.util.AppConfig;
+import vn.edu.fpt.util.Messages;
 
 // RBAC theo tiền tố URL: /staff/* cho Staff, /manager/* cho Manager và Admin, /customer/* cho Customer
 @WebFilter({"/staff/*", "/manager/*", "/customer/*"})
@@ -23,6 +28,9 @@ public class AuthFilter implements Filter {
     private static final List<String> STAFF_ROLES = List.of(Role.STAFF, Role.MANAGER, Role.ADMIN);
     private static final List<String> MANAGER_ROLES = List.of(Role.MANAGER, Role.ADMIN);
     private static final List<String> CUSTOMER_ROLES = List.of(Role.CUSTOMER);
+    private static final Logger LOGGER = Logger.getLogger(AuthFilter.class.getName());
+
+    private final ProfileService profileService = new ProfileService();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -47,18 +55,39 @@ public class AuthFilter implements Filter {
             return;
         }
         if (user == null) {
-            String returnUrl = req.getRequestURI();
-            if (req.getQueryString() != null) {
-                returnUrl += "?" + req.getQueryString();
-            }
-            resp.sendRedirect(req.getContextPath() + "/login?returnUrl=" + java.net.URLEncoder.encode(returnUrl, java.nio.charset.StandardCharsets.UTF_8));
+            redirectToLogin(req, resp);
             return;
         }
         if (!allowed) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập vào khu vực này.");
             return;
         }
+        if (customerArea) {
+            boolean credentialCurrent;
+            try {
+                credentialCurrent = profileService.isSessionCredentialCurrent(user);
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi kiểm tra hiệu lực phiên đăng nhập", e);
+                resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, Messages.SYSTEM_ERROR);
+                return;
+            }
+            if (!credentialCurrent) {
+                // UC-10 AF1 bước 4: mật khẩu đã được đổi ở phiên khác -> thu hồi phiên này
+                session.invalidate();
+                req.getSession(true).setAttribute("flashError", Messages.PROFILE_SESSION_REVOKED);
+                redirectToLogin(req, resp);
+                return;
+            }
+        }
         chain.doFilter(request, response);
+    }
+
+    private void redirectToLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String returnUrl = req.getRequestURI();
+        if (req.getQueryString() != null) {
+            returnUrl += "?" + req.getQueryString();
+        }
+        resp.sendRedirect(req.getContextPath() + "/login?returnUrl=" + java.net.URLEncoder.encode(returnUrl, java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private User devUser(boolean staffArea) {

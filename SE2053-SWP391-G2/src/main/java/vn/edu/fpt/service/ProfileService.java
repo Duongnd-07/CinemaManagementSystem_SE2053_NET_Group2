@@ -116,6 +116,18 @@ public class ProfileService {
         return requireUser(userId);
     }
 
+    /**
+     * AF1 bước 4: phiên đăng nhập chỉ còn hiệu lực khi mật khẩu băm lưu lúc đăng nhập vẫn trùng với DB.
+     * Đổi mật khẩu ở một phiên sẽ làm mọi phiên khác của tài khoản đó hết hiệu lực.
+     */
+    public boolean isSessionCredentialCurrent(User sessionUser) throws SQLException {
+        if (sessionUser == null || sessionUser.getPasswordHash() == null) {
+            return false;
+        }
+        User user = userDAO.findById(sessionUser.getUserId());
+        return user != null && sessionUser.getPasswordHash().equals(user.getPasswordHash());
+    }
+
     private User requireUser(int userId) throws SQLException, ValidationException {
         User user = userDAO.findById(userId);
         if (user == null) {

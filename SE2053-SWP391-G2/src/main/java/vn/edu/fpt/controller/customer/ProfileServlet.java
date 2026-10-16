@@ -71,6 +71,9 @@ public class ProfileServlet extends HttpServlet {
             String message;
             if (passwordAction) {
                 updated = profileService.changePassword(userId, readPasswordForm(request));
+                // AF1 bước 4: cấp session ID mới cho phiên hiện tại; các phiên khác bị AuthFilter thu hồi
+                // vì mật khẩu băm của chúng không còn khớp với DB
+                request.changeSessionId();
                 message = Messages.PROFILE_PASSWORD_CHANGED;
             } else {
                 updated = profileService.updateProfile(userId, profileForm);
