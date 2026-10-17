@@ -126,8 +126,8 @@
                                                 </p>
                                                 <div class="flex flex-wrap gap-2">
                                                     <c:forEach var="showtime" items="${roomEntry.value}">
-                                                        <%-- Chọn giờ chiếu -> sơ đồ ghế của suất (UC-09) để bắt đầu đặt vé --%>
-                                                        <a href="${ctx}/seat-map?id=${showtime.showtimeId}" class="time-slot"
+                                                        <%-- Chọn giờ chiếu -> chọn ghế của suất (UC-13) để bắt đầu đặt vé --%>
+                                                        <a href="${ctx}/booking?showtimeId=${showtime.showtimeId}" class="time-slot"
                                                            title="Chọn ghế suất ${showtime.startTime.format(timeFormat)} - <c:out value='${roomEntry.key}'/>">
                                                             <span class="time-slot-start">${showtime.startTime.format(timeFormat)}</span>
                                                             <span class="time-slot-sub">
