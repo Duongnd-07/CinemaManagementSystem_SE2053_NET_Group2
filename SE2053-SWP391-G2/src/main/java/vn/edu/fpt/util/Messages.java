@@ -162,6 +162,32 @@ public final class Messages {
     public static final String PROFILE_SESSION_REVOKED =
             "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
 
+    // UC-13 Book Ticket Online (E1-E4 theo đúng câu chữ SRS)
+    public static final String BOOKING_HOLD_EXPIRED = "Phiên đặt vé đã hết hạn. Vui lòng chọn lại ghế.";
+    public static final String BOOKING_SEAT_TAKEN =
+            "Ghế bạn chọn vừa có người đặt giữ chỗ. Vui lòng chọn ghế khác.";
+    public static final String BOOKING_VOUCHER_INVALID =
+            "Mã giảm giá không hợp lệ hoặc không đủ điều kiện áp dụng.";
+    public static final String BOOKING_POINTS_INSUFFICIENT = "Số điểm tích lũy của bạn không đủ để quy đổi.";
+    public static final String BOOKING_SEAT_REQUIRED = "Vui lòng chọn ít nhất một ghế.";
+    public static final String BOOKING_SEAT_LIMIT = "Mỗi đơn đặt vé chỉ được chọn tối đa {0} ghế.";
+    public static final String BOOKING_SEAT_INVALID = "Ghế đã chọn không thuộc phòng chiếu của suất này.";
+    public static final String BOOKING_AGE_REQUIRED =
+            "Phim phân loại {0}: bạn cần xác nhận đủ độ tuổi quy định trước khi tiếp tục đặt vé.";
+    public static final String BOOKING_CUSTOMER_ONLY = "Chỉ tài khoản khách hàng mới có thể đặt vé online.";
+    public static final String BOOKING_POINTS_INVALID = "Số điểm quy đổi phải là số nguyên không âm.";
+    public static final String BOOKING_POINTS_EXCEED =
+            "Điểm chỉ được trừ vào tiền vé; đơn này dùng được tối đa {0} điểm.";
+    public static final String BOOKING_CONCESSION_QUANTITY_INVALID = "Số lượng {0} phải từ 0 đến {1}.";
+    public static final String BOOKING_CONCESSION_UNAVAILABLE = "Món {0} hiện đã ngừng bán hoặc không đủ hàng.";
+    public static final String BOOKING_SHOWTIME_UNAVAILABLE =
+            "Suất chiếu không còn mở bán. Đơn đặt vé đã được hủy và ghế đã được trả lại.";
+    public static final String BOOKING_UPDATED = "Đã cập nhật đơn hàng.";
+    public static final String BOOKING_CANCELLED = "Đã hủy đơn đặt vé và trả lại ghế.";
+    public static final String BOOKING_NOT_FOUND = "Không tìm thấy đơn đặt vé.";
+    public static final String BOOKING_NOT_PENDING = "Đơn đặt vé không còn ở trạng thái chờ thanh toán.";
+    public static final String BOOKING_PAID = "Thanh toán thành công! Vé điện tử đã được phát hành.";
+
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
     private Messages() {
