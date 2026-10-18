@@ -86,10 +86,17 @@ public class MovieService {
             groups.put(status, new ArrayList<>());
         }
         for (Movie movie : movieDAO.findByStatuses(MovieStatus.PUBLIC, form.getKeyword(), genreId,
-                form.getDirector(), form.getCast(), form.getAgeRating())) {
+                form.getDirector(), form.getCast(), allowedRatings(form.getAgeRating()))) {
             groups.get(publicStatusOf(movie)).add(movie);
         }
         return groups;
+    }
+
+    // Lọc theo độ tuổi người xem: chọn một nhãn thì gồm mọi phim người ở độ tuổi đó được xem
+    // (AgeRating.ALL xếp từ P tới C18), vd C16 -> P, C13, C16. Rỗng = không lọc.
+    private List<String> allowedRatings(String ageRating) {
+        int index = AgeRating.ALL.indexOf(ageRating);
+        return index < 0 ? List.of() : AgeRating.ALL.subList(0, index + 1);
     }
 
     // UC-06: phim để xem chi tiết; null nếu không tồn tại hoặc không còn công khai (Ended/Hidden) - E1

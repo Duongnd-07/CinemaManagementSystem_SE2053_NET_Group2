@@ -71,7 +71,7 @@ public class MovieDAO {
     // UC-04/UC-05: phim theo các trạng thái cho trước, kèm bộ lọc (null/rỗng = bỏ qua, các điều kiện kết hợp AND).
     // Chữ được so khớp một phần, không phân biệt hoa thường và dấu ("lat mat" khớp "Lật Mặt"). Mới khởi chiếu xếp trước.
     public List<Movie> findByStatuses(List<String> statuses, String title, Integer genreId, String director,
-            String cast, String ageRating) throws SQLException {
+            String cast, List<String> ageRatings) throws SQLException {
         List<Movie> movies = new ArrayList<>();
         if (statuses.isEmpty()) {
             return movies;
@@ -82,9 +82,9 @@ public class MovieDAO {
         addContains(conditions, params, "Title", title);
         addContains(conditions, params, "Director", director);
         addContains(conditions, params, "[Cast]", cast);
-        if (ageRating != null && !ageRating.isEmpty()) {
-            conditions.add("AgeRating = ?");
-            params.add(ageRating);
+        if (ageRatings != null && !ageRatings.isEmpty()) {
+            conditions.add("AgeRating IN (" + String.join(",", Collections.nCopies(ageRatings.size(), "?")) + ")");
+            params.addAll(ageRatings);
         }
         if (genreId != null) {
             conditions.add("EXISTS (SELECT 1 FROM Movie_Genre mg WHERE mg.MovieID = Movie.MovieID AND mg.GenreID = ?)");

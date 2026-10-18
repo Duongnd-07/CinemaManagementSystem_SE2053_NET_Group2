@@ -135,6 +135,10 @@
         var lock = lockAt(r, left);
         var code = left < 0 ? AISLE : grid[r][left];
 
+        if (left >= 0 && isCouple(code) && (tool === AISLE || tool === 'S' || tool === 'V')) {
+            return splitCouple(r, c - left, left, code, lock, tool);
+        }
+
         if (tool === AISLE) {
             if (left < 0) {
                 return null;
@@ -169,12 +173,36 @@
         var keep = lock === 'report';
         if (left < 0) {
             grid[r][c] = tool;
-        } else if (isCouple(code)) {
-            // Tách ghế đôi: ô trái giữ ghế cũ (đổi loại), ô phải thành ghế mới cùng loại
-            setType(r, left, tool, keep);
-            grid[r][left + 1] = tool;
         } else {
             setType(r, left, tool, keep);
+        }
+        return keep ? 'Ghế ' + position(r, left) + ' có báo cáo sự cố chưa xử lý nên vẫn giữ trạng thái khóa.' : null;
+    }
+
+    // Tô lối đi / ghế thường / VIP lên MỘT nửa ghế đôi (half 0 = ô trái, 1 = ô phải): nửa đó theo công cụ,
+    // nửa còn lại thành ghế thường (giữ trạng thái khóa của ghế đôi). Ô trái giữ ghế cũ trong DB nên
+    // xóa ô trái cần ghế chưa có lịch sử, còn đổi loại cần ghế chưa bán vé.
+    function splitCouple(r, half, left, code, lock, tool) {
+        var name = seatName(r, left);
+        var other = isDisabled(code) ? 's' : 'S';
+        var keep = lock === 'report';
+        if (half === 0 && tool === AISLE) {
+            if (lock) {
+                return 'Ghế ' + name + ' ' + LOCK_LABELS[lock] + ' nên không thể xóa, chỉ có thể khóa.';
+            }
+            grid[r][left] = AISLE;
+            grid[r][left + 1] = other;
+            return null;
+        }
+        if (lock === 'sold') {
+            return 'Ghế ' + name + ' đã bán vé cho suất chiếu sắp tới nên không thể đổi loại ghế.';
+        }
+        if (half === 0) {
+            setType(r, left, tool, keep);
+            grid[r][left + 1] = other;
+        } else {
+            grid[r][left] = keep ? 's' : other;
+            grid[r][left + 1] = tool;
         }
         return keep ? 'Ghế ' + position(r, left) + ' có báo cáo sự cố chưa xử lý nên vẫn giữ trạng thái khóa.' : null;
     }
@@ -201,7 +229,13 @@
                 + ' nên không thể bị ghế đôi thay thế.';
         }
         if (rightLeft >= 0 && rightLeft !== left) {
+            // Ô bên phải là nửa trái của một ghế đôi khác (vd dời ghế đôi D3-4 sang D2-3): ghế đôi mới chỉ đè
+            // một nửa, nửa còn lại (D4) thành ghế thường, giữ trạng thái khóa của ghế đôi cũ
+            var leftover = isCouple(grid[r][rightLeft]) ? (isDisabled(grid[r][rightLeft]) ? 's' : 'S') : null;
             clearSeat(r, rightLeft);
+            if (leftover) {
+                grid[r][rightLeft + 1] = leftover;
+            }
         }
         var keep = lock === 'report';
         grid[r][c] = keep ? 'c' : 'C';
@@ -358,6 +392,18 @@
         return el && el.classList.contains('cell') && el.dataset.r !== undefined ? el : null;
     }
 
+    // Cột của ô được bấm; ghế đôi là một nút rộng 2 ô nên nửa phải của nút là cột bên phải
+    function columnAt(el, clientX) {
+        var c = parseInt(el.dataset.c, 10);
+        if (el.classList.contains('cell-wide')) {
+            var rect = el.getBoundingClientRect();
+            if (clientX >= rect.left + rect.width / 2) {
+                c++;
+            }
+        }
+        return c;
+    }
+
     // Ô của cả hàng / cột; ghế đôi tô theo từng cặp từ trái sang
     function lineCells(kind, index, tool) {
         var cells = [];
@@ -390,7 +436,7 @@
         }
         e.preventDefault();
         painting = true;
-        paint([[parseInt(target.dataset.r, 10), parseInt(target.dataset.c, 10)]]);
+        paint([[parseInt(target.dataset.r, 10), columnAt(target, e.clientX)]]);
     });
     gridEl.addEventListener('pointermove', function (e) {
         if (!painting) {
@@ -399,7 +445,7 @@
         var cell = cellFromPoint(e.clientX, e.clientY);
         if (cell) {
             var r = parseInt(cell.dataset.r, 10);
-            var c = parseInt(cell.dataset.c, 10);
+            var c = columnAt(cell, e.clientX);
             var before = grid[r].join('');
             applyTool(r, c, currentTool());
             if (grid[r].join('') !== before) {

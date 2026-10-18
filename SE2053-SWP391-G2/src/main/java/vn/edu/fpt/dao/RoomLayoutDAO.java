@@ -169,6 +169,20 @@ public class RoomLayoutDAO {
         }
     }
 
+    // Sửa thông tin phòng (tên, định dạng, trạng thái). Chỉ ghi khi Status trong DB vẫn là expectedStatus,
+    // để không ghi đè trạng thái Bảo trì mà UC-26 vừa đặt trong lúc Manager đang sửa; trả về false nếu đã đổi
+    public boolean updateRoomInfo(Room room, String expectedStatus) throws SQLException {
+        String sql = "UPDATE Room SET RoomName = ?, Format = ?, Status = ? WHERE RoomID = ? AND Status = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, room.getRoomName());
+            ps.setString(2, room.getFormat());
+            ps.setString(3, room.getStatus());
+            ps.setInt(4, room.getRoomId());
+            ps.setString(5, expectedStatus);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     public void insertSeats(Connection conn, int roomId, List<Seat> seats) throws SQLException {
         if (seats.isEmpty()) {
             return;
