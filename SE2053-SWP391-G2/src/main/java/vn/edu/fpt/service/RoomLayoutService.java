@@ -35,6 +35,8 @@ public class RoomLayoutService {
             'S', SeatType.STANDARD, 'V', SeatType.VIP, 'C', SeatType.SWEETBOX);
     private static final Map<String, Character> CODE_BY_TYPE = Map.of(
             SeatType.STANDARD, 'S', SeatType.VIP, 'V', SeatType.SWEETBOX, 'C');
+    // Trạng thái Manager được chọn; Bảo trì (Maintenance) chỉ do UC-26 bật/tắt
+    public static final List<String> MANAGER_STATUSES = List.of(RoomStatus.ACTIVE, RoomStatus.INACTIVE);
     // Số vị trí ghế tối đa liệt kê trong một thông báo lỗi
     private static final int MAX_LISTED = 12;
     private static final int SQL_UNIQUE_VIOLATION = 2627;
@@ -64,9 +66,24 @@ public class RoomLayoutService {
     public RoomLayoutForm newForm() {
         RoomLayoutForm form = new RoomLayoutForm();
         form.setFormat(MovieService.FORMATS.get(0));
+        form.setStatus(RoomStatus.ACTIVE);
         form.setRows(String.valueOf(DEFAULT_ROWS));
         form.setCols(String.valueOf(DEFAULT_COLS));
         form.setLayout(filledLayout(DEFAULT_ROWS, DEFAULT_COLS, 'S'));
+        return form;
+    }
+
+    // Form Sửa: chỉ tên, định dạng, trạng thái (không dựng lưới ghế)
+    public RoomLayoutForm loadInfoForm(int roomId) throws SQLException, ValidationException {
+        Room room = roomId > 0 ? roomDAO.findRoom(roomId) : null;
+        if (room == null) {
+            throw new ValidationException(Map.of("general", Messages.ROOM_NOT_FOUND));
+        }
+        RoomLayoutForm form = new RoomLayoutForm();
+        form.setRoomId(room.getRoomId());
+        form.setName(room.getRoomName());
+        form.setFormat(room.getFormat() == null ? "" : room.getFormat());
+        form.setStatus(room.getStatus() == null ? "" : room.getStatus());
         return form;
     }
 
@@ -80,6 +97,7 @@ public class RoomLayoutService {
         form.setRoomId(room.getRoomId());
         form.setName(room.getRoomName());
         form.setFormat(room.getFormat() == null ? "" : room.getFormat());
+        form.setStatus(room.getStatus() == null ? "" : room.getStatus());
         List<Seat> seats = roomDAO.findSeats(roomId);
         if (seats.isEmpty()) {
             return form;
@@ -145,17 +163,18 @@ public class RoomLayoutService {
     // Lưu phòng và toàn bộ sơ đồ ghế trong một giao dịch; trả về RoomID
     public int save(RoomLayoutForm form) throws SQLException, ValidationException {
         Map<String, String> errors = new LinkedHashMap<>();
-        String name = form.getName() == null ? "" : form.getName().trim();
-        String format = form.getFormat() == null ? "" : form.getFormat().trim();
-        form.setName(name);
-        form.setFormat(format);
-        if (name.isEmpty()) {
-            errors.put("name", Messages.format(Messages.MSG02, "Tên phòng"));
-        } else if (name.length() > MAX_NAME) {
-            errors.put("name", Messages.format(Messages.MSG08, MAX_NAME));
+        Room current = null;
+        if (form.getRoomId() > 0) {
+            current = roomDAO.findRoom(form.getRoomId());
+            if (current == null) {
+                throw new ValidationException(Map.of("general", Messages.ROOM_NOT_FOUND));
+            }
         }
-        if (!MovieService.FORMATS.contains(format)) {
-            errors.put("format", Messages.ROOM_FORMAT_INVALID);
+        validateInfo(form, current, errors);
+        // Phòng mới chọn Hoạt động / Dừng hoạt động; phòng có sẵn đổi trạng thái ở form Sửa (saveInfo)
+        String status = form.getStatus() == null ? "" : form.getStatus().trim();
+        if (current == null && !MANAGER_STATUSES.contains(status)) {
+            errors.put("status", Messages.ROOM_STATUS_INVALID);
         }
         int rows = parseInt(form.getRows());
         int cols = parseInt(form.getCols());
@@ -171,26 +190,10 @@ public class RoomLayoutService {
                 errors.put("layout", Messages.ROOM_LAYOUT_EMPTY);
             }
         }
-        if (!errors.containsKey("name") && roomDAO.existsByName(name, form.getRoomId())) {
-            errors.put("name", Messages.ROOM_NAME_DUPLICATE);
-        }
-
-        Room current = null;
         Map<String, Seat> existing = new LinkedHashMap<>();
-        if (form.getRoomId() > 0) {
-            current = roomDAO.findRoom(form.getRoomId());
-            if (current == null) {
-                throw new ValidationException(Map.of("general", Messages.ROOM_NOT_FOUND));
-            }
+        if (current != null) {
             for (Seat seat : roomDAO.findSeats(current.getRoomId())) {
                 existing.put(seat.getRowName() + seat.getColNumber(), seat);
-            }
-            // Phòng chưa khai báo định dạng (NULL) thì được điền lần đầu; chỉ chặn khi đổi định dạng đã có
-            if (!errors.containsKey("format") && current.getFormat() != null && !format.equals(current.getFormat())) {
-                int upcoming = roomDAO.countUpcomingShowtimes(current.getRoomId());
-                if (upcoming > 0) {
-                    errors.put("format", Messages.format(Messages.ROOM_FORMAT_LOCKED, upcoming));
-                }
             }
             if (layout != null && !errors.containsKey("layout")) {
                 checkSeatChanges(current.getRoomId(), existing, layout, errors);
@@ -201,8 +204,8 @@ public class RoomLayoutService {
         }
 
         Room room = current == null ? new Room() : current;
-        room.setRoomName(name);
-        room.setFormat(format);
+        room.setRoomName(form.getName());
+        room.setFormat(form.getFormat());
         // Sức chứa: ghế đôi tính 2 người
         room.setTotalSeats(layout.values().stream().mapToInt(s -> SeatType.capacityOf(s.getSeatType())).sum());
         try (Connection conn = DBContext.getConnection()) {
@@ -210,7 +213,7 @@ public class RoomLayoutService {
             try {
                 int roomId;
                 if (current == null) {
-                    room.setStatus(RoomStatus.ACTIVE);
+                    room.setStatus(status);
                     roomId = roomDAO.insertRoom(conn, room);
                 } else {
                     roomId = room.getRoomId();
@@ -222,6 +225,72 @@ public class RoomLayoutService {
             } catch (SQLException e) {
                 conn.rollback();
                 throw translate(e);
+            }
+        }
+    }
+
+    // Form Sửa: tên, định dạng, trạng thái của phòng có sẵn (không đụng sơ đồ ghế).
+    // Trạng thái: Bảo trì chỉ do UC-26 bật/tắt nên khi phòng đang Bảo trì thì giữ nguyên; Manager chọn
+    // Hoạt động / Dừng hoạt động, và không dừng hoạt động phòng còn suất chiếu sắp tới.
+    public void saveInfo(RoomLayoutForm form) throws SQLException, ValidationException {
+        Room current = form.getRoomId() > 0 ? roomDAO.findRoom(form.getRoomId()) : null;
+        if (current == null) {
+            throw new ValidationException(Map.of("general", Messages.ROOM_NOT_FOUND));
+        }
+        Map<String, String> errors = new LinkedHashMap<>();
+        validateInfo(form, current, errors);
+        String status = form.getStatus() == null ? "" : form.getStatus().trim();
+        if (RoomStatus.MAINTENANCE.equals(current.getStatus())) {
+            if (!status.isEmpty() && !RoomStatus.MAINTENANCE.equals(status)) {
+                errors.put("status", Messages.ROOM_STATUS_MAINTENANCE_LOCKED);
+            }
+            status = RoomStatus.MAINTENANCE;
+        } else if (!MANAGER_STATUSES.contains(status)) {
+            errors.put("status", Messages.ROOM_STATUS_INVALID);
+        } else if (RoomStatus.INACTIVE.equals(status) && !status.equals(current.getStatus())) {
+            int upcoming = roomDAO.countUpcomingShowtimes(current.getRoomId());
+            if (upcoming > 0) {
+                errors.put("status", Messages.format(Messages.ROOM_STATUS_INACTIVE_LOCKED, upcoming));
+            }
+        }
+        form.setStatus(status);
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+        String expectedStatus = current.getStatus();
+        current.setRoomName(form.getName());
+        current.setFormat(form.getFormat());
+        current.setStatus(status);
+        try {
+            if (!roomDAO.updateRoomInfo(current, expectedStatus)) {
+                throw new ValidationException(Map.of("general", Messages.ROOM_STATUS_CHANGED));
+            }
+        } catch (SQLException e) {
+            throw translate(e);
+        }
+    }
+
+    // Tên (bắt buộc, tối đa 50, không trùng) và định dạng; phòng đã có định dạng thì không đổi khi còn suất chiếu sắp tới.
+    // Chuẩn hóa (trim) tên/định dạng trong form để lưu và hiển thị lại.
+    private void validateInfo(RoomLayoutForm form, Room current, Map<String, String> errors) throws SQLException {
+        String name = form.getName() == null ? "" : form.getName().trim();
+        String format = form.getFormat() == null ? "" : form.getFormat().trim();
+        form.setName(name);
+        form.setFormat(format);
+        if (name.isEmpty()) {
+            errors.put("name", Messages.format(Messages.MSG02, "Tên phòng"));
+        } else if (name.length() > MAX_NAME) {
+            errors.put("name", Messages.format(Messages.MSG08, MAX_NAME));
+        } else if (roomDAO.existsByName(name, current == null ? 0 : current.getRoomId())) {
+            errors.put("name", Messages.ROOM_NAME_DUPLICATE);
+        }
+        if (!MovieService.FORMATS.contains(format)) {
+            errors.put("format", Messages.ROOM_FORMAT_INVALID);
+        } else if (current != null && current.getFormat() != null && !format.equals(current.getFormat())) {
+            // Phòng chưa khai báo định dạng (NULL) thì được điền lần đầu; chỉ chặn khi đổi định dạng đã có
+            int upcoming = roomDAO.countUpcomingShowtimes(current.getRoomId());
+            if (upcoming > 0) {
+                errors.put("format", Messages.format(Messages.ROOM_FORMAT_LOCKED, upcoming));
             }
         }
     }

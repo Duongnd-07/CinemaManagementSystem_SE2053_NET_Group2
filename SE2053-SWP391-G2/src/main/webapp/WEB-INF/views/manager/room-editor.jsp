@@ -93,13 +93,27 @@
                         class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-lg transition-all">
                     <span class="material-symbols-outlined text-[18px]">grid_on</span>Áp dụng kích thước lưới
                 </button>
-                <c:if test="${editing}">
-                    <p class="text-body-sm text-on-surface-variant">
-                        Trạng thái phòng:
-                        <strong class="${room.status == 'Maintenance' ? 'text-amber-400' : 'text-emerald-400'}">${room.status == 'Maintenance' ? 'Bảo trì' : 'Hoạt động'}</strong>
-                        <span class="text-outline">(cập nhật từ chức năng xử lý sự cố thiết bị)</span>
-                    </p>
-                </c:if>
+                <c:choose>
+                    <c:when test="${editing}">
+                        <%-- Phòng có sẵn: đổi trạng thái ở nút Sửa của danh sách phòng --%>
+                        <p class="text-body-sm text-on-surface-variant">
+                            Trạng thái phòng:
+                            <strong class="${room.status == 'Maintenance' ? 'text-amber-400' : room.status == 'Inactive' ? 'text-outline' : 'text-emerald-400'}">${room.status == 'Maintenance' ? 'Bảo trì' : room.status == 'Inactive' ? 'Dừng hoạt động' : 'Hoạt động'}</strong>
+                            <a class="text-primary underline" href="${ctx}/manager/rooms?info=${form.roomId}">Đổi</a>
+                        </p>
+                    </c:when>
+                    <c:otherwise>
+                        <div>
+                            <label class="block text-label-md text-on-surface-variant mb-1" for="status">Trạng thái <span class="req">*</span></label>
+                            <select class="${inputClass} w-full" id="status" name="status">
+                                <option value="Active" ${form.status == 'Active' ? 'selected' : ''}>Hoạt động</option>
+                                <option value="Inactive" ${form.status == 'Inactive' ? 'selected' : ''}>Dừng hoạt động</option>
+                            </select>
+                            <p class="mt-1 text-body-sm text-outline">Bảo trì chỉ được bật từ mục Sự cố thiết bị.</p>
+                            <c:if test="${not empty errors.status}"><p class="form-error"><c:out value="${errors.status}"/></p></c:if>
+                        </div>
+                    </c:otherwise>
+                </c:choose>
             </section>
 
             <section class="bg-surface-container-low border border-white/5 rounded-xl p-space-lg space-y-space-md">

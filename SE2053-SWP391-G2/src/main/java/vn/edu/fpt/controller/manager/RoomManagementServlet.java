@@ -46,11 +46,15 @@ public class RoomManagementServlet extends HttpServlet {
                 }
             } else if ("1".equals(request.getParameter("add"))) {
                 renderEditor(request, response, roomService.newForm(), new LinkedHashMap<>());
+            } else if (request.getParameter("info") != null) {
+                try {
+                    RoomLayoutForm form = roomService.loadInfoForm(parseInt(request.getParameter("info")));
+                    renderList(request, response, form, new LinkedHashMap<>());
+                } catch (ValidationException e) {
+                    redirectToList(request, response, FLASH_ERROR, e.getErrors().get("general"));
+                }
             } else {
-                moveFlashToRequest(request);
-                request.setAttribute("rooms", roomService.listRooms());
-                request.setAttribute("activeMenu", "rooms");
-                request.getRequestDispatcher(LIST_VIEW).forward(request, response);
+                renderList(request, response, null, null);
             }
         } catch (SQLException e) {
             handleSystemError(response, e);
@@ -68,10 +72,15 @@ public class RoomManagementServlet extends HttpServlet {
         form.setRoomId(parseInt(request.getParameter("roomId")));
         form.setName(trim(request.getParameter("name")));
         form.setFormat(trim(request.getParameter("format")));
+        form.setStatus(trim(request.getParameter("status")));
         form.setRows(trim(request.getParameter("rows")));
         form.setCols(trim(request.getParameter("cols")));
         form.setLayout(trim(request.getParameter("layout")));
         try {
+            if ("info".equals(request.getParameter("action"))) {
+                saveInfo(request, response, form);
+                return;
+            }
             try {
                 roomService.save(form);
             } catch (ValidationException e) {
@@ -86,6 +95,40 @@ public class RoomManagementServlet extends HttpServlet {
         } catch (SQLException e) {
             handleSystemError(response, e);
         }
+    }
+
+    // Form Sửa (tên, định dạng, trạng thái) hiển thị dạng hộp thoại trên trang danh sách
+    private void saveInfo(HttpServletRequest request, HttpServletResponse response, RoomLayoutForm form)
+            throws SQLException, ServletException, IOException {
+        try {
+            roomService.saveInfo(form);
+        } catch (ValidationException e) {
+            if (Messages.ROOM_NOT_FOUND.equals(e.getErrors().get("general"))) {
+                redirectToList(request, response, FLASH_ERROR, Messages.ROOM_NOT_FOUND);
+            } else {
+                renderList(request, response, form, e.getErrors());
+            }
+            return;
+        }
+        redirectToList(request, response, FLASH_SUCCESS, Messages.ROOM_INFO_SAVED);
+    }
+
+    // infoForm khác null thì mở hộp thoại Sửa của phòng đó
+    private void renderList(HttpServletRequest request, HttpServletResponse response, RoomLayoutForm infoForm,
+                            Map<String, String> errors) throws SQLException, ServletException, IOException {
+        moveFlashToRequest(request);
+        request.setAttribute("rooms", roomService.listRooms());
+        request.setAttribute("activeMenu", "rooms");
+        if (infoForm != null) {
+            request.setAttribute("infoForm", infoForm);
+            request.setAttribute("infoRoom", roomService.findRoom(infoForm.getRoomId()));
+            request.setAttribute("infoUpcoming", roomService.countUpcomingShowtimes(infoForm.getRoomId()));
+            request.setAttribute("errors", errors);
+            request.setAttribute("formats", MovieService.FORMATS);
+            request.setAttribute("maxName", RoomLayoutService.MAX_NAME);
+            request.setAttribute("csrfToken", CsrfToken.get(request.getSession()));
+        }
+        request.getRequestDispatcher(LIST_VIEW).forward(request, response);
     }
 
     private void renderEditor(HttpServletRequest request, HttpServletResponse response, RoomLayoutForm form,

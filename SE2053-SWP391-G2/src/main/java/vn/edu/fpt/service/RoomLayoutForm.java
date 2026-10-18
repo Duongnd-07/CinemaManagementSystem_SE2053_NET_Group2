@@ -7,6 +7,8 @@ public class RoomLayoutForm {
     private int roomId;
     private String name = "";
     private String format = "";
+    // Active / Inactive do Manager chọn; Maintenance chỉ hiển thị (UC-26 bật/tắt)
+    private String status = "";
     private String rows = "";
     private String cols = "";
     private String layout = "";
@@ -33,6 +35,14 @@ public class RoomLayoutForm {
 
     public void setFormat(String format) {
         this.format = format;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public String getRows() {

@@ -6,6 +6,8 @@ import java.util.List;
 public final class RoomStatus {
     public static final String ACTIVE = "Active";
     public static final String MAINTENANCE = "Maintenance";
+    // Chỉ dùng cho Room: phòng dừng hoạt động do Manager đặt (UC-25); ghế không có trạng thái này nên không nằm trong ALL
+    public static final String INACTIVE = "Inactive";
 
     public static final List<String> ALL = List.of(ACTIVE, MAINTENANCE);
 

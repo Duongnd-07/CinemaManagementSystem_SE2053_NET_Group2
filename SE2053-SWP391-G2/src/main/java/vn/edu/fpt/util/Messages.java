@@ -66,6 +66,14 @@ public final class Messages {
             "Ghế {0} đã bán vé cho suất chiếu sắp tới nên không thể khóa.";
     public static final String ROOM_SEAT_TYPE_LOCKED =
             "Ghế {0} đã bán vé cho suất chiếu sắp tới nên không thể đổi loại ghế.";
+    public static final String ROOM_INFO_SAVED = "Đã cập nhật thông tin phòng chiếu.";
+    public static final String ROOM_STATUS_INVALID = "Trạng thái phòng chỉ gồm Hoạt động hoặc Dừng hoạt động.";
+    public static final String ROOM_STATUS_MAINTENANCE_LOCKED =
+            "Phòng đang bảo trì do sự cố thiết bị. Trạng thái chỉ đổi được khi sự cố được xử lý ở mục Sự cố thiết bị.";
+    public static final String ROOM_STATUS_INACTIVE_LOCKED =
+            "Phòng đang có {0} suất chiếu sắp tới nên không thể dừng hoạt động. Hãy hủy hoặc dời các suất chiếu đó trước.";
+    public static final String ROOM_STATUS_CHANGED =
+            "Trạng thái phòng vừa được thay đổi (ví dụ phòng vừa bị khóa bảo trì). Vui lòng tải lại trang và thử lại.";
     public static final String ROOM_SEAT_REPORT_LOCKED =
             "Ghế {0} đang có báo cáo sự cố chưa xử lý xong nên phải giữ trạng thái khóa.";
     // UC-05 Search & Filter Movies
