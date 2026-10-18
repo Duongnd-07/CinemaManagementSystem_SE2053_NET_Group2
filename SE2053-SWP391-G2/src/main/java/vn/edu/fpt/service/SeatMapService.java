@@ -3,7 +3,6 @@ package vn.edu.fpt.service;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +15,7 @@ import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.model.Seat;
 import vn.edu.fpt.model.SeatStatus;
+import vn.edu.fpt.model.SeatType;
 import vn.edu.fpt.model.Showtime;
 import vn.edu.fpt.model.ShowtimeStatus;
 import vn.edu.fpt.util.Messages;
@@ -70,7 +70,8 @@ public class SeatMapService {
             statusCounts.merge(status, 1, Integer::sum);
             cells.add(new SeatMapCell(seat.getSeatId(), seat.getRowName(), seat.getColNumber(),
                     seat.getSeatType(), status));
-            columnCount = Math.max(columnCount, seat.getColNumber());
+            // Ghế đôi chiếm 2 cột (ColNumber là cột trái)
+            columnCount = Math.max(columnCount, seat.getColNumber() + SeatType.widthOf(seat.getSeatType()) - 1);
         }
         return new SeatMapView(showtime, movie, room, buildRows(cells, columnCount), cells, columnCount,
                 statusCounts, now);
@@ -90,7 +91,8 @@ public class SeatMapService {
         return SeatStatus.AVAILABLE;
     }
 
-    // Đặt ghế vào lưới theo ColNumber để các hàng thẳng cột, chỗ không có ghế để trống
+    // Đặt ghế vào lưới theo ColNumber để các hàng thẳng cột, chỗ không có ghế để trống (null).
+    // Ghế đôi chiếm thêm cột bên phải nên cột đó không có phần tử riêng (JSP cho ghế đôi trải 2 cột).
     private List<SeatMapRow> buildRows(List<SeatMapCell> cells, int columnCount) {
         Map<String, SeatMapCell[]> byRow = new LinkedHashMap<>();
         for (SeatMapCell cell : cells) {
@@ -101,7 +103,15 @@ public class SeatMapService {
         }
         List<SeatMapRow> rows = new ArrayList<>();
         for (Map.Entry<String, SeatMapCell[]> entry : byRow.entrySet()) {
-            rows.add(new SeatMapRow(entry.getKey(), Arrays.asList(entry.getValue())));
+            SeatMapCell[] line = entry.getValue();
+            List<SeatMapCell> rowCells = new ArrayList<>();
+            for (int col = 0; col < line.length; col++) {
+                rowCells.add(line[col]);
+                if (line[col] != null) {
+                    col += SeatType.widthOf(line[col].getSeatType()) - 1;
+                }
+            }
+            rows.add(new SeatMapRow(entry.getKey(), rowCells));
         }
         return rows;
     }

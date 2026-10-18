@@ -36,13 +36,38 @@ public final class Messages {
     public static final String MOVIE_TRAILER_URL_INVALID =
             "Trailer phải là đường dẫn YouTube hợp lệ (https://www.youtube.com/watch?v=...).";
     public static final String MOVIE_HAS_ACTIVE_SHOWTIMES =
-            "Phim có suất chiếu đang/sắp diễn ra đã có vé đặt, không thể ẩn hoặc chuyển sang Đã kết thúc.";
+            "Phim còn suất chiếu chưa kết thúc. Vui lòng hủy các suất chiếu trước khi ẩn hoặc chuyển sang Đã kết thúc.";
     // UC-04 View Movie List
     public static final String MOVIE_LIST_EMPTY = "Hiện tại chưa có phim nào trong danh mục này.";
     // UC-06 View Movie Details
     public static final String MOVIE_DETAIL_UNAVAILABLE = "Phim này không còn tồn tại hoặc đã ngừng chiếu.";
     // UC-08 View Showtimes
     public static final String SHOWTIME_NONE_FOR_DATE = "Không có suất chiếu nào cho ngày này. Vui lòng chọn ngày khác.";
+    // UC-25 Manage Rooms & Seat Layout
+    public static final String ROOM_SAVED = "Đã lưu phòng chiếu và sơ đồ ghế.";
+    public static final String ROOM_NOT_FOUND = "Không tìm thấy phòng chiếu.";
+    public static final String ROOM_NAME_DUPLICATE = "Tên phòng đã tồn tại trong hệ thống.";
+    public static final String ROOM_FORMAT_INVALID = "Định dạng chiếu chỉ gồm 2D, 3D hoặc IMAX.";
+    public static final String ROOM_SIZE_INVALID = "Số hàng phải từ 1 đến {0} và số cột từ 1 đến {1}.";
+    public static final String ROOM_LAYOUT_INVALID =
+            "Sơ đồ ghế không hợp lệ (sai kích thước, có ô không xác định hoặc ghế đôi không chiếm đủ 2 ô liền nhau). "
+            + "Vui lòng tạo lại lưới ghế.";
+    public static final String ROOM_LAYOUT_EMPTY = "Sơ đồ phải có ít nhất một ghế đang sử dụng được.";
+    public static final String ROOM_LAYOUT_UNSUPPORTED =
+            "Sơ đồ ghế hiện tại có vị trí ngoài phạm vi hỗ trợ (hàng A-Z, cột 1-{0}) hoặc có ghế chồng lên nhau "
+            + "(ghế đôi kiểu cũ chiếm 1 ô - hãy chạy sql/UC25_sweetbox_two_cells.sql) nên không chỉnh sửa được tại đây.";
+    public static final String ROOM_LAYOUT_CHANGED =
+            "Sơ đồ ghế vừa phát sinh vé hoặc giữ chỗ mới trong lúc lưu. Vui lòng tải lại trang và thử lại.";
+    public static final String ROOM_FORMAT_LOCKED =
+            "Phòng đang có {0} suất chiếu sắp tới nên không thể đổi định dạng chiếu.";
+    public static final String ROOM_SEAT_REMOVE_LOCKED =
+            "Ghế {0} đã có lịch sử vé, giữ chỗ hoặc báo cáo sự cố nên không thể xóa khỏi sơ đồ. Hãy khóa ghế thay vì xóa.";
+    public static final String ROOM_SEAT_DISABLE_LOCKED =
+            "Ghế {0} đã bán vé cho suất chiếu sắp tới nên không thể khóa.";
+    public static final String ROOM_SEAT_TYPE_LOCKED =
+            "Ghế {0} đã bán vé cho suất chiếu sắp tới nên không thể đổi loại ghế.";
+    public static final String ROOM_SEAT_REPORT_LOCKED =
+            "Ghế {0} đang có báo cáo sự cố chưa xử lý xong nên phải giữ trạng thái khóa.";
     // UC-05 Search & Filter Movies
     public static final String MOVIE_SEARCH_NO_RESULT = "Không tìm thấy phim phù hợp với từ khóa/bộ lọc của bạn.";
     // UC-34 Manage Movie Genres
@@ -147,6 +172,34 @@ public final class Messages {
     public static final String PROFILE_CURRENT_PASSWORD_WRONG = "Mật khẩu hiện tại không chính xác.";
     public static final String PROFILE_PASSWORD_SAME_AS_OLD = "Mật khẩu mới không được trùng với mật khẩu hiện tại.";
     public static final String PROFILE_NOT_FOUND = "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.";
+    public static final String PROFILE_SESSION_REVOKED =
+            "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
+
+    // UC-13 Book Ticket Online (E1-E4 theo đúng câu chữ SRS)
+    public static final String BOOKING_HOLD_EXPIRED = "Phiên đặt vé đã hết hạn. Vui lòng chọn lại ghế.";
+    public static final String BOOKING_SEAT_TAKEN =
+            "Ghế bạn chọn vừa có người đặt giữ chỗ. Vui lòng chọn ghế khác.";
+    public static final String BOOKING_VOUCHER_INVALID =
+            "Mã giảm giá không hợp lệ hoặc không đủ điều kiện áp dụng.";
+    public static final String BOOKING_POINTS_INSUFFICIENT = "Số điểm tích lũy của bạn không đủ để quy đổi.";
+    public static final String BOOKING_SEAT_REQUIRED = "Vui lòng chọn ít nhất một ghế.";
+    public static final String BOOKING_SEAT_LIMIT = "Mỗi đơn đặt vé chỉ được chọn tối đa {0} ghế.";
+    public static final String BOOKING_SEAT_INVALID = "Ghế đã chọn không thuộc phòng chiếu của suất này.";
+    public static final String BOOKING_AGE_REQUIRED =
+            "Phim phân loại {0}: bạn cần xác nhận đủ độ tuổi quy định trước khi tiếp tục đặt vé.";
+    public static final String BOOKING_CUSTOMER_ONLY = "Chỉ tài khoản khách hàng mới có thể đặt vé online.";
+    public static final String BOOKING_POINTS_INVALID = "Số điểm quy đổi phải là số nguyên không âm.";
+    public static final String BOOKING_POINTS_EXCEED =
+            "Điểm chỉ được trừ vào tiền vé; đơn này dùng được tối đa {0} điểm.";
+    public static final String BOOKING_CONCESSION_QUANTITY_INVALID = "Số lượng {0} phải từ 0 đến {1}.";
+    public static final String BOOKING_CONCESSION_UNAVAILABLE = "Món {0} hiện đã ngừng bán hoặc không đủ hàng.";
+    public static final String BOOKING_SHOWTIME_UNAVAILABLE =
+            "Suất chiếu không còn mở bán. Đơn đặt vé đã được hủy và ghế đã được trả lại.";
+    public static final String BOOKING_UPDATED = "Đã cập nhật đơn hàng.";
+    public static final String BOOKING_CANCELLED = "Đã hủy đơn đặt vé và trả lại ghế.";
+    public static final String BOOKING_NOT_FOUND = "Không tìm thấy đơn đặt vé.";
+    public static final String BOOKING_NOT_PENDING = "Đơn đặt vé không còn ở trạng thái chờ thanh toán.";
+    public static final String BOOKING_PAID = "Thanh toán thành công! Vé điện tử đã được phát hành.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

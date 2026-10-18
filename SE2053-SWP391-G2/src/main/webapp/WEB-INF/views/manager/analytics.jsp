@@ -138,7 +138,7 @@
             <h2 class="text-headline-sm text-on-surface">Lấp đầy theo phòng</h2>
             <p class="text-body-sm text-on-surface-variant mb-space-md">Vé bán / tổng số ghế của các suất trong kỳ.</p>
             <c:forEach var="room" items="${rooms}">
-                <div class="mb-space-md" title="${fn:escapeXml(room.name)}: ${room.ticketCount}/${room.capacity} ghế, ${room.showtimeCount} suất">
+                <div class="mb-space-md" title="${fn:escapeXml(room.name)}: ${room.ticketCount}/${room.capacity} chỗ, ${room.showtimeCount} suất">
                     <div class="flex items-baseline justify-between gap-space-sm mb-1">
                         <span class="text-on-surface font-label-lg truncate"><c:out value="${room.name}"/></span>
                         <span class="text-on-surface whitespace-nowrap"><fmt:formatNumber value="${room.occupancyPercent}" maxFractionDigits="1"/>%</span>
@@ -146,7 +146,7 @@
                     <div class="h-2 rounded-full bg-surface-container-high overflow-hidden">
                         <div class="h-full rounded-full bg-primary" style="width: ${room.occupancyPercent > 100 ? 100 : room.occupancyPercent}%"></div>
                     </div>
-                    <div class="text-body-sm text-on-surface-variant mt-1">${room.ticketCount}/${room.capacity} ghế • ${room.showtimeCount} suất</div>
+                    <div class="text-body-sm text-on-surface-variant mt-1">${room.ticketCount}/${room.capacity} chỗ • ${room.showtimeCount} suất</div>
                 </div>
             </c:forEach>
             <c:if test="${empty rooms}">
@@ -159,13 +159,13 @@
     <section class="cl-card p-space-lg">
         <h2 class="text-headline-sm text-on-surface">Hiệu quả theo phim</h2>
         <p class="text-body-sm text-on-surface-variant mb-space-md">
-            Bán chạy: lấp đầy từ ${topThreshold}% trở lên. Bán chậm: lấp đầy dưới ${lowThreshold}%. Sắp theo số vé bán.</p>
+            Bán chạy: lấp đầy từ ${topThreshold}% trở lên. Bán chậm: lấp đầy dưới ${lowThreshold}%. Sắp theo số chỗ đã bán (ghế đôi tính 2).</p>
         <table class="w-full text-body-md">
             <thead>
             <tr class="text-on-surface-variant text-body-sm text-left border-b border-white/10">
                 <th class="py-2 font-normal">Phim</th>
                 <th class="py-2 font-normal text-right">Suất chiếu</th>
-                <th class="py-2 font-normal text-right">Vé bán</th>
+                <th class="py-2 font-normal text-right" title="Ghế đôi tính 2 chỗ">Chỗ đã bán</th>
                 <th class="py-2 font-normal text-right">Doanh thu vé</th>
                 <th class="py-2 pl-space-lg font-normal w-64">Tỷ lệ lấp đầy</th>
                 <th class="py-2 pl-space-md font-normal">Xếp loại</th>
@@ -179,7 +179,7 @@
                     <td class="py-3 text-right"><fmt:formatNumber value="${movie.ticketCount}"/></td>
                     <td class="py-3 text-right"><fmt:formatNumber value="${movie.ticketRevenue}" maxFractionDigits="0"/>đ</td>
                     <td class="py-3 pl-space-lg">
-                        <div class="flex items-center gap-space-sm" title="${movie.ticketCount}/${movie.capacity} ghế">
+                        <div class="flex items-center gap-space-sm" title="${movie.ticketCount}/${movie.capacity} chỗ">
                             <div class="flex-1 h-2 rounded-full bg-surface-container-high overflow-hidden">
                                 <div class="h-full rounded-full bg-primary" style="width: ${movie.occupancyPercent > 100 ? 100 : movie.occupancyPercent}%"></div>
                             </div>
