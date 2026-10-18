@@ -36,7 +36,7 @@ public final class Messages {
     public static final String MOVIE_TRAILER_URL_INVALID =
             "Trailer phải là đường dẫn YouTube hợp lệ (https://www.youtube.com/watch?v=...).";
     public static final String MOVIE_HAS_ACTIVE_SHOWTIMES =
-            "Phim có suất chiếu đang/sắp diễn ra đã có vé đặt, không thể ẩn hoặc chuyển sang Đã kết thúc.";
+            "Phim còn suất chiếu chưa kết thúc. Vui lòng hủy các suất chiếu trước khi ẩn hoặc chuyển sang Đã kết thúc.";
     // UC-04 View Movie List
     public static final String MOVIE_LIST_EMPTY = "Hiện tại chưa có phim nào trong danh mục này.";
     // UC-06 View Movie Details
@@ -126,6 +126,19 @@ public final class Messages {
     public static final String VOUCHER_MIN_ORDER_INVALID = "Giá trị đơn tối thiểu phải là số nguyên không âm.";
     public static final String VOUCHER_NUMBER_INVALID = "Giá trị phải là số hợp lệ.";
     public static final String VOUCHER_EXPIRY_INVALID = "Hạn sử dụng phải là thời điểm trong tương lai.";
+    public static final String CUSTOMER_DATA_NOT_FOUND = "Không tìm thấy dữ liệu tài khoản.";
+    public static final String BOOKING_HISTORY_EMPTY = "Bạn chưa có lịch sử đặt vé nào.";
+    public static final String VOUCHER_WALLET_EMPTY = "Ví voucher của bạn hiện đang trống.";
+    public static final String NOTIFICATION_EMPTY = "Không có thông báo mới.";
+    public static final String LOYALTY_HISTORY_EMPTY = "Bạn chưa có giao dịch điểm nào.";
+    public static final String NOTIFICATION_MARKED_READ = "Đã đánh dấu tất cả thông báo là đã đọc.";
+    public static final String TICKET_CANCELLATION_NOT_ALLOWED =
+            "Vé này không ở trạng thái hợp lệ để hủy.";
+    public static final String TICKET_CANCELLATION_WINDOW =
+            "Không thể hủy vé trong vòng 2 giờ trước giờ chiếu theo quy định.";
+    public static final String TICKET_CANCELLATION_SUCCESS =
+            "Đã hủy vé và cấp voucher hoàn 80% giá vé vào ví của bạn.";
+    public static final String CUSTOMER_ACTION_FAILED = "Không thể hoàn tất thao tác. Vui lòng thử lại.";
 
     // UC-01 Register Account
     public static final String REGISTER_SUCCESS = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";
@@ -167,6 +180,34 @@ public final class Messages {
     public static final String PROFILE_CURRENT_PASSWORD_WRONG = "Mật khẩu hiện tại không chính xác.";
     public static final String PROFILE_PASSWORD_SAME_AS_OLD = "Mật khẩu mới không được trùng với mật khẩu hiện tại.";
     public static final String PROFILE_NOT_FOUND = "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.";
+    public static final String PROFILE_SESSION_REVOKED =
+            "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
+
+    // UC-13 Book Ticket Online (E1-E4 theo đúng câu chữ SRS)
+    public static final String BOOKING_HOLD_EXPIRED = "Phiên đặt vé đã hết hạn. Vui lòng chọn lại ghế.";
+    public static final String BOOKING_SEAT_TAKEN =
+            "Ghế bạn chọn vừa có người đặt giữ chỗ. Vui lòng chọn ghế khác.";
+    public static final String BOOKING_VOUCHER_INVALID =
+            "Mã giảm giá không hợp lệ hoặc không đủ điều kiện áp dụng.";
+    public static final String BOOKING_POINTS_INSUFFICIENT = "Số điểm tích lũy của bạn không đủ để quy đổi.";
+    public static final String BOOKING_SEAT_REQUIRED = "Vui lòng chọn ít nhất một ghế.";
+    public static final String BOOKING_SEAT_LIMIT = "Mỗi đơn đặt vé chỉ được chọn tối đa {0} ghế.";
+    public static final String BOOKING_SEAT_INVALID = "Ghế đã chọn không thuộc phòng chiếu của suất này.";
+    public static final String BOOKING_AGE_REQUIRED =
+            "Phim phân loại {0}: bạn cần xác nhận đủ độ tuổi quy định trước khi tiếp tục đặt vé.";
+    public static final String BOOKING_CUSTOMER_ONLY = "Chỉ tài khoản khách hàng mới có thể đặt vé online.";
+    public static final String BOOKING_POINTS_INVALID = "Số điểm quy đổi phải là số nguyên không âm.";
+    public static final String BOOKING_POINTS_EXCEED =
+            "Điểm chỉ được trừ vào tiền vé; đơn này dùng được tối đa {0} điểm.";
+    public static final String BOOKING_CONCESSION_QUANTITY_INVALID = "Số lượng {0} phải từ 0 đến {1}.";
+    public static final String BOOKING_CONCESSION_UNAVAILABLE = "Món {0} hiện đã ngừng bán hoặc không đủ hàng.";
+    public static final String BOOKING_SHOWTIME_UNAVAILABLE =
+            "Suất chiếu không còn mở bán. Đơn đặt vé đã được hủy và ghế đã được trả lại.";
+    public static final String BOOKING_UPDATED = "Đã cập nhật đơn hàng.";
+    public static final String BOOKING_CANCELLED = "Đã hủy đơn đặt vé và trả lại ghế.";
+    public static final String BOOKING_NOT_FOUND = "Không tìm thấy đơn đặt vé.";
+    public static final String BOOKING_NOT_PENDING = "Đơn đặt vé không còn ở trạng thái chờ thanh toán.";
+    public static final String BOOKING_PAID = "Thanh toán thành công! Vé điện tử đã được phát hành.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

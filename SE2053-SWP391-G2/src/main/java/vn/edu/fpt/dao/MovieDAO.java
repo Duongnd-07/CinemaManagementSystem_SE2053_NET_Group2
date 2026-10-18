@@ -15,7 +15,6 @@ import java.util.Map;
 import vn.edu.fpt.model.Genre;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.ShowtimeStatus;
-import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.util.DBContext;
 
 public class MovieDAO {
@@ -163,24 +162,7 @@ public class MovieDAO {
         }
     }
 
-    // BR-MOV-04: suất chiếu chưa kết thúc (không tính suất đã hủy) đã có vé xác nhận
-    public boolean hasActiveBookedShowtimes(int movieId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Showtime s "
-                + "JOIN Booking b ON b.ShowtimeID = s.ShowtimeID "
-                + "JOIN Ticket t ON t.BookingID = b.BookingID "
-                + "WHERE s.MovieID = ? AND s.EndTime > GETDATE() AND (s.Status IS NULL OR s.Status <> ?) "
-                + "AND t.Status = ?";
-        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, movieId);
-            ps.setString(2, ShowtimeStatus.CANCELLED);
-            ps.setString(3, TicketStatus.UPCOMING);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
-    // GB-08: EndTime của suất chiếu tính theo thời lượng phim, nên còn suất chưa kết thúc thì không đổi thời lượng
+    // Suất chưa hủy và chưa kết thúc. Dùng cho GB-08 (khóa thời lượng) và BR-MOV-04 (chặn ẩn/kết thúc phim)
     public boolean hasUnfinishedShowtimes(int movieId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM Showtime "
                 + "WHERE MovieID = ? AND EndTime > GETDATE() AND (Status IS NULL OR Status <> ?)";
