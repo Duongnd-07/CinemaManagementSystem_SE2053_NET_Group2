@@ -118,6 +118,19 @@ public final class Messages {
     public static final String VOUCHER_MIN_ORDER_INVALID = "Giá trị đơn tối thiểu phải là số nguyên không âm.";
     public static final String VOUCHER_NUMBER_INVALID = "Giá trị phải là số hợp lệ.";
     public static final String VOUCHER_EXPIRY_INVALID = "Hạn sử dụng phải là thời điểm trong tương lai.";
+    public static final String CUSTOMER_DATA_NOT_FOUND = "Không tìm thấy dữ liệu tài khoản.";
+    public static final String BOOKING_HISTORY_EMPTY = "Bạn chưa có lịch sử đặt vé nào.";
+    public static final String VOUCHER_WALLET_EMPTY = "Ví voucher của bạn hiện đang trống.";
+    public static final String NOTIFICATION_EMPTY = "Không có thông báo mới.";
+    public static final String LOYALTY_HISTORY_EMPTY = "Bạn chưa có giao dịch điểm nào.";
+    public static final String NOTIFICATION_MARKED_READ = "Đã đánh dấu tất cả thông báo là đã đọc.";
+    public static final String TICKET_CANCELLATION_NOT_ALLOWED =
+            "Vé này không ở trạng thái hợp lệ để hủy.";
+    public static final String TICKET_CANCELLATION_WINDOW =
+            "Không thể hủy vé trong vòng 2 giờ trước giờ chiếu theo quy định.";
+    public static final String TICKET_CANCELLATION_SUCCESS =
+            "Đã hủy vé và cấp voucher hoàn 80% giá vé vào ví của bạn.";
+    public static final String CUSTOMER_ACTION_FAILED = "Không thể hoàn tất thao tác. Vui lòng thử lại.";
 
     // UC-01 Register Account
     public static final String REGISTER_SUCCESS = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";
