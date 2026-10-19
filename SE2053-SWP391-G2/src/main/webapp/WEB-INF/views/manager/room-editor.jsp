@@ -13,7 +13,7 @@
 <head>
     <title>${editing ? 'Sửa phòng chiếu' : 'Thêm phòng chiếu'} - CineAdmin</title>
     <jsp:include page="/WEB-INF/views/common/manager-head.jsp"/>
-    <link href="${ctx}/assets/css/room-editor.css" rel="stylesheet"/>
+    <link href="${ctx}/assets/css/room-editor.css?v=2" rel="stylesheet"/>
 </head>
 <body class="bg-surface font-body-md text-on-surface">
 <jsp:include page="/WEB-INF/views/common/manager-sidebar.jsp"/>
@@ -184,6 +184,6 @@
 </main>
 
 <script src="${ctx}/assets/js/manager-common.js"></script>
-<script src="${ctx}/assets/js/room-editor.js"></script>
+<script src="${ctx}/assets/js/room-editor.js?v=2"></script>
 </body>
 </html>
