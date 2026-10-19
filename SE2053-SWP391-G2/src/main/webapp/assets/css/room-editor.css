@@ -109,8 +109,7 @@ button.grid-label:hover {
 
 /* Dấu chấm góc trên cho ghế bị giới hạn thao tác */
 .lock-sold::after,
-.lock-report::after,
-.lock-history::after {
+.lock-report::after {
     content: '';
     position: absolute;
     top: -4px;
@@ -127,10 +126,6 @@ button.grid-label:hover {
 
 .lock-report::after {
     background: #fbbf24;
-}
-
-.lock-history::after {
-    background: #60a5fa;
 }
 
 .tool {

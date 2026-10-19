@@ -167,7 +167,6 @@
                 <c:if test="${editing}">
                     <li><span class="cell cell-S lock-sold"></span>Đã bán vé suất sắp tới (không khóa, đổi loại hay xóa được)</li>
                     <li><span class="cell cell-S cell-off lock-report"></span>Có báo cáo sự cố chưa xử lý (phải giữ khóa)</li>
-                    <li><span class="cell cell-S lock-history"></span>Đã có lịch sử vé/sự cố (chỉ khóa, không xóa)</li>
                 </c:if>
             </ul>
 

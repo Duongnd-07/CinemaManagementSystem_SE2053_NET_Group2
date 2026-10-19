@@ -263,7 +263,7 @@
         var text = seatName(r, c) + ' - ' + TYPE_LABELS[code.toUpperCase()]
             + (isCouple(code) ? ' (2 người)' : '') + (isDisabled(code) ? ' (đang khóa)' : '');
         var lock = locks[position(r, c)];
-        return lock ? text + ' - ' + LOCK_LABELS[lock] : text;
+        return lock && lock !== 'history' ? text + ' - ' + LOCK_LABELS[lock] : text;
     }
 
     function render() {
@@ -310,7 +310,8 @@
                         counts[type]++;
                     }
                     var lock = locks[position(r, c)];
-                    if (lock) {
+                    // Ghế chỉ có lịch sử (vd sự cố đã sửa xong) hiển thị như ghế thường, không gắn dấu chấm
+                    if (lock && lock !== 'history') {
                         classes.push('lock-' + lock);
                     }
                 }
