@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,7 +40,26 @@ public class VoucherManagementServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            render(request, response, null, new LinkedHashMap<>());
+            VoucherForm form = null;
+            boolean showForm = false;
+            String editId = trim(request.getParameter("edit"));
+            if (!editId.isEmpty()) {
+                Voucher existing = voucherService.findById(parseInt(editId));
+                if (existing == null) {
+                    request.getSession().setAttribute(FLASH_ERROR, Messages.VOUCHER_NOT_FOUND);
+                } else if (!VoucherType.PROMOTION.equals(existing.getVoucherType())) {
+                    request.getSession().setAttribute(FLASH_ERROR, Messages.VOUCHER_SYSTEM_MANAGED);
+                } else {
+                    form = toForm(existing);
+                    request.setAttribute("editingVoucherId", existing.getVoucherId());
+                    showForm = true;
+                }
+            } else if ("1".equals(request.getParameter("add"))) {
+                form = new VoucherForm();
+                request.setAttribute("editingVoucherId", null);
+                showForm = true;
+            }
+            render(request, response, form, showForm, new LinkedHashMap<>());
         } catch (SQLException e) {
             handleSystemError(response, e);
         }
@@ -52,32 +72,55 @@ public class VoucherManagementServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
-        VoucherForm form = readForm(request);
         try {
-            HttpSession session = request.getSession(false);
-            User manager = session == null ? null : (User) session.getAttribute("user");
-            Integer managerId = manager == null ? null : manager.getUserId();
-            voucherService.createPromotion(form, managerId);
-            request.getSession().setAttribute(FLASH_SUCCESS, Messages.VOUCHER_SAVED);
-            response.sendRedirect(request.getContextPath() + "/manager/vouchers" + listQuery(request));
-        } catch (ValidationException e) {
-            try {
-                render(request, response, form, e.getErrors());
-            } catch (SQLException sqlException) {
-                handleSystemError(response, sqlException);
+            String action = trim(request.getParameter("action"));
+            if ("delete".equals(action)) {
+                handleDelete(request, response);
+                return;
             }
+            handleSave(request, response);
         } catch (SQLException e) {
             handleSystemError(response, e);
         }
     }
 
+    private void handleSave(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        VoucherForm form = readForm(request);
+        Integer voucherId = parseNullableInt(request.getParameter("voucherId"));
+        try {
+            HttpSession session = request.getSession(false);
+            User manager = session == null ? null : (User) session.getAttribute("user");
+            Integer managerId = manager == null ? null : manager.getUserId();
+            voucherService.save(voucherId, form, managerId);
+            request.getSession().setAttribute(FLASH_SUCCESS,
+                    voucherId == null || voucherId <= 0 ? Messages.VOUCHER_SAVED : Messages.VOUCHER_UPDATED);
+            response.sendRedirect(request.getContextPath() + "/manager/vouchers" + listQuery(request));
+        } catch (ValidationException e) {
+            render(request, response, form, true, e.getErrors());
+        }
+    }
+
+    private void handleDelete(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        int voucherId = parseInt(request.getParameter("voucherId"));
+        try {
+            voucherService.delete(voucherId);
+            request.getSession().setAttribute(FLASH_SUCCESS, Messages.VOUCHER_DELETED);
+        } catch (ValidationException e) {
+            request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());
+        }
+        response.sendRedirect(request.getContextPath() + "/manager/vouchers" + listQuery(request));
+    }
+
     private void render(HttpServletRequest request, HttpServletResponse response, VoucherForm form,
-                        Map<String, String> errors) throws SQLException, ServletException, IOException {
+                        boolean showForm, Map<String, String> errors)
+            throws SQLException, ServletException, IOException {
         String keyword = trim(request.getParameter("q"));
         String requestedType = trim(request.getParameter("type"));
         String type = VoucherType.ALL.contains(requestedType) ? requestedType : "";
         Page<Voucher> voucherPage = voucherService.list(keyword, type, parseInt(request.getParameter("page")));
-        Map<String, Integer> refundInventory = voucherService.refundInventory();
+        Map<String, Integer> overview = voucherService.overview();
 
         HttpSession session = request.getSession();
         for (String key : List.of(FLASH_SUCCESS, FLASH_ERROR)) {
@@ -91,19 +134,40 @@ public class VoucherManagementServlet extends HttpServlet {
         request.setAttribute("keyword", keyword);
         request.setAttribute("typeFilter", type);
         request.setAttribute("voucherTypes", VoucherType.ALL);
-        request.setAttribute("statuses", List.of(VoucherService.ACTIVE, VoucherService.USED,
-                VoucherService.EXPIRED, VoucherService.DISABLED));
-        request.setAttribute("refundActive", refundInventory.getOrDefault(VoucherService.ACTIVE, 0));
-        request.setAttribute("refundUsed", refundInventory.getOrDefault(VoucherService.USED, 0));
-        request.setAttribute("refundExpired", refundInventory.getOrDefault(VoucherService.EXPIRED, 0));
+        request.setAttribute("promotionActive", overview.getOrDefault("PromotionActive", 0));
+        request.setAttribute("promotionExpired", overview.getOrDefault("PromotionExpired", 0));
+        request.setAttribute("refund80Active", overview.getOrDefault("Refund80Active", 0));
+        request.setAttribute("refund80Expired", overview.getOrDefault("Refund80Expired", 0));
         request.setAttribute("listQuery", listQuery(request));
         request.setAttribute("csrfToken", CsrfToken.get(session));
         request.setAttribute("activeMenu", "vouchers");
         request.setAttribute("msgNoResult", Messages.MSG01);
-        request.setAttribute("showForm", form != null || "1".equals(request.getParameter("add")));
+        request.setAttribute("showForm", showForm);
         request.setAttribute("form", form == null ? new VoucherForm() : form);
+        Object editingVoucherId = request.getAttribute("editingVoucherId");
+        if (editingVoucherId == null) {
+            editingVoucherId = request.getParameter("voucherId");
+        }
+        request.setAttribute("editingVoucherId", editingVoucherId);
+        Voucher editingVoucher = editingVoucherId == null || trim(editingVoucherId.toString()).isEmpty()
+                ? null : voucherService.findById(parseInt(editingVoucherId.toString()));
+        String createdAt = editingVoucher == null || editingVoucher.getCreatedAt() == null
+                ? "Tự động khi lưu"
+                : editingVoucher.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        request.setAttribute("voucherCreatedAt", createdAt);
         request.setAttribute("errors", errors);
         request.getRequestDispatcher(VIEW).forward(request, response);
+    }
+
+    private VoucherForm toForm(Voucher voucher) {
+        VoucherForm form = new VoucherForm();
+        form.setVoucherCode(voucher.getVoucherCode());
+        form.setDiscountType(voucher.getDiscountType());
+        form.setDiscountValue(voucher.getDiscountValue() == null ? "" : voucher.getDiscountValue().toPlainString());
+        form.setMinOrderAmount(voucher.getMinOrderAmount() == null ? "" : voucher.getMinOrderAmount().toPlainString());
+        form.setExpiryDate(voucher.getExpiryDate() == null ? "" : voucher.getExpiryDate().toLocalDate().toString() + "T"
+                + voucher.getExpiryDate().toLocalTime().toString().substring(0, 5));
+        return form;
     }
 
     private VoucherForm readForm(HttpServletRequest request) {
@@ -136,7 +200,18 @@ public class VoucherManagementServlet extends HttpServlet {
         try {
             return Integer.parseInt(value == null ? "" : value.trim());
         } catch (NumberFormatException e) {
-            return 1;
+            return 0;
+        }
+    }
+
+    private Integer parseNullableInt(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 

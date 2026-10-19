@@ -24,6 +24,13 @@
             <version>12.6.1.jre11</version>
         </dependency>
 
+        <!-- HikariCP: connection pool cho JDBC -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
         <!-- Tomcat 10.x: Jakarta Servlet 6 / JSP 3.1 (container cung cấp) -->
         <dependency>
             <groupId>jakarta.servlet</groupId>

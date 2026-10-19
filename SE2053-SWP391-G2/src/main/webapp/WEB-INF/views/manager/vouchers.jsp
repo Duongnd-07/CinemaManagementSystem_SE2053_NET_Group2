@@ -39,18 +39,22 @@
         </a>
     </div>
 
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-space-md mb-space-xl" aria-label="Kho voucher hoàn vé">
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-space-md mb-space-xl" aria-label="Tổng quan voucher">
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
-            <p class="text-on-surface-variant">Voucher hoàn 80% còn hiệu lực</p>
-            <p class="text-headline-lg text-primary mt-space-xs">${refundActive}</p>
+            <p class="text-on-surface-variant">Voucher khuyến mãi còn hiệu lực</p>
+            <p class="text-headline-lg text-primary mt-space-xs">${promotionActive}</p>
         </div>
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
-            <p class="text-on-surface-variant">Voucher hoàn 80% đã sử dụng</p>
-            <p class="text-headline-lg mt-space-xs">${refundUsed}</p>
+            <p class="text-on-surface-variant">Voucher khuyến mãi hết hạn</p>
+            <p class="text-headline-lg mt-space-xs">${promotionExpired}</p>
+        </div>
+        <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
+            <p class="text-on-surface-variant">Voucher hoàn 80% còn hiệu lực</p>
+            <p class="text-headline-lg text-primary mt-space-xs">${refund80Active}</p>
         </div>
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
             <p class="text-on-surface-variant">Voucher hoàn 80% hết hạn</p>
-            <p class="text-headline-lg mt-space-xs">${refundExpired}</p>
+            <p class="text-headline-lg mt-space-xs">${refund80Expired}</p>
         </div>
     </section>
 
@@ -80,8 +84,10 @@
                     <th class="py-4 px-5">Phân loại</th>
                     <th class="py-4 px-5">Mức giảm</th>
                     <th class="py-4 px-5">Đơn tối thiểu</th>
+                    <th class="py-4 px-5">Ngày tạo</th>
                     <th class="py-4 px-5">Hạn sử dụng</th>
                     <th class="py-4 px-5">Trạng thái</th>
+                    <th class="py-4 px-5 text-right">Thao tác</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5 text-body-md">
@@ -103,12 +109,30 @@
                             </c:choose>
                         </td>
                         <td class="py-4 px-5"><c:out value="${voucher.minOrderAmount}"/>đ</td>
+                        <td class="py-4 px-5"><c:out value="${voucher.createdAt}"/></td>
                         <td class="py-4 px-5"><c:out value="${voucher.expiryDate}"/></td>
                         <td class="py-4 px-5"><c:out value="${voucher.status}"/></td>
+                        <td class="py-4 px-5 text-right">
+                            <c:if test="${voucher.voucherType == 'Promotion'}">
+                                <div class="flex justify-end gap-2">
+                                    <a href="${ctx}/manager/vouchers?edit=${voucher.voucherId}${fn:escapeXml(fn:replace(listQuery, '?', '&'))}"
+                                       class="px-3 py-1.5 text-sm rounded-full bg-surface-container-high border border-white/10 hover:border-primary">Sửa</a>
+                                    <form method="post" action="${ctx}/manager/vouchers${listQuery}" class="inline">
+                                        <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                        <input type="hidden" name="action" value="delete"/>
+                                        <input type="hidden" name="voucherId" value="${voucher.voucherId}"/>
+                                        <button type="submit" class="px-3 py-1.5 text-sm rounded-full bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25"
+                                                onclick="return confirm('Xóa voucher ${fn:escapeXml(voucher.voucherCode)}?');">
+                                            Xóa
+                                        </button>
+                                    </form>
+                                </div>
+                            </c:if>
+                        </td>
                     </tr>
                 </c:forEach>
                 <c:if test="${empty voucherPage.items}">
-                    <tr><td colspan="6" class="py-12 px-6 text-center text-on-surface-variant">
+                    <tr><td colspan="8" class="py-12 px-6 text-center text-on-surface-variant">
                         <c:out value="${msgNoResult}"/>
                     </td></tr>
                 </c:if>
@@ -131,18 +155,24 @@
                href="${ctx}/manager/vouchers${listQuery}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
             </a>
-            <h2 class="text-headline-md text-on-surface mb-space-lg">Tạo mã khuyến mãi</h2>
+            <h2 class="text-headline-md text-on-surface mb-space-lg">${empty editingVoucherId ? 'Tạo mã khuyến mãi' : 'Cập nhật mã khuyến mãi'}</h2>
             <c:if test="${not empty errors.general}">
                 <div class="mb-space-md form-error-banner"><c:out value="${errors.general}"/></div>
             </c:if>
             <form method="post" action="${ctx}/manager/vouchers${listQuery}" class="space-y-space-md">
                 <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                <input type="hidden" name="voucherId" value="${editingVoucherId}"/>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="voucherCode">Mã voucher</label>
                     <input id="voucherCode" name="voucherCode" class="${inputClass} w-full" maxlength="32"
                            pattern="[A-Za-z0-9-]{4,32}" required
                            value="<c:out value='${form.voucherCode}'/>" placeholder="VD: CINEMA20"/>
                     <c:if test="${not empty errors.voucherCode}"><p class="form-error"><c:out value="${errors.voucherCode}"/></p></c:if>
+                </div>
+                <div>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="createdAt">Ngày tạo</label>
+                    <input id="createdAt" class="${inputClass} w-full opacity-70" type="text"
+                           value="<c:out value='${voucherCreatedAt}'/>" readonly/>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                     <div>
@@ -176,7 +206,7 @@
                 </div>
                 <div class="flex justify-end gap-space-sm pt-space-sm">
                     <a class="px-space-lg py-2 rounded-full bg-surface-container-high" href="${ctx}/manager/vouchers${listQuery}">Hủy</a>
-                    <button class="px-space-lg py-2 rounded-full bg-primary text-on-primary" type="submit">Tạo voucher</button>
+                    <button class="px-space-lg py-2 rounded-full bg-primary text-on-primary" type="submit">${empty editingVoucherId ? 'Tạo voucher' : 'Cập nhật voucher'}</button>
                 </div>
             </form>
         </div>
