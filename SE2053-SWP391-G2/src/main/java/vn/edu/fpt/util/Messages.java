@@ -110,6 +110,13 @@ public final class Messages {
     public static final String REPORT_LOG_SEAT_REOPENED = "Mở lại ghế {0}.";
     // UC-28 Manage Vouchers & Promotions
     public static final String VOUCHER_SAVED = "Mã khuyến mãi đã được tạo.";
+    public static final String VOUCHER_UPDATED = "Mã khuyến mãi đã được cập nhật.";
+    public static final String VOUCHER_DELETED = "Mã khuyến mãi đã được xóa.";
+    public static final String VOUCHER_NOT_FOUND = "Không tìm thấy voucher.";
+    public static final String VOUCHER_SYSTEM_MANAGED = "Voucher hoàn 80% do hệ thống quản lý, không thể sửa hoặc xóa.";
+    public static final String VOUCHER_DELETE_IN_USE = "Voucher đã được gắn với đơn đặt vé nên không thể xóa.";
+    public static final String VOUCHER_IMMUTABLE = "Voucher đã sử dụng hoặc bị vô hiệu hóa nên không thể chỉnh sửa.";
+    public static final String VOUCHER_ID_INVALID = "Voucher không hợp lệ. Vui lòng tải lại danh sách.";
     public static final String VOUCHER_CODE_INVALID = "Mã chỉ gồm chữ in hoa, chữ số, dấu gạch ngang; dài 4-32 ký tự.";
     public static final String VOUCHER_CODE_DUPLICATE = "Mã voucher đã tồn tại trong hệ thống.";
     public static final String VOUCHER_DISCOUNT_TYPE_INVALID = "Loại giảm giá không hợp lệ.";

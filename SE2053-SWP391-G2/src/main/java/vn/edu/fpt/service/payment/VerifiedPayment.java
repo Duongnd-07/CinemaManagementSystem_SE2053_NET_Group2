@@ -10,23 +10,13 @@ public final class VerifiedPayment {
     private final BigDecimal paidAmount;
     private final LocalDateTime paidAt;
 
-    public VerifiedPayment(String providerTransactionId, int bookingId, boolean successful,
-                          BigDecimal paidAmount, LocalDateTime paidAt) {
+    VerifiedPayment(String providerTransactionId, int bookingId, boolean successful,
+                    BigDecimal paidAmount, LocalDateTime paidAt) {
         this.providerTransactionId = providerTransactionId;
         this.bookingId = bookingId;
         this.successful = successful;
         this.paidAmount = paidAmount;
         this.paidAt = paidAt;
-    }
-
-    public static VerifiedPayment success(String providerTransactionId, int bookingId,
-                                         BigDecimal paidAmount, LocalDateTime paidAt) {
-        return new VerifiedPayment(providerTransactionId, bookingId, true, paidAmount, paidAt);
-    }
-
-    public static VerifiedPayment failed(String providerTransactionId, int bookingId,
-                                        BigDecimal paidAmount, LocalDateTime paidAt) {
-        return new VerifiedPayment(providerTransactionId, bookingId, false, paidAmount, paidAt);
     }
 
     public String getProviderTransactionId() {

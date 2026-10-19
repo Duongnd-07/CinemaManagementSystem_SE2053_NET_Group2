@@ -17,7 +17,7 @@ import vn.edu.fpt.util.DBContext;
 
 public class VoucherDAO {
     private static final String SELECT_COLUMNS = "SELECT VoucherID, VoucherCode, DiscountValue, DiscountType, "
-            + "ExpiryDate, OwnerUserID, CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() "
+            + "CreatedAt, ExpiryDate, OwnerUserID, CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() "
             + "THEN 'Expired' ELSE Status END AS Status, VoucherType, MinOrderAmount, CreatedByUserID FROM Voucher ";
 
     public List<Voucher> search(String keyword, String voucherType, int offset, int limit) throws SQLException {
@@ -47,21 +47,64 @@ public class VoucherDAO {
         }
     }
 
-    public Map<String, Integer> countRefundInventory() throws SQLException {
-        String effectiveStatus = "CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() "
-                + "THEN 'Expired' ELSE Status END";
-        String sql = "SELECT " + effectiveStatus + " AS Status, COUNT(*) AS Total FROM Voucher "
-                + "WHERE VoucherType = ? GROUP BY " + effectiveStatus;
+    public Map<String, Integer> countByTypeAndStatus() throws SQLException {
+        String sql = "SELECT VoucherType, "
+                + "SUM(CASE WHEN Status = 'Active' AND ExpiryDate > GETDATE() THEN 1 ELSE 0 END) AS Active, "
+                + "SUM(CASE WHEN Status = 'Expired' OR (Status = 'Active' AND ExpiryDate <= GETDATE()) "
+                + "THEN 1 ELSE 0 END) AS Expired "
+                + "FROM Voucher GROUP BY VoucherType";
         Map<String, Integer> totals = new HashMap<>();
-        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, VoucherType.REFUND_80);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    totals.put(rs.getString("Status"), rs.getInt("Total"));
-                }
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                String type = rs.getString("VoucherType");
+                totals.put(type + ":Active", rs.getInt("Active"));
+                totals.put(type + ":Expired", rs.getInt("Expired"));
             }
         }
         return totals;
+    }
+
+    public Voucher findById(int voucherId) throws SQLException {
+        String sql = SELECT_COLUMNS + "WHERE VoucherID = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, voucherId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapRow(rs) : null;
+            }
+        }
+    }
+
+    public boolean update(Voucher voucher) throws SQLException {
+        String sql = "UPDATE Voucher SET VoucherCode = ?, DiscountValue = ?, DiscountType = ?, "
+                + "ExpiryDate = ?, Status = ?, VoucherType = ?, MinOrderAmount = ?, CreatedByUserID = ? "
+                + "WHERE VoucherID = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, voucher.getVoucherCode());
+            ps.setBigDecimal(2, voucher.getDiscountValue());
+            ps.setString(3, voucher.getDiscountType());
+            ps.setTimestamp(4, Timestamp.valueOf(voucher.getExpiryDate()));
+            ps.setString(5, voucher.getStatus());
+            ps.setString(6, voucher.getVoucherType());
+            ps.setBigDecimal(7, voucher.getMinOrderAmount());
+            if (voucher.getCreatedByUserId() == null) {
+                ps.setNull(8, java.sql.Types.INTEGER);
+            } else {
+                ps.setInt(8, voucher.getCreatedByUserId());
+            }
+            ps.setInt(9, voucher.getVoucherId());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean deleteById(int voucherId) throws SQLException {
+        String sql = "DELETE FROM Voucher WHERE VoucherID = ? AND VoucherType = ? "
+                + "AND NOT EXISTS (SELECT 1 FROM Booking WHERE Booking.VoucherID = Voucher.VoucherID)";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, voucherId);
+            ps.setString(2, VoucherType.PROMOTION);
+            return ps.executeUpdate() > 0;
+        }
     }
 
     public List<Voucher> findWalletForOwner(int ownerUserId) throws SQLException {
@@ -159,6 +202,8 @@ public class VoucherDAO {
         voucher.setVoucherCode(rs.getString("VoucherCode"));
         voucher.setDiscountValue(rs.getBigDecimal("DiscountValue"));
         voucher.setDiscountType(rs.getString("DiscountType"));
+        Timestamp createdAt = rs.getTimestamp("CreatedAt");
+        voucher.setCreatedAt(createdAt == null ? null : createdAt.toLocalDateTime());
         Timestamp expiryDate = rs.getTimestamp("ExpiryDate");
         voucher.setExpiryDate(expiryDate == null ? null : expiryDate.toLocalDateTime());
         voucher.setOwnerUserId(rs.getObject("OwnerUserID", Integer.class));
