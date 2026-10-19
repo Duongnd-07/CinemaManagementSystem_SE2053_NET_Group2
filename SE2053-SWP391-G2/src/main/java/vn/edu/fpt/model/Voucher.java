@@ -8,6 +8,7 @@ public class Voucher {
     private String voucherCode;
     private BigDecimal discountValue;
     private String discountType;
+    private LocalDateTime createdAt;
     private LocalDateTime expiryDate;
     private Integer ownerUserId;
     private String status;
@@ -48,6 +49,14 @@ public class Voucher {
 
     public void setDiscountType(String discountType) {
         this.discountType = discountType;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public LocalDateTime getExpiryDate() {

@@ -8,6 +8,7 @@ BEGIN
         VoucherCode VARCHAR(32) NOT NULL,
         DiscountValue DECIMAL(18,2) NOT NULL,
         DiscountType VARCHAR(20) NOT NULL,
+        CreatedAt DATETIME NOT NULL CONSTRAINT DF_Voucher_CreatedAt DEFAULT GETDATE(),
         ExpiryDate DATETIME NOT NULL,
         OwnerUserID INT NULL CONSTRAINT FK_Voucher_OwnerUser REFERENCES [User](UserID),
         Status VARCHAR(20) NOT NULL CONSTRAINT DF_Voucher_Status DEFAULT 'Active',
@@ -30,6 +31,9 @@ IF COL_LENGTH('Voucher', 'MinOrderAmount') IS NULL
         CONSTRAINT DF_Voucher_MinOrder DEFAULT 0 WITH VALUES;
 IF COL_LENGTH('Voucher', 'CreatedByUserID') IS NULL
     ALTER TABLE Voucher ADD CreatedByUserID INT NULL;
+IF COL_LENGTH('Voucher', 'CreatedAt') IS NULL
+    ALTER TABLE Voucher ADD CreatedAt DATETIME NOT NULL
+        CONSTRAINT DF_Voucher_CreatedAt DEFAULT GETDATE() WITH VALUES;
 GO
 
 IF NOT EXISTS (
