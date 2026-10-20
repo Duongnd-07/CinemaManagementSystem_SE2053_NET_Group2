@@ -2,18 +2,23 @@ package vn.edu.fpt.service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import vn.edu.fpt.dao.EquipmentReportDAO;
 import vn.edu.fpt.dao.EquipmentReportLogDAO;
 import vn.edu.fpt.dao.RoomDAO;
+import vn.edu.fpt.dao.RoomEquipmentDAO;
 import vn.edu.fpt.dao.SeatDAO;
 import vn.edu.fpt.model.EquipmentCategory;
 import vn.edu.fpt.model.EquipmentReport;
 import vn.edu.fpt.model.EquipmentReportLog;
 import vn.edu.fpt.model.ReportStatus;
 import vn.edu.fpt.model.Room;
+import vn.edu.fpt.model.RoomEquipment;
 import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.model.Seat;
 import vn.edu.fpt.model.UrgencyLevel;
@@ -28,13 +33,25 @@ public class EquipmentReportService {
     private static final int SQL_UNIQUE_INDEX_VIOLATION = 2601;
     private static final String LOG_ROOM_AUTO_UNLOCKED =
             "Tự động mở khóa phòng chiếu: không còn sự cố nào chưa xử lý.";
+    private static final String LOG_ROOM_AUTO_UNLOCKED_BELOW_LIMIT =
+            "Tự động mở khóa phòng chiếu: còn dưới 2 thiết bị (không tính ghế) hỏng mức Cao/Khẩn cấp.";
     private static final String EQUIPMENT_DUPLICATE =
             "Thiết bị này của phòng đã có báo cáo #SC-{0} chưa xử lý xong, không cần báo lại.";
+    private static final String UNIT_DUPLICATE = "{0} đã có báo cáo #SC-{1} chưa xử lý xong.";
+    private static final String UNIT_INVALID = "Thiết bị không thuộc phòng và loại thiết bị đã chọn.";
+    private static final String LOG_ROOM_AUTO_LOCKED =
+            "Tự động khóa phòng chiếu: từ 2 thiết bị (không tính ghế) mức Cao/Khẩn cấp chưa xử lý.";
+    // Từ AUTO_LOCK_DEVICES thiết bị hỏng (không tính ghế) ở các mức này chưa xử lý xong thì phòng tự khóa bảo trì
+    private static final List<String> AUTO_LOCK_URGENCIES = List.of(UrgencyLevel.HIGH, UrgencyLevel.CRITICAL);
+    private static final int AUTO_LOCK_DEVICES = 2;
+    private static final String ROOM_UNLOCK_BLOCKED = "Không thể mở khóa phòng: phòng còn từ 2 thiết bị (không tính ghế) "
+            + "hỏng mức Cao/Khẩn cấp chưa xử lý xong.";
 
     private final EquipmentReportDAO reportDAO = new EquipmentReportDAO();
     private final EquipmentReportLogDAO logDAO = new EquipmentReportLogDAO();
     private final RoomDAO roomDAO = new RoomDAO();
     private final SeatDAO seatDAO = new SeatDAO();
+    private final RoomEquipmentDAO equipmentDAO = new RoomEquipmentDAO();
 
     public Page<EquipmentReport> listByStaff(int staffId, String status, int page) throws SQLException {
         String statusFilter = ReportStatus.isValid(status) ? status : null;
@@ -52,6 +69,11 @@ public class EquipmentReportService {
 
     public List<Seat> listSeats() throws SQLException {
         return seatDAO.findAll();
+    }
+
+    // Thiết bị cụ thể của mọi phòng; form lọc theo phòng và loại thiết bị đang chọn
+    public List<RoomEquipment> listEquipment() throws SQLException {
+        return equipmentDAO.findAll();
     }
 
     // Sự cố chưa xử lý xong của mọi nhân viên, form hiển thị theo phòng để tránh báo trùng
@@ -76,30 +98,11 @@ public class EquipmentReportService {
             errors.put("roomId", Messages.REPORT_ROOM_INVALID);
         }
 
+        boolean placeValid = !errors.containsKey("category") && !errors.containsKey("roomId");
         if (EquipmentCategory.SEAT.equals(form.getCategory())) {
-            if (form.getSeatId().isEmpty()) {
-                errors.put("seatId", Messages.format(Messages.MSG02, "Ghế"));
-            } else {
-                Seat seat = seatDAO.findById(parseId(form.getSeatId()));
-                if (seat == null || seat.getRoomId() != roomId) {
-                    errors.put("seatId", Messages.REPORT_SEAT_INVALID);
-                } else {
-                    // Một ghế chỉ có một báo cáo đang mở, tránh nhiều nhân viên báo trùng
-                    Integer openReportId = reportDAO.findOpenReportIdBySeat(seat.getSeatId());
-                    if (openReportId != null) {
-                        errors.put("seatId", Messages.format(Messages.REPORT_SEAT_DUPLICATE,
-                                seat.getRowName() + seat.getColNumber(), String.valueOf(openReportId)));
-                    }
-                }
-            }
-        } else if (!EquipmentCategory.OTHER.equals(form.getCategory())
-                && !errors.containsKey("category") && !errors.containsKey("roomId")) {
-            // Mỗi phòng có một máy chiếu/âm thanh/điều hòa nên chỉ một báo cáo đang mở cho mỗi loại;
-            // "Khác" không xác định được thiết bị cụ thể nên không chặn
-            Integer openReportId = reportDAO.findOpenReportIdByEquipment(roomId, form.getCategory());
-            if (openReportId != null) {
-                errors.put("category", Messages.format(EQUIPMENT_DUPLICATE, String.valueOf(openReportId)));
-            }
+            validateSeats(form, roomId, errors);
+        } else if (placeValid && !EquipmentCategory.OTHER.equals(form.getCategory())) {
+            validateUnits(form, roomId, errors);
         }
 
         if (form.getUrgency().isEmpty()) {
@@ -117,21 +120,108 @@ public class EquipmentReportService {
         return errors;
     }
 
-    // Trả về số vé còn hiệu lực của ghế vừa bị khóa (0 nếu báo cáo không gắn với ghế)
-    public int submit(EquipmentReportForm form, int staffId) throws SQLException, ValidationException {
+    // Mỗi ghế phải thuộc phòng đã chọn và chưa có báo cáo nào đang mở (tránh nhiều nhân viên báo trùng)
+    private void validateSeats(EquipmentReportForm form, int roomId, Map<String, String> errors) throws SQLException {
+        Set<Integer> seatIds = toIds(form.getSeatIds());
+        if (seatIds.isEmpty()) {
+            errors.put("seatId", Messages.format(Messages.MSG02, "Ghế"));
+            return;
+        }
+        List<String> duplicates = new ArrayList<>();
+        for (int seatId : seatIds) {
+            Seat seat = seatDAO.findById(seatId);
+            if (seat == null || seat.getRoomId() != roomId) {
+                errors.put("seatId", Messages.REPORT_SEAT_INVALID);
+                return;
+            }
+            Integer openReportId = reportDAO.findOpenReportIdBySeat(seatId);
+            if (openReportId != null) {
+                duplicates.add(Messages.format(Messages.REPORT_SEAT_DUPLICATE,
+                        seat.getRowName() + seat.getColNumber(), String.valueOf(openReportId)));
+            }
+        }
+        if (!duplicates.isEmpty()) {
+            errors.put("seatId", String.join(" ", duplicates));
+        }
+    }
+
+    // Phòng đã khai báo thiết bị thì phải chọn thiết bị cụ thể, mỗi thiết bị chỉ một báo cáo đang mở.
+    // Phòng chưa khai báo thì giữ cách cũ: mỗi loại thiết bị của phòng chỉ một báo cáo đang mở
+    private void validateUnits(EquipmentReportForm form, int roomId, Map<String, String> errors) throws SQLException {
+        Map<Integer, RoomEquipment> units = new LinkedHashMap<>();
+        for (RoomEquipment unit : equipmentDAO.findByRoomAndCategory(roomId, form.getCategory())) {
+            units.put(unit.getEquipmentId(), unit);
+        }
+        Set<Integer> unitIds = toIds(form.getEquipmentIds());
+        if (units.isEmpty()) {
+            if (!unitIds.isEmpty()) {
+                errors.put("equipmentId", UNIT_INVALID);
+                return;
+            }
+            Integer openReportId = reportDAO.findOpenReportIdByEquipment(roomId, form.getCategory());
+            if (openReportId != null) {
+                errors.put("category", Messages.format(EQUIPMENT_DUPLICATE, String.valueOf(openReportId)));
+            }
+            return;
+        }
+        if (unitIds.isEmpty()) {
+            errors.put("equipmentId", Messages.format(Messages.MSG02, "Thiết bị"));
+            return;
+        }
+        List<String> duplicates = new ArrayList<>();
+        for (int unitId : unitIds) {
+            RoomEquipment unit = units.get(unitId);
+            if (unit == null) {
+                errors.put("equipmentId", UNIT_INVALID);
+                return;
+            }
+            Integer openReportId = reportDAO.findOpenReportIdByUnit(unitId);
+            if (openReportId != null) {
+                duplicates.add(Messages.format(UNIT_DUPLICATE, unit.getName(), String.valueOf(openReportId)));
+            }
+        }
+        if (!duplicates.isEmpty()) {
+            errors.put("equipmentId", String.join(" ", duplicates));
+        }
+    }
+
+    // Một lần gửi tạo một báo cáo cho mỗi ghế / thiết bị đã chọn, tất cả trong cùng một transaction
+    public SubmitResult submit(EquipmentReportForm form, int staffId) throws SQLException, ValidationException {
         Map<String, String> errors = validate(form);
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
-        EquipmentReport report = toReport(form, staffId);
+        boolean isSeat = EquipmentCategory.SEAT.equals(form.getCategory());
+        Set<Integer> seatIds = isSeat ? toIds(form.getSeatIds()) : Set.of();
+        // Loại "Khác" không có thiết bị cụ thể nên bỏ qua mọi equipmentIds gửi kèm
+        boolean hasUnits = !isSeat && !EquipmentCategory.OTHER.equals(form.getCategory());
+        Set<Integer> unitIds = hasUnits ? toIds(form.getEquipmentIds()) : Set.of();
+        SubmitResult result = new SubmitResult();
 
         try (Connection conn = DBContext.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                reportDAO.insert(conn, report);
-                if (report.getSeatId() != null) {
+                int lastReportId = 0;
+                for (int seatId : seatIds) {
+                    reportDAO.insert(conn, toReport(form, staffId, seatId), null);
                     // Ghế hỏng phải khóa ngay để không bán tiếp (rule "Defective seat operational lock")
-                    seatDAO.updateStatus(conn, report.getSeatId(), RoomStatus.MAINTENANCE);
+                    seatDAO.updateStatus(conn, seatId, RoomStatus.MAINTENANCE);
+                }
+                for (int unitId : unitIds) {
+                    lastReportId = reportDAO.insert(conn, toReport(form, staffId, null), unitId);
+                }
+                if (seatIds.isEmpty() && unitIds.isEmpty()) {
+                    lastReportId = reportDAO.insert(conn, toReport(form, staffId, null), null);
+                }
+                // Chỉ xét khi lần gửi này là thiết bị mức Cao/Khẩn cấp, để Manager đã mở khóa thủ công (UC-26)
+                // không bị khóa lại cho tới khi có báo cáo khẩn mới; đếm cộng dồn cả báo cáo gửi trước đó
+                int roomId = parseId(form.getRoomId());
+                if (!isSeat && AUTO_LOCK_URGENCIES.contains(form.getUrgency())
+                        && reportDAO.countOpenDevicesByUrgency(conn, roomId, AUTO_LOCK_URGENCIES) >= AUTO_LOCK_DEVICES
+                        && roomDAO.lockIfActive(conn, roomId)) {
+                    writeLog(conn, lastReportId, staffId, ReportStatus.PENDING, ReportStatus.PENDING,
+                            LOG_ROOM_AUTO_LOCKED);
+                    result.roomLocked = true;
                 }
                 conn.commit();
             } catch (SQLException e) {
@@ -146,7 +236,41 @@ public class EquipmentReportService {
                 throw e;
             }
         }
-        return report.getSeatId() == null ? 0 : seatDAO.countUpcomingTickets(report.getSeatId());
+        result.reportCount = Math.max(1, seatIds.size() + unitIds.size());
+        for (int seatId : seatIds) {
+            result.affectedTickets += seatDAO.countUpcomingTickets(seatId);
+        }
+        if (result.roomLocked) {
+            result.upcomingShowtimes = roomDAO.countUpcomingShowtimes(parseId(form.getRoomId()));
+        }
+        return result;
+    }
+
+    // Kết quả gửi báo cáo để Controller dựng thông báo
+    public static final class SubmitResult {
+        private int reportCount;
+        private int affectedTickets;
+        private boolean roomLocked;
+        private int upcomingShowtimes;
+
+        public int getReportCount() {
+            return reportCount;
+        }
+
+        // Số vé còn hiệu lực trên các ghế vừa bị khóa
+        public int getAffectedTickets() {
+            return affectedTickets;
+        }
+
+        // Phòng vừa bị tự động khóa bảo trì trong lần gửi này
+        public boolean isRoomLocked() {
+            return roomLocked;
+        }
+
+        // Số suất chiếu sắp tới của phòng vừa bị khóa, cần Manager xử lý
+        public int getUpcomingShowtimes() {
+            return upcomingShowtimes;
+        }
     }
 
     // ----- UC-26: quản lý xử lý báo cáo -----
@@ -217,15 +341,28 @@ public class EquipmentReportService {
                     writeLog(conn, reportId, managerId, oldStatus, newStatus, note.isEmpty() ? null : note);
                 }
                 // Phòng tự mở khóa khi sự cố cuối cùng của phòng xử lý xong; còn sự cố dở thì chỉ mở khi quản lý bỏ tích
-                boolean autoUnlock = statusChanged && ReportStatus.RESOLVED.equals(newStatus)
-                        && reportDAO.countOtherOpenByRoom(conn, report.getRoomId(), reportId) == 0;
+                boolean resolved = statusChanged && ReportStatus.RESOLVED.equals(newStatus);
+                boolean roomClear = resolved && reportDAO.countOtherOpenByRoom(conn, report.getRoomId(), reportId) == 0;
+                // Xử lý xong một thiết bị hỏng nặng làm phòng còn dưới ngưỡng tự khóa (UC-21) thì cũng tự mở;
+                // ghế hỏng còn lại đã bị khóa riêng từng ghế nên không cần giữ khóa cả phòng
+                boolean belowLockLimit = resolved && !roomClear && report.getSeatId() == null
+                        && AUTO_LOCK_URGENCIES.contains(report.getUrgencyLevel())
+                        && reportDAO.countOpenDevicesByUrgency(conn, report.getRoomId(), AUTO_LOCK_URGENCIES)
+                        < AUTO_LOCK_DEVICES;
+                boolean autoUnlock = roomClear || belowLockLimit;
                 boolean lockRoom = form.isLockRoom() && !autoUnlock;
+                // Còn đủ thiết bị hỏng nặng để tự khóa (UC-21) thì không cho bỏ tích; đếm sau khi đã đổi trạng thái ở trên
+                if (!lockRoom && !autoUnlock && isRoomLocked(report) && reportDAO.countOpenDevicesByUrgency(
+                        conn, report.getRoomId(), AUTO_LOCK_URGENCIES) >= AUTO_LOCK_DEVICES) {
+                    throw new ValidationException(Map.of("general", ROOM_UNLOCK_BLOCKED));
+                }
                 if (lockRoom != isRoomLocked(report)) {
                     roomDAO.updateStatus(conn, report.getRoomId(),
                             lockRoom ? RoomStatus.MAINTENANCE : RoomStatus.ACTIVE);
                     writeLog(conn, reportId, managerId, newStatus, newStatus, lockRoom
                             ? Messages.REPORT_LOG_ROOM_LOCKED
-                            : autoUnlock ? LOG_ROOM_AUTO_UNLOCKED : Messages.REPORT_LOG_ROOM_UNLOCKED);
+                            : roomClear ? LOG_ROOM_AUTO_UNLOCKED
+                            : belowLockLimit ? LOG_ROOM_AUTO_UNLOCKED_BELOW_LIMIT : Messages.REPORT_LOG_ROOM_UNLOCKED);
                     result.roomLocked = lockRoom;
                     result.roomUnlocked = !lockRoom;
                 }
@@ -293,16 +430,25 @@ public class EquipmentReportService {
         }
     }
 
-    private EquipmentReport toReport(EquipmentReportForm form, int staffId) {
+    private EquipmentReport toReport(EquipmentReportForm form, int staffId, Integer seatId) {
         EquipmentReport report = new EquipmentReport();
         report.setStaffId(staffId);
         report.setRoomId(parseId(form.getRoomId()));
-        report.setSeatId(EquipmentCategory.SEAT.equals(form.getCategory()) ? parseId(form.getSeatId()) : null);
+        report.setSeatId(seatId);
         report.setEquipmentCategory(form.getCategory());
         report.setUrgencyLevel(form.getUrgency());
         report.setDescription(form.getDescription().trim());
         report.setStatus(ReportStatus.PENDING);
         return report;
+    }
+
+    // Bỏ trùng và giữ thứ tự; giá trị không phải số thành 0 để bị báo là không hợp lệ
+    private Set<Integer> toIds(List<String> values) {
+        Set<Integer> ids = new LinkedHashSet<>();
+        for (String value : values) {
+            ids.add(parseId(value));
+        }
+        return ids;
     }
 
     private boolean roomExists(int roomId) throws SQLException {

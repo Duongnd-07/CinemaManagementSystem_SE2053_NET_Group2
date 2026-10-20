@@ -1,35 +1,42 @@
-// Form báo cáo sự cố: ô Ghế chỉ dùng khi loại thiết bị là "Seat" và chỉ liệt kê ghế của phòng đã chọn.
-// Server vẫn kiểm tra lại ghế có thuộc phòng hay không.
+// Form báo cáo sự cố: loại "Ghế" hiện danh sách ghế của phòng đã chọn; máy chiếu / âm thanh / điều hòa hiện
+// thiết bị cụ thể của phòng (nếu phòng đã khai báo). Chọn được nhiều cái, mỗi cái thành một báo cáo.
+// Ô bị ẩn được disable để không gửi lên; server vẫn kiểm tra lại ghế/thiết bị có thuộc phòng hay không.
 (function () {
     var category = document.getElementById('category');
     var room = document.getElementById('roomId');
-    var seat = document.getElementById('seatId');
     var seatField = document.getElementById('seatField');
+    var unitField = document.getElementById('unitField');
     var seatNotice = document.getElementById('seatNotice');
-    if (!category || !room || !seat) {
+    if (!category || !room || !seatField || !unitField) {
         return;
     }
 
-    var placeholder = seat.options[0];
-    var allSeats = Array.prototype.slice.call(seat.options, 1);
+    // Hiện/ẩn từng ô theo điều kiện; trả về số ô đang hiện
+    function filter(field, matches) {
+        var visible = 0;
+        Array.prototype.forEach.call(field.querySelectorAll('label[data-room]'), function (item) {
+            var show = matches(item);
+            // class inline-flex của Tailwind đè thuộc tính hidden nên phải ẩn bằng style
+            item.style.display = show ? '' : 'none';
+            item.querySelector('input').disabled = !show;
+            if (show) {
+                visible++;
+            }
+        });
+        return visible;
+    }
 
     function refresh() {
         var isSeat = category.value === 'Seat';
-        seatField.hidden = !isSeat;
-        seatNotice.hidden = !isSeat;
-
-        var selected = seat.value;
-        seat.innerHTML = '';
-        seat.appendChild(placeholder);
-        allSeats.forEach(function (option) {
-            if (option.dataset.room === room.value) {
-                seat.appendChild(option);
-            }
+        var seats = filter(seatField, function (item) {
+            return isSeat && item.dataset.room === room.value;
         });
-        seat.value = selected;
-        if (seat.selectedIndex < 0) {
-            seat.selectedIndex = 0;
-        }
+        var units = filter(unitField, function (item) {
+            return item.dataset.room === room.value && item.dataset.category === category.value;
+        });
+        seatField.hidden = !isSeat || seats === 0;
+        unitField.hidden = units === 0;
+        seatNotice.hidden = !isSeat;
         refreshOpenReports();
     }
 

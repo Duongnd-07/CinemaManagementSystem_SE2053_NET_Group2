@@ -11,6 +11,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import java.util.logging.Logger;
 import vn.edu.fpt.filter.AuthFilter;
 import vn.edu.fpt.model.EquipmentCategory;
 import vn.edu.fpt.model.ReportStatus;
+import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.UrgencyLevel;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.service.EquipmentReportForm;
@@ -35,12 +37,19 @@ public class EquipmentReportServlet extends HttpServlet {
     private static final String FLASH_SUCCESS = "flashSuccess";
     private static final String FLASH_ERROR = "flashError";
     private static final String ITEM_LABEL = "báo cáo sự cố";
+    private static final String STAFF_ONLY = "Chỉ nhân viên mới được gửi báo cáo sự cố.";
+    private static final String ROOM_AUTO_LOCKED =
+            "Phòng chiếu đã tự động khóa bảo trì vì có từ 2 thiết bị hỏng mức Cao/Khẩn cấp.";
+    private static final String ROOM_AUTO_LOCKED_SHOWTIMES = " Phòng đang có {0} suất chiếu sắp tới, cần báo quản lý.";
 
     private final EquipmentReportService reportService = new EquipmentReportService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!isStaff(request, response)) {
+            return;
+        }
         try {
             EquipmentReportForm form = "1".equals(request.getParameter("add")) ? new EquipmentReportForm() : null;
             render(request, response, form, new LinkedHashMap<>());
@@ -52,20 +61,23 @@ public class EquipmentReportServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!isStaff(request, response)) {
+            return;
+        }
         if (!CsrfToken.isValid(request)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
         try {
             EquipmentReportForm form = readForm(request);
-            int affectedTickets;
+            EquipmentReportService.SubmitResult result;
             try {
-                affectedTickets = reportService.submit(form, currentUserId(request));
+                result = reportService.submit(form, currentUserId(request));
             } catch (ValidationException e) {
                 render(request, response, form, e.getErrors());
                 return;
             }
-            request.getSession().setAttribute(FLASH_SUCCESS, successMessage(form, affectedTickets));
+            request.getSession().setAttribute(FLASH_SUCCESS, successMessage(form, result));
             response.sendRedirect(request.getContextPath() + "/staff/equipment-reports");
         } catch (SQLException e) {
             handleSystemError(response, e);
@@ -102,6 +114,7 @@ public class EquipmentReportServlet extends HttpServlet {
             request.setAttribute("urgencyLevels", UrgencyLevel.ALL);
             request.setAttribute("rooms", reportService.listRooms());
             request.setAttribute("seats", reportService.listSeats());
+            request.setAttribute("equipment", reportService.listEquipment());
             request.setAttribute("openReports", reportService.listOpenReports());
         }
         request.getRequestDispatcher(VIEW).forward(request, response);
@@ -111,20 +124,42 @@ public class EquipmentReportServlet extends HttpServlet {
         EquipmentReportForm form = new EquipmentReportForm();
         form.setCategory(trim(request.getParameter("category")));
         form.setRoomId(trim(request.getParameter("roomId")));
-        form.setSeatId(trim(request.getParameter("seatId")));
+        form.setSeatIds(values(request, "seatIds"));
+        form.setEquipmentIds(values(request, "equipmentIds"));
         form.setUrgency(trim(request.getParameter("urgency")));
         form.setDescription(trim(request.getParameter("description")));
         return form;
     }
 
-    private String successMessage(EquipmentReportForm form, int affectedTickets) {
-        String message = Messages.format(Messages.MSG04, ITEM_LABEL);
+    // Checkbox chọn nhiều ghế / thiết bị gửi lên nhiều giá trị cùng tên
+    private List<String> values(HttpServletRequest request, String name) {
+        String[] values = request.getParameterValues(name);
+        return values == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(values));
+    }
+
+    private String successMessage(EquipmentReportForm form, EquipmentReportService.SubmitResult result) {
+        String label = result.getReportCount() > 1 ? result.getReportCount() + " " + ITEM_LABEL : ITEM_LABEL;
+        String message = Messages.format(Messages.MSG04, label);
+        if (result.isRoomLocked()) {
+            message += " " + ROOM_AUTO_LOCKED + (result.getUpcomingShowtimes() > 0
+                    ? Messages.format(ROOM_AUTO_LOCKED_SHOWTIMES, result.getUpcomingShowtimes()) : "");
+        }
         if (!EquipmentCategory.SEAT.equals(form.getCategory())) {
             return message;
         }
-        return message + " " + (affectedTickets > 0
-                ? Messages.format(Messages.REPORT_SEAT_HAS_TICKETS, affectedTickets)
+        return message + " " + (result.getAffectedTickets() > 0
+                ? Messages.format(Messages.REPORT_SEAT_HAS_TICKETS, result.getAffectedTickets())
                 : Messages.REPORT_SEAT_LOCKED);
+    }
+
+    // AuthFilter cho Manager/Admin vào /staff/*, nhưng chỉ nhân viên tác nghiệp mới được báo cáo sự cố
+    private boolean isStaff(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        User user = (User) request.getSession().getAttribute(AuthFilter.SESSION_USER);
+        if (user != null && Role.STAFF.equals(user.getRole())) {
+            return true;
+        }
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, STAFF_ONLY);
+        return false;
     }
 
     // Người gửi báo cáo luôn là người đang đăng nhập, không nhận từ form

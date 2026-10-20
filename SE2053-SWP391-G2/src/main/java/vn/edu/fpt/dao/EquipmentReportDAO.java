@@ -8,6 +8,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +20,12 @@ public class EquipmentReportDAO {
 
     private static final String SELECT_WITH_PLACE = "SELECT r.ReportID, r.StaffID, r.RoomID, r.SeatID, "
             + "r.EquipmentCategory, r.Description, r.UrgencyLevel, r.Status, r.ReportDate, r.ResolvedDate, "
-            + "rm.RoomName, rm.Status AS RoomStatus, s.RowName, s.ColNumber, u.FullName AS StaffName "
+            + "rm.RoomName, rm.Status AS RoomStatus, s.RowName, s.ColNumber, u.FullName AS StaffName, "
+            + "eq.Name AS EquipmentName "
             + "FROM Equipment_Report r "
             + "JOIN Room rm ON rm.RoomID = r.RoomID "
             + "LEFT JOIN Seat s ON s.SeatID = r.SeatID "
+            + "LEFT JOIN RoomEquipment eq ON eq.EquipmentID = r.EquipmentID "
             + "LEFT JOIN [User] u ON u.UserID = r.StaffID ";
 
     // UC-26: việc chưa xong đứng trước, trong cùng trạng thái thì khẩn cấp hơn đứng trước
@@ -31,9 +34,10 @@ public class EquipmentReportDAO {
             + "CASE r.UrgencyLevel WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, "
             + "r.ReportDate DESC, r.ReportID DESC ";
 
-    public int insert(Connection conn, EquipmentReport report) throws SQLException {
+    // equipmentId: thiết bị cụ thể (RoomEquipment), null với báo cáo ghế hoặc phòng chưa khai báo thiết bị
+    public int insert(Connection conn, EquipmentReport report, Integer equipmentId) throws SQLException {
         String sql = "INSERT INTO Equipment_Report (StaffID, RoomID, SeatID, EquipmentCategory, Description, "
-                + "UrgencyLevel, Status, ReportDate) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                + "UrgencyLevel, Status, ReportDate, EquipmentID) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, report.getStaffId());
             ps.setInt(2, report.getRoomId());
@@ -46,6 +50,11 @@ public class EquipmentReportDAO {
             ps.setString(5, report.getDescription());
             ps.setString(6, report.getUrgencyLevel());
             ps.setString(7, report.getStatus());
+            if (equipmentId == null) {
+                ps.setNull(8, Types.INTEGER);
+            } else {
+                ps.setInt(8, equipmentId);
+            }
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 return keys.next() ? keys.getInt(1) : 0;
@@ -118,11 +127,24 @@ public class EquipmentReportDAO {
     // Mã báo cáo chưa xử lý xong của một loại thiết bị (không phải ghế) trong phòng, null nếu không có
     public Integer findOpenReportIdByEquipment(int roomId, String category) throws SQLException {
         String sql = "SELECT TOP 1 ReportID FROM Equipment_Report WHERE RoomID = ? AND EquipmentCategory = ? "
-                + "AND SeatID IS NULL AND Status <> ? ORDER BY ReportID";
+                + "AND SeatID IS NULL AND EquipmentID IS NULL AND Status <> ? ORDER BY ReportID";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, roomId);
             ps.setString(2, category);
             ps.setString(3, ReportStatus.RESOLVED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        }
+    }
+
+    // Mã báo cáo chưa xử lý xong của một thiết bị cụ thể, null nếu không có
+    public Integer findOpenReportIdByUnit(int equipmentId) throws SQLException {
+        String sql = "SELECT TOP 1 ReportID FROM Equipment_Report WHERE EquipmentID = ? AND Status <> ? "
+                + "ORDER BY ReportID";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, equipmentId);
+            ps.setString(2, ReportStatus.RESOLVED);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : null;
             }
@@ -151,6 +173,23 @@ public class EquipmentReportDAO {
             ps.setInt(1, seatId);
             ps.setInt(2, excludeReportId);
             ps.setString(3, ReportStatus.RESOLVED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    // Số báo cáo thiết bị (không tính ghế) chưa xử lý xong của phòng có mức khẩn cấp thuộc urgencies
+    public int countOpenDevicesByUrgency(Connection conn, int roomId, List<String> urgencies) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Equipment_Report WHERE RoomID = ? AND SeatID IS NULL AND Status <> ? "
+                + "AND UrgencyLevel IN (" + String.join(", ", Collections.nCopies(urgencies.size(), "?")) + ")";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            int idx = 1;
+            ps.setInt(idx++, roomId);
+            ps.setString(idx++, ReportStatus.RESOLVED);
+            for (String urgency : urgencies) {
+                ps.setString(idx++, urgency);
+            }
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : 0;
             }
@@ -252,8 +291,10 @@ public class EquipmentReportDAO {
         report.setResolvedDate(resolvedDate == null ? null : resolvedDate.toLocalDateTime());
         report.setRoomName(rs.getString("RoomName"));
         report.setRoomStatus(rs.getString("RoomStatus"));
+        // shortcut: seatLabel giữ nhãn vị trí cụ thể (số ghế hoặc tên thiết bị như "Điều hòa 2") vì model
+        // EquipmentReport là file dùng chung; nên thêm field equipmentName riêng khi nhóm đồng ý sửa model
         String rowName = rs.getString("RowName");
-        report.setSeatLabel(rowName == null ? null : rowName + rs.getInt("ColNumber"));
+        report.setSeatLabel(rowName == null ? rs.getString("EquipmentName") : rowName + rs.getInt("ColNumber"));
         report.setStaffName(rs.getString("StaffName"));
         return report;
     }

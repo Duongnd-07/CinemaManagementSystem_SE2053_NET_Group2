@@ -91,7 +91,7 @@
                         <td class="py-4 px-5 whitespace-nowrap">
                             <c:out value="${report.roomName}"/>
                             <c:if test="${not empty report.seatLabel}">
-                                <span class="text-on-surface-variant"> • Ghế <c:out value="${report.seatLabel}"/></span>
+                                <span class="text-on-surface-variant"> • ${not empty report.seatId ? 'Ghế ' : ''}<c:out value="${report.seatLabel}"/></span>
                             </c:if>
                         </td>
                         <td class="py-4 px-5 text-on-surface-variant max-w-xs"><p class="line-clamp-2"><c:out value="${report.description}"/></p></td>
@@ -151,7 +151,7 @@
                         <c:if test="${not empty errors.urgency}"><p class="form-error"><c:out value="${errors.urgency}"/></p></c:if>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-space-md">
+                <div>
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="roomId">Phòng chiếu <span class="req">*</span></label>
                         <select class="${inputClass}" id="roomId" name="roomId">
@@ -164,19 +164,35 @@
                         </select>
                         <c:if test="${not empty errors.roomId}"><p class="form-error"><c:out value="${errors.roomId}"/></p></c:if>
                     </div>
-                    <%-- Chỉ dùng khi loại thiết bị là Ghế; equipment-report.js ẩn/hiện và lọc ghế theo phòng --%>
-                    <div id="seatField">
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="seatId">Ghế <span class="req">*</span></label>
-                        <select class="${inputClass}" id="seatId" name="seatId">
-                            <option value="">-- Chọn ghế --</option>
-                            <c:forEach var="seat" items="${seats}">
-                                <option value="${seat.seatId}" data-room="${seat.roomId}" ${form.seatId eq ''.concat(seat.seatId) ? 'selected' : ''}>
-                                    <c:out value="${seat.rowName}"/>${seat.colNumber}${seat.status == 'Maintenance' ? ' (đang bảo trì)' : ''}
-                                </option>
-                            </c:forEach>
-                        </select>
-                        <c:if test="${not empty errors.seatId}"><p class="form-error"><c:out value="${errors.seatId}"/></p></c:if>
+                </div>
+                <%-- Chọn được nhiều ghế / thiết bị, mỗi cái thành một báo cáo; equipment-report.js lọc theo phòng và loại --%>
+                <div id="seatField">
+                    <span class="block text-label-md text-on-surface-variant mb-1">Ghế hỏng <span class="req">*</span>
+                        <span class="normal-case font-normal">(chọn được nhiều ghế)</span></span>
+                    <div class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 rounded-lg border border-white/10 bg-surface-container-high">
+                        <c:forEach var="seat" items="${seats}">
+                            <label data-room="${seat.roomId}"
+                                   class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-container text-body-sm cursor-pointer has-[:checked]:bg-primary-container has-[:checked]:text-on-primary-container">
+                                <input type="checkbox" name="seatIds" value="${seat.seatId}" ${form.seatIds.contains(''.concat(seat.seatId)) ? 'checked' : ''}/>
+                                <c:out value="${seat.rowName}"/>${seat.colNumber}${seat.status == 'Maintenance' ? ' (bảo trì)' : ''}
+                            </label>
+                        </c:forEach>
                     </div>
+                    <c:if test="${not empty errors.seatId}"><p class="form-error"><c:out value="${errors.seatId}"/></p></c:if>
+                </div>
+                <div id="unitField">
+                    <span class="block text-label-md text-on-surface-variant mb-1">Thiết bị hỏng <span class="req">*</span>
+                        <span class="normal-case font-normal">(chọn được nhiều thiết bị)</span></span>
+                    <div class="flex flex-wrap gap-1.5 p-2 rounded-lg border border-white/10 bg-surface-container-high">
+                        <c:forEach var="unit" items="${equipment}">
+                            <label data-room="${unit.roomId}" data-category="${unit.category}"
+                                   class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-container text-body-sm cursor-pointer has-[:checked]:bg-primary-container has-[:checked]:text-on-primary-container">
+                                <input type="checkbox" name="equipmentIds" value="${unit.equipmentId}" ${form.equipmentIds.contains(''.concat(unit.equipmentId)) ? 'checked' : ''}/>
+                                <c:out value="${unit.name}"/>
+                            </label>
+                        </c:forEach>
+                    </div>
+                    <c:if test="${not empty errors.equipmentId}"><p class="form-error"><c:out value="${errors.equipmentId}"/></p></c:if>
                 </div>
                 <%-- Sự cố đang mở của phòng đã chọn (equipment-report.js lọc theo phòng) để nhân viên không báo trùng --%>
                 <div id="openReports" class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-space-md" hidden>
@@ -185,7 +201,7 @@
                         <c:forEach var="open" items="${openReports}">
                             <li data-room="${open.roomId}">
                                 <span class="text-on-surface-variant">#SC-${open.reportId}</span>
-                                • ${categoryLabels[open.equipmentCategory]}<c:if test="${not empty open.seatLabel}"> <c:out value="${open.seatLabel}"/></c:if>
+                                • <c:choose><c:when test="${empty open.seatId and not empty open.seatLabel}"><c:out value="${open.seatLabel}"/></c:when><c:otherwise>${categoryLabels[open.equipmentCategory]}<c:if test="${not empty open.seatLabel}"> <c:out value="${open.seatLabel}"/></c:if></c:otherwise></c:choose>
                                 • ${urgencyLabels[open.urgencyLevel]}
                                 • ${statusLabels[open.status]}:
                                 <span class="text-on-surface-variant"><c:out value="${fn:length(open.description) > 80 ? fn:substring(open.description, 0, 80).concat('…') : open.description}"/></span>
@@ -199,6 +215,9 @@
                               placeholder="VD: Máy chiếu bị nhòe hình ở góc phải màn hình"><c:out value="${form.description}"/></textarea>
                     <c:if test="${not empty errors.description}"><p class="form-error"><c:out value="${errors.description}"/></p></c:if>
                 </div>
+                <p class="text-body-sm text-on-surface-variant">
+                    Phòng có từ 2 thiết bị (không tính ghế) hỏng mức Cao hoặc Khẩn cấp chưa xử lý sẽ tự động khóa bảo trì.
+                </p>
                 <p class="text-body-sm text-on-surface-variant" id="seatNotice">
                     Khi báo ghế hỏng, ghế sẽ được khóa bảo trì ngay và không bán được nữa.
                 </p>
@@ -213,7 +232,7 @@
             </form>
         </div>
     </div>
-    <script src="${ctx}/assets/js/equipment-report.js"></script>
+    <script src="${ctx}/assets/js/equipment-report.js?v=2"></script>
 </c:if>
 
 <script src="${ctx}/assets/js/manager-common.js"></script>

@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import vn.edu.fpt.model.Room;
+import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.util.DBContext;
 
 public class RoomDAO {
@@ -36,6 +37,17 @@ public class RoomDAO {
             ps.setString(1, status);
             ps.setInt(2, roomId);
             ps.executeUpdate();
+        }
+    }
+
+    // Khóa bảo trì chỉ khi phòng đang hoạt động (phòng Dừng hoạt động của UC-25 giữ nguyên); true nếu đã khóa
+    public boolean lockIfActive(Connection conn, int roomId) throws SQLException {
+        String sql = "UPDATE Room SET Status = ? WHERE RoomID = ? AND Status = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, RoomStatus.MAINTENANCE);
+            ps.setInt(2, roomId);
+            ps.setString(3, RoomStatus.ACTIVE);
+            return ps.executeUpdate() > 0;
         }
     }
 

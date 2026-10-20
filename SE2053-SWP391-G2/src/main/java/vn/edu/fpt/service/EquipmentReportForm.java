@@ -1,10 +1,15 @@
 package vn.edu.fpt.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 // Dữ liệu thô (chuỗi) từ form để Service tự validate và hiển thị lại khi có lỗi
 public class EquipmentReportForm {
     private String category = "";
     private String roomId = "";
-    private String seatId = "";
+    // Nhiều ghế hoặc nhiều thiết bị cụ thể trong một lần gửi, mỗi cái thành một báo cáo riêng
+    private List<String> seatIds = new ArrayList<>();
+    private List<String> equipmentIds = new ArrayList<>();
     private String urgency = "";
     private String description = "";
 
@@ -24,12 +29,20 @@ public class EquipmentReportForm {
         this.roomId = roomId;
     }
 
-    public String getSeatId() {
-        return seatId;
+    public List<String> getSeatIds() {
+        return seatIds;
     }
 
-    public void setSeatId(String seatId) {
-        this.seatId = seatId;
+    public void setSeatIds(List<String> seatIds) {
+        this.seatIds = seatIds;
+    }
+
+    public List<String> getEquipmentIds() {
+        return equipmentIds;
+    }
+
+    public void setEquipmentIds(List<String> equipmentIds) {
+        this.equipmentIds = equipmentIds;
     }
 
     public String getUrgency() {
