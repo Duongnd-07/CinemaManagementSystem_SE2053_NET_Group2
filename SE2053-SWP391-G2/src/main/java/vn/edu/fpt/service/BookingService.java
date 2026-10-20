@@ -6,6 +6,7 @@ import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -15,7 +16,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import vn.edu.fpt.dao.BookingDAO;
+import vn.edu.fpt.dao.PaymentDAO;
 import vn.edu.fpt.dao.SystemConfigDAO;
 import vn.edu.fpt.model.Booking;
 import vn.edu.fpt.model.BookingChannel;
@@ -24,6 +28,8 @@ import vn.edu.fpt.model.BookingStatus;
 import vn.edu.fpt.model.Concession;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.MovieStatus;
+import vn.edu.fpt.model.PaymentAttempt;
+import vn.edu.fpt.model.PaymentMethod;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.RoomStatus;
@@ -35,15 +41,21 @@ import vn.edu.fpt.model.Ticket;
 import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.model.Voucher;
+import vn.edu.fpt.service.payment.PaymentGateway;
+import vn.edu.fpt.service.payment.PaymentGatewayException;
+import vn.edu.fpt.service.payment.PaymentRequest;
+import vn.edu.fpt.service.payment.PaymentSession;
+import vn.edu.fpt.service.payment.VerifiedPayment;
 import vn.edu.fpt.util.DBContext;
 import vn.edu.fpt.util.Messages;
 
 // UC-13: Book Ticket Online.
 // Bước 1-4 chọn ghế (chỉ đọc, dùng dữ liệu UC-09) -> bước 5 giữ ghế 10 phút (Seat_Hold) -> bước 6-8 bắp nước,
-// voucher, điểm (lưu trong BookingCheckout) -> bước 9 tạo đơn Pending -> thanh toán (UC-14, hiện là bản demo).
+// voucher, điểm (lưu trong BookingCheckout) -> bước 9 tạo đơn Pending -> thanh toán qua UC-14.
 // Mỗi thao tác chỉ mở MỘT kết nối DB và truyền xuống DAO: trang checkout tự tính lại tiền mỗi lần khách đổi lựa
 // chọn, mở kết nối mới cho từng truy vấn sẽ làm mỗi lần tính chậm vài giây.
 public class BookingService {
+    private static final Logger LOGGER = Logger.getLogger(BookingService.class.getName());
     // Khóa lỗi khiến phiên đặt vé kết thúc (E1 hết giờ giữ ghế, suất chiếu không còn mở bán...): quay lại chọn ghế
     public static final String ERROR_ENDED = "ended";
     public static final String ERROR_GENERAL = "general";
@@ -70,6 +82,7 @@ public class BookingService {
 
     private final SeatMapService seatMapService = new SeatMapService();
     private final BookingDAO bookingDAO = new BookingDAO();
+    private final PaymentDAO paymentDAO = new PaymentDAO();
     private final SystemConfigDAO configDAO = new SystemConfigDAO();
 
     // ===== Bước 1-4: chọn ghế =====
@@ -289,56 +302,143 @@ public class BookingService {
         });
     }
 
-    // Thanh toán DEMO thay cho UC-14 (cổng thanh toán do thành viên khác làm): xác nhận đơn như khi cổng
-    // báo thành công - Paid, sinh mã QR cho vé, trừ kho bắp nước (GB-10), đánh dấu voucher cá nhân đã dùng,
-    // trừ điểm đã quy đổi. Trả về số điểm còn lại của khách.
-    public int payDemo(User customer, int bookingId) throws SQLException, ValidationException {
+    public PaymentSession startVnPayPayment(User customer, int bookingId, String clientIpAddress,
+                                            String returnUrl, String callbackUrl, PaymentGateway gateway)
+            throws SQLException, ValidationException, PaymentGatewayException {
         requireCustomer(customer);
-        // Hủy đơn hết hạn trong transaction riêng để việc hủy vẫn được lưu dù bước thanh toán báo lỗi
         inTransaction(conn -> {
             expireIfNeeded(conn, customer, bookingId);
             return null;
         });
-        return inTransaction(conn -> {
-            Booking booking = lockPendingBooking(conn, customer, bookingId);
-            List<Ticket> tickets = bookingDAO.findTickets(conn, bookingId);
-            Set<Integer> held = bookingDAO.findLiveHeldSeatIds(conn, bookingHoldSession(bookingId), true);
-            Set<Integer> ticketSeats = new HashSet<>();
-            for (Ticket ticket : tickets) {
-                ticketSeats.add(ticket.getSeatId());
-            }
-            if (!held.equals(ticketSeats)) {
-                throw error(ERROR_ENDED, Messages.BOOKING_HOLD_EXPIRED);
-            }
-            Map<Integer, String> names = bookingDAO.findConcessionNames(conn, bookingId);
-            for (BookingConcession item : bookingDAO.findBookingConcessions(conn, bookingId)) {
-                if (!bookingDAO.decreaseStock(conn, item.getConcessionId(), item.getQuantity())) {
-                    throw error(ERROR_GENERAL, Messages.format(Messages.BOOKING_CONCESSION_UNAVAILABLE,
-                            names.getOrDefault(item.getConcessionId(), "đã chọn")));
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                Booking booking = lockPendingBooking(conn, customer, bookingId);
+                List<Ticket> tickets = bookingDAO.findTickets(conn, bookingId);
+                Set<Integer> held = bookingDAO.findLiveHeldSeatIds(conn, bookingHoldSession(bookingId), true);
+                if (!held.equals(ticketSeatIds(tickets))) {
+                    throw error(ERROR_ENDED, Messages.BOOKING_HOLD_EXPIRED);
                 }
-            }
-            if (booking.getVoucherId() != null) {
-                Voucher voucher = bookingDAO.findVoucherByCode(conn,
-                        bookingDAO.findVoucherCode(conn, booking.getVoucherId()));
-                if (voucher != null && voucher.getOwnerUserId() != null
-                        && !bookingDAO.markPersonalVoucherUsed(conn, voucher.getVoucherId())) {
-                    throw error(ERROR_GENERAL, Messages.BOOKING_VOUCHER_INVALID);
+                long remainingSeconds = bookingDAO.findRemainingHoldSeconds(conn, bookingHoldSession(bookingId));
+                if (remainingSeconds <= 0) {
+                    throw error(ERROR_ENDED, Messages.BOOKING_HOLD_EXPIRED);
                 }
+                if (booking.getFinalAmount() == null || booking.getFinalAmount().signum() <= 0) {
+                    throw error(ERROR_GENERAL, Messages.BOOKING_VNPAY_AMOUNT_INVALID);
+                }
+
+                String transactionReference = bookingId + "-" + UUID.randomUUID().toString().replace("-", "");
+                PaymentRequest paymentRequest = new PaymentRequest();
+                paymentRequest.setBookingId(bookingId);
+                paymentRequest.setCustomerId(customer.getUserId());
+                paymentRequest.setAmount(booking.getFinalAmount());
+                paymentRequest.setTransactionReference(transactionReference);
+                paymentRequest.setClientIpAddress(clientIpAddress);
+                paymentRequest.setExpiresAt(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
+                        .plusSeconds(remainingSeconds));
+                paymentRequest.setReturnUrl(returnUrl);
+                paymentRequest.setCallbackUrl(callbackUrl);
+                PaymentSession paymentSession = gateway.createPayment(paymentRequest);
+
+                paymentDAO.expireInitiatedForBooking(conn, bookingId);
+                paymentDAO.insertInitiated(conn, bookingId, transactionReference, booking.getFinalAmount());
+                if (!bookingDAO.setBookingPaymentMethod(conn, bookingId, PaymentMethod.VNPAY)) {
+                    throw new SQLException("Booking status changed before VNPay session was created.");
+                }
+                conn.commit();
+                return paymentSession;
+            } catch (SQLException | ValidationException | PaymentGatewayException | RuntimeException e) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackException) {
+                    e.addSuppressed(rollbackException);
+                }
+                throw e;
             }
-            if (booking.getPointsRedeemed() > 0
-                    && !bookingDAO.deductPoints(conn, customer.getUserId(), booking.getPointsRedeemed())) {
-                throw error(ERROR_GENERAL, Messages.BOOKING_POINTS_INSUFFICIENT);
+        }
+    }
+
+    public Integer findBookingIdForPaymentReturn(User customer, String transactionReference) throws SQLException,
+            ValidationException {
+        requireCustomer(customer);
+        try (Connection conn = DBContext.getConnection()) {
+            PaymentAttempt attempt = paymentDAO.findByReference(conn, transactionReference, false);
+            return attempt != null && attempt.getCustomerId() == customer.getUserId()
+                    ? attempt.getBookingId() : null;
+        }
+    }
+
+    public boolean applyVerifiedVnPayPayment(VerifiedPayment payment) throws SQLException, ValidationException {
+        if (payment == null || payment.getTransactionReference() == null) {
+            return false;
+        }
+        PaymentAttempt initialAttempt;
+        try (Connection conn = DBContext.getConnection()) {
+            initialAttempt = paymentDAO.findByReference(conn, payment.getTransactionReference(), false);
+        }
+        if (initialAttempt == null) {
+            return false;
+        }
+        try {
+            return inTransaction(conn -> {
+                Booking booking = bookingDAO.findBookingOfCustomer(conn, initialAttempt.getBookingId(),
+                        initialAttempt.getCustomerId(), true);
+                PaymentAttempt attempt = paymentDAO.findByReference(conn, payment.getTransactionReference(), true);
+                if (attempt == null || attempt.getBookingId() != initialAttempt.getBookingId()) {
+                    return false;
+                }
+                if (PaymentAttempt.STATUS_PAID.equals(attempt.getStatus())) {
+                    return payment.isSuccessful() && paymentDAO.hasMatchingPaidTransaction(conn, attempt,
+                            payment.getProviderTransactionId(), payment.getPaidAmount());
+                }
+                if (PaymentAttempt.STATUS_REVIEW_REQUIRED.equals(attempt.getStatus())) {
+                    return payment.isSuccessful() && paymentDAO.hasMatchingReviewCallback(attempt,
+                            payment.getProviderTransactionId(), payment.getResponseCode(), payment.getPaidAmount());
+                }
+                if (PaymentAttempt.STATUS_FAILED.equals(attempt.getStatus())) {
+                    if (!payment.isSuccessful()) {
+                        return paymentDAO.hasMatchingFailedCallback(attempt, payment.getProviderTransactionId(),
+                                payment.getResponseCode(), payment.getPaidAmount());
+                    }
+                    return markVnPayPaymentForReview(conn, payment, "success arrived after a failed callback");
+                }
+                if (PaymentAttempt.STATUS_EXPIRED.equals(attempt.getStatus())) {
+                    return payment.isSuccessful()
+                            ? markVnPayPaymentForReview(conn, payment, "success arrived after the attempt expired")
+                            : true;
+                }
+                if (!PaymentAttempt.STATUS_INITIATED.equals(attempt.getStatus())) {
+                    return false;
+                }
+                if (!payment.isSuccessful()) {
+                    paymentDAO.markFailed(conn, payment.getTransactionReference(), payment.getProviderTransactionId(),
+                            payment.getPaidAmount(), payment.getResponseCode());
+                    return true;
+                }
+                if (payment.getPaidAmount() == null || payment.getPaidAt() == null
+                        || payment.getProviderTransactionId() == null || payment.getProviderTransactionId().isBlank()
+                        || attempt.getAmount().compareTo(payment.getPaidAmount()) != 0
+                        || booking == null || !BookingStatus.PENDING.equals(booking.getStatus())
+                        || booking.getFinalAmount().compareTo(payment.getPaidAmount()) != 0) {
+                    return markVnPayPaymentForReview(conn, payment,
+                            "successful callback did not match the pending booking amount or status");
+                }
+
+                completeBookingPayment(conn, booking, attempt.getCustomerId());
+                if (!paymentDAO.markPaid(conn, payment.getTransactionReference(), payment.getProviderTransactionId(),
+                        payment.getPaidAmount(), payment.getResponseCode(), payment.getPaidAt())) {
+                    throw new SQLException("Could not record verified VNPay transaction.");
+                }
+                return true;
+            });
+        } catch (ValidationException e) {
+            if (!payment.isSuccessful()) {
+                throw e;
             }
-            for (Ticket ticket : tickets) {
-                ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
-            }
-            bookingDAO.updateTicketQrCodes(conn, tickets);
-            bookingDAO.markBookingPaid(conn, bookingId);
-            // Ghế đã có vé của đơn Paid nên là SOLD, không cần giữ nữa
-            bookingDAO.deleteHoldsBySession(conn, bookingHoldSession(bookingId));
-            Integer balance = bookingDAO.findPointBalance(conn, customer.getUserId(), false);
-            return balance == null ? 0 : balance;
-        });
+            boolean recordedForReview = inTransaction(conn -> markVnPayPaymentForReview(conn, payment,
+                    "booking settlement prerequisites failed: " + e.getMessage()));
+            return recordedForReview;
+        }
     }
 
     // AF2 khi đơn đã tạo nhưng chưa thanh toán: đơn và vé chuyển Cancelled, ghế về AVAILABLE ngay
@@ -370,6 +470,75 @@ public class BookingService {
     }
 
     // ===== Nội bộ =====
+
+    private boolean markVnPayPaymentForReview(Connection conn, VerifiedPayment payment, String reason)
+            throws SQLException {
+        PaymentAttempt attempt = paymentDAO.findByReference(conn, payment.getTransactionReference(), true);
+        if (attempt == null) {
+            return false;
+        }
+        if (PaymentAttempt.STATUS_PAID.equals(attempt.getStatus())) {
+            return paymentDAO.hasMatchingPaidTransaction(conn, attempt, payment.getProviderTransactionId(),
+                    payment.getPaidAmount());
+        }
+        if (PaymentAttempt.STATUS_REVIEW_REQUIRED.equals(attempt.getStatus())) {
+            return paymentDAO.hasMatchingReviewCallback(attempt, payment.getProviderTransactionId(),
+                    payment.getResponseCode(), payment.getPaidAmount());
+        }
+        boolean recorded = paymentDAO.markReviewRequired(conn, payment.getTransactionReference(),
+                payment.getProviderTransactionId(), payment.getPaidAmount(), payment.getResponseCode());
+        if (recorded) {
+            LOGGER.log(Level.SEVERE,
+                    "Verified VNPay payment requires manual review. reference={0}; reason={1}",
+                    new Object[]{payment.getTransactionReference(), reason});
+        }
+        return recorded;
+    }
+
+    private void completeBookingPayment(Connection conn, Booking booking, int customerId)
+            throws SQLException, ValidationException {
+        int bookingId = booking.getBookingId();
+        List<Ticket> tickets = bookingDAO.findTickets(conn, bookingId);
+        Set<Integer> held = bookingDAO.findLiveHeldSeatIds(conn, bookingHoldSession(bookingId), true);
+        if (!held.equals(ticketSeatIds(tickets))) {
+            throw error(ERROR_ENDED, Messages.BOOKING_HOLD_EXPIRED);
+        }
+        Map<Integer, String> names = bookingDAO.findConcessionNames(conn, bookingId);
+        for (BookingConcession item : bookingDAO.findBookingConcessions(conn, bookingId)) {
+            if (!bookingDAO.decreaseStock(conn, item.getConcessionId(), item.getQuantity())) {
+                throw error(ERROR_GENERAL, Messages.format(Messages.BOOKING_CONCESSION_UNAVAILABLE,
+                        names.getOrDefault(item.getConcessionId(), "đã chọn")));
+            }
+        }
+        if (booking.getVoucherId() != null) {
+            Voucher voucher = bookingDAO.findVoucherByCode(conn,
+                    bookingDAO.findVoucherCode(conn, booking.getVoucherId()));
+            if (voucher != null && voucher.getOwnerUserId() != null
+                    && !bookingDAO.markPersonalVoucherUsed(conn, voucher.getVoucherId())) {
+                throw error(ERROR_GENERAL, Messages.BOOKING_VOUCHER_INVALID);
+            }
+        }
+        if (booking.getPointsRedeemed() > 0
+                && !bookingDAO.deductPoints(conn, customerId, booking.getPointsRedeemed())) {
+            throw error(ERROR_GENERAL, Messages.BOOKING_POINTS_INSUFFICIENT);
+        }
+        for (Ticket ticket : tickets) {
+            ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
+        }
+        bookingDAO.updateTicketQrCodes(conn, tickets);
+        if (!bookingDAO.markBookingPaid(conn, bookingId, PaymentMethod.VNPAY)) {
+            throw new SQLException("Booking status changed before payment settlement.");
+        }
+        bookingDAO.deleteHoldsBySession(conn, bookingHoldSession(bookingId));
+    }
+
+    private Set<Integer> ticketSeatIds(List<Ticket> tickets) {
+        Set<Integer> seatIds = new HashSet<>();
+        for (Ticket ticket : tickets) {
+            seatIds.add(ticket.getSeatId());
+        }
+        return seatIds;
+    }
 
     private int cancelExpiredBookings(Connection conn, int showtimeId) throws SQLException {
         List<Integer> expired = bookingDAO.findExpiredPendingBookingIds(conn, showtimeId);

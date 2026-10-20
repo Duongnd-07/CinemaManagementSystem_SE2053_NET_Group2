@@ -592,12 +592,23 @@ public class BookingDAO {
         }
     }
 
-    public boolean markBookingPaid(Connection conn, int bookingId) throws SQLException {
-        String sql = "UPDATE Booking SET Status = ? WHERE BookingID = ? AND Status = ?";
+    public boolean setBookingPaymentMethod(Connection conn, int bookingId, String paymentMethod) throws SQLException {
+        String sql = "UPDATE Booking SET PaymentMethod = ? WHERE BookingID = ? AND Status = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, BookingStatus.PAID);
+            ps.setString(1, paymentMethod);
             ps.setInt(2, bookingId);
             ps.setString(3, BookingStatus.PENDING);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    public boolean markBookingPaid(Connection conn, int bookingId, String paymentMethod) throws SQLException {
+        String sql = "UPDATE Booking SET Status = ?, PaymentMethod = ? WHERE BookingID = ? AND Status = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, BookingStatus.PAID);
+            ps.setString(2, paymentMethod);
+            ps.setInt(3, bookingId);
+            ps.setString(4, BookingStatus.PENDING);
             return ps.executeUpdate() == 1;
         }
     }
