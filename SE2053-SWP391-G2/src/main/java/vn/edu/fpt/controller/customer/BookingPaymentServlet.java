@@ -14,11 +14,11 @@ import vn.edu.fpt.model.User;
 import vn.edu.fpt.service.BookingService;
 import vn.edu.fpt.service.BookingSummary;
 import vn.edu.fpt.service.ValidationException;
+import vn.edu.fpt.service.payment.PaymentGatewayException;
+import vn.edu.fpt.service.payment.PaymentService;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
 
-// Sau UC-13 bước 9: đơn chờ thanh toán. Cổng thanh toán thật thuộc UC-14 (thành viên khác làm);
-// trang này chỉ mô phỏng kết quả thanh toán thành công để chạy trọn luồng đặt vé, kèm AF2 hủy đơn.
 @WebServlet(BookingFlow.PAYMENT_PATH)
 public class BookingPaymentServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(BookingPaymentServlet.class.getName());
@@ -27,6 +27,7 @@ public class BookingPaymentServlet extends HttpServlet {
     private static final String ACTION_CANCEL = "cancel";
 
     private final BookingService bookingService = new BookingService();
+    private final PaymentService paymentService = new PaymentService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -60,16 +61,21 @@ public class BookingPaymentServlet extends HttpServlet {
         String action = request.getParameter("action");
         try {
             if (ACTION_PAY.equals(action)) {
-                int pointBalance = bookingService.payDemo(user, bookingId);
-                // Header hiển thị số điểm từ user trong session
-                user.setPointBalance(pointBalance);
-                session.setAttribute(BookingFlow.FLASH_SUCCESS, Messages.BOOKING_PAID);
+                var paymentSession = paymentService.startVnPayPayment(user, bookingId, request.getRemoteAddr());
+                response.sendRedirect(paymentSession.getPaymentUrl());
+                return;
             } else if (ACTION_CANCEL.equals(action)) {
                 bookingService.cancelBooking(user, bookingId);
                 session.setAttribute(BookingFlow.FLASH_SUCCESS, Messages.BOOKING_CANCELLED);
+            } else {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+                return;
             }
         } catch (ValidationException e) {
             session.setAttribute(BookingFlow.FLASH_ERROR, e.getErrors().values().iterator().next());
+        } catch (PaymentGatewayException e) {
+            LOGGER.log(Level.SEVERE, "Không thể khởi tạo thanh toán VNPay", e);
+            session.setAttribute(BookingFlow.FLASH_ERROR, Messages.BOOKING_VNPAY_START_FAILED);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Lỗi xử lý thanh toán/hủy đơn đặt vé", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, Messages.SYSTEM_ERROR);

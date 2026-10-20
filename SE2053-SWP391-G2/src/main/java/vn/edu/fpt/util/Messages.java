@@ -215,6 +215,12 @@ public final class Messages {
     public static final String BOOKING_NOT_FOUND = "Không tìm thấy đơn đặt vé.";
     public static final String BOOKING_NOT_PENDING = "Đơn đặt vé không còn ở trạng thái chờ thanh toán.";
     public static final String BOOKING_PAID = "Thanh toán thành công! Vé điện tử đã được phát hành.";
+    public static final String BOOKING_VNPAY_AMOUNT_INVALID =
+            "Số tiền thanh toán không hợp lệ cho VNPay. Vui lòng liên hệ nhân viên hỗ trợ.";
+    public static final String BOOKING_VNPAY_START_FAILED =
+            "Không thể khởi tạo thanh toán VNPay. Vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ.";
+    public static final String BOOKING_VNPAY_RETURN_PENDING =
+            "VNPay đã tiếp nhận yêu cầu. Đơn chỉ được xác nhận sau khi hệ thống nhận kết quả thanh toán hợp lệ.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

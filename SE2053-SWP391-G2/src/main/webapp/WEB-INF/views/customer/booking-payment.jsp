@@ -58,9 +58,8 @@
                 <section class="cl-card p-5 flex items-start gap-3 border-[#3b82f6]/40">
                     <span class="material-symbols-outlined text-[#60a5fa]">info</span>
                     <p class="text-sm text-[#c7cad6]">
-                        Đơn <strong class="text-white">#${booking.bookingId}</strong> đang chờ thanh toán. Cổng thanh toán online
-                        (VNPay/SePay - UC-14) đang được phát triển; nút bên dưới chỉ <strong class="text-white">mô phỏng</strong>
-                        giao dịch thành công để hoàn tất luồng đặt vé.
+                        Đơn <strong class="text-white">#${booking.bookingId}</strong> đang chờ thanh toán qua VNPay.
+                        Đơn chỉ được xác nhận sau khi hệ thống nhận và xác minh thông báo thanh toán từ VNPay.
                     </p>
                 </section>
             </c:when>
@@ -151,7 +150,7 @@
                         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                         <input type="hidden" name="id" value="${booking.bookingId}"/>
                         <button type="submit" name="action" value="pay" class="booking-btn booking-btn--primary" data-submit-once>
-                            <span class="material-symbols-outlined text-base">payments</span>Thanh toán (demo)
+                            <span class="material-symbols-outlined text-base">payments</span>Thanh toán qua VNPay
                         </button>
                     </form>
                 </div>
