@@ -562,7 +562,7 @@ public class BookingService {
             ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
         }
         bookingDAO.updateTicketQrCodes(conn, tickets);
-        if (!bookingDAO.markBookingPaid(conn, bookingId, paymentMethod)) {
+        if (!bookingDAO.markBookingPaid(conn, bookingId, paymentMethod, pointsEarned)) {
             throw new SQLException("Booking status changed before payment settlement.");
         }
         bookingDAO.deleteHoldsBySession(conn, bookingHoldSession(bookingId));
