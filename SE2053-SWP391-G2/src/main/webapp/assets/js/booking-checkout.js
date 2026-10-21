@@ -1,5 +1,5 @@
 // UC-13 bước 6-9 và trang chờ thanh toán: đồng hồ giữ ghế, nút tăng/giảm số lượng bắp nước,
-// tự tính lại tổng tiền khi đổi lựa chọn, xác nhận trước khi hủy đơn, chặn bấm gửi hai lần.
+// tự tính lại tổng tiền khi đổi lựa chọn, tự tải lại khi chờ VNPay, xác nhận trước khi hủy đơn, chặn bấm gửi hai lần.
 (function () {
     var timer = document.getElementById('holdTimer');
     if (timer) {
@@ -18,6 +18,14 @@
             window.setTimeout(tick, 1000);
         };
         tick();
+    }
+
+    // UC-14: đã chuyển sang VNPay, đơn chỉ đổi trạng thái khi server nhận IPN nên tải lại định kỳ để hiện kết quả
+    var awaiting = document.querySelector('[data-auto-refresh]');
+    if (awaiting) {
+        window.setTimeout(function () {
+            window.location.reload();
+        }, Math.max(3, parseInt(awaiting.dataset.autoRefresh, 10) || 5) * 1000);
     }
 
     var form = document.getElementById('checkoutForm');
@@ -152,7 +160,8 @@
 
     document.querySelectorAll('[data-submit-once]').forEach(function (button) {
         button.form.addEventListener('submit', function (event) {
-            if (event.submitter !== button) {
+            // Khách bấm "Hủy" ở hộp thoại xác nhận (data-confirm) thì không gửi nên không khóa nút
+            if (event.submitter !== button || event.defaultPrevented) {
                 return;
             }
             // Vô hiệu hóa sau khi trình duyệt đã lấy name/value của nút vào dữ liệu gửi đi

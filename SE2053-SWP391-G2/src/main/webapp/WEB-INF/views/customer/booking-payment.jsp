@@ -54,12 +54,40 @@
                     <p class="booking-hint">Mã đơn #${booking.bookingId}. Vui lòng đưa mã vé hoặc mã QR cho nhân viên soát vé khi vào phòng chiếu.</p>
                 </section>
             </c:when>
+            <c:when test="${pending and summary.free}">
+                <section class="cl-card p-5 flex items-start gap-3 border-[#34d399]/40">
+                    <span class="material-symbols-outlined text-[#34d399]">redeem</span>
+                    <p class="text-sm text-[#c7cad6]">
+                        Đơn <strong class="text-white">#${booking.bookingId}</strong> đã được trừ hết bằng voucher/điểm tích lũy,
+                        không cần thanh toán thêm. Bấm <strong class="text-white">Xác nhận đặt vé</strong> để nhận vé điện tử.
+                    </p>
+                </section>
+            </c:when>
+            <c:when test="${pending and summary.awaitingGateway}">
+                <%-- Đã chuyển sang VNPay, chờ IPN: trang tự tải lại để hiện kết quả, không mời thanh toán thêm lần nữa --%>
+                <section id="awaitingPayment" class="cl-card p-5 flex items-start gap-3 border-[#fbbf24]/40"
+                         data-auto-refresh="5">
+                    <span class="material-symbols-outlined text-[#fbbf24]">hourglass_top</span>
+                    <p class="text-sm text-[#c7cad6]">
+                        Đang chờ VNPay xác nhận thanh toán cho đơn <strong class="text-white">#${booking.bookingId}</strong>.
+                        Trang sẽ tự cập nhật khi có kết quả, vui lòng không thanh toán lại nếu bạn đã trả tiền.
+                    </p>
+                </section>
+            </c:when>
             <c:when test="${pending}">
                 <section class="cl-card p-5 flex items-start gap-3 border-[#3b82f6]/40">
-                    <span class="material-symbols-outlined text-[#60a5fa]">info</span>
+                    <span class="material-symbols-outlined text-[#60a5fa]">${summary.lastPaymentFailed ? 'error' : 'info'}</span>
                     <p class="text-sm text-[#c7cad6]">
-                        Đơn <strong class="text-white">#${booking.bookingId}</strong> đang chờ thanh toán qua VNPay.
-                        Đơn chỉ được xác nhận sau khi hệ thống nhận và xác minh thông báo thanh toán từ VNPay.
+                        <c:choose>
+                            <c:when test="${summary.lastPaymentFailed}">
+                                Lần thanh toán trước của đơn <strong class="text-white">#${booking.bookingId}</strong> chưa thành công
+                                (bị hủy hoặc bị từ chối). Bạn có thể thanh toán lại trong thời gian giữ ghế.
+                            </c:when>
+                            <c:otherwise>
+                                Đơn <strong class="text-white">#${booking.bookingId}</strong> đang chờ thanh toán qua VNPay.
+                                Đơn chỉ được xác nhận sau khi hệ thống nhận và xác minh thông báo thanh toán từ VNPay.
+                            </c:otherwise>
+                        </c:choose>
                     </p>
                 </section>
             </c:when>
@@ -138,7 +166,10 @@
         <c:choose>
             <c:when test="${pending}">
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <form method="post" action="${ctx}/customer/booking/payment" data-confirm="Hủy đơn và trả lại các ghế đang giữ?">
+                    <form method="post" action="${ctx}/customer/booking/payment"
+                          data-confirm="${summary.awaitingGateway
+                                ? 'Nếu bạn đã trả tiền trên VNPay, đừng hủy đơn - hãy chờ hệ thống xác nhận. Vẫn hủy đơn và trả lại ghế?'
+                                : 'Hủy đơn và trả lại các ghế đang giữ?'}">
                         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                         <input type="hidden" name="id" value="${booking.bookingId}"/>
                         <input type="hidden" name="action" value="cancel"/>
@@ -146,13 +177,37 @@
                             <span class="material-symbols-outlined text-base">close</span>Hủy đơn
                         </button>
                     </form>
-                    <form method="post" action="${ctx}/customer/booking/payment">
-                        <input type="hidden" name="csrfToken" value="${csrfToken}"/>
-                        <input type="hidden" name="id" value="${booking.bookingId}"/>
-                        <button type="submit" name="action" value="pay" class="booking-btn booking-btn--primary" data-submit-once>
-                            <span class="material-symbols-outlined text-base">payments</span>Thanh toán qua VNPay
-                        </button>
-                    </form>
+                    <c:choose>
+                        <c:when test="${summary.free}">
+                            <form method="post" action="${ctx}/customer/booking/payment">
+                                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                <input type="hidden" name="id" value="${booking.bookingId}"/>
+                                <button type="submit" name="action" value="confirmFree" class="booking-btn booking-btn--primary" data-submit-once>
+                                    <span class="material-symbols-outlined text-base">check_circle</span>Xác nhận đặt vé (0đ)
+                                </button>
+                            </form>
+                        </c:when>
+                        <c:when test="${summary.awaitingGateway}">
+                            <%-- Khách đóng trang VNPay mà chưa trả: vẫn cho thanh toán lại nhưng phải xác nhận rõ --%>
+                            <form method="post" action="${ctx}/customer/booking/payment"
+                                  data-confirm="Chỉ thanh toán lại nếu bạn CHƯA trả tiền ở lần trước (ví dụ đã đóng trang VNPay). Nếu đã trả, hãy chờ để tránh bị trừ tiền hai lần. Tiếp tục?">
+                                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                <input type="hidden" name="id" value="${booking.bookingId}"/>
+                                <button type="submit" name="action" value="pay" class="booking-btn booking-btn--ghost" data-submit-once>
+                                    <span class="material-symbols-outlined text-base">refresh</span>Tôi chưa trả tiền, thanh toán lại
+                                </button>
+                            </form>
+                        </c:when>
+                        <c:otherwise>
+                            <form method="post" action="${ctx}/customer/booking/payment">
+                                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                <input type="hidden" name="id" value="${booking.bookingId}"/>
+                                <button type="submit" name="action" value="pay" class="booking-btn booking-btn--primary" data-submit-once>
+                                    <span class="material-symbols-outlined text-base">payments</span>${summary.lastPaymentFailed ? 'Thanh toán lại qua VNPay' : 'Thanh toán qua VNPay'}
+                                </button>
+                            </form>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </c:when>
             <c:when test="${paid}">

@@ -24,6 +24,7 @@ public class BookingPaymentServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(BookingPaymentServlet.class.getName());
     private static final String VIEW = "/WEB-INF/views/customer/booking-payment.jsp";
     private static final String ACTION_PAY = "pay";
+    private static final String ACTION_CONFIRM_FREE = "confirmFree";
     private static final String ACTION_CANCEL = "cancel";
 
     private final BookingService bookingService = new BookingService();
@@ -36,7 +37,10 @@ public class BookingPaymentServlet extends HttpServlet {
         BookingFlow.moveFlashToRequest(session, request);
         int bookingId = BookingFlow.parseInt(request.getParameter("id"));
         try {
-            BookingSummary summary = bookingService.loadBooking(BookingFlow.currentUser(session), bookingId);
+            User user = BookingFlow.currentUser(session);
+            BookingSummary summary = bookingService.loadBooking(user, bookingId);
+            // VNPay chốt đơn qua IPN (không qua phiên của khách) nên làm mới số điểm hiển thị ở header tại đây
+            user.setPointBalance(summary.getPointBalance());
             request.setAttribute("summary", summary);
             request.setAttribute("csrfToken", CsrfToken.get(session));
             request.getRequestDispatcher(VIEW).forward(request, response);
@@ -64,6 +68,9 @@ public class BookingPaymentServlet extends HttpServlet {
                 var paymentSession = paymentService.startVnPayPayment(user, bookingId, request.getRemoteAddr());
                 response.sendRedirect(paymentSession.getPaymentUrl());
                 return;
+            } else if (ACTION_CONFIRM_FREE.equals(action)) {
+                bookingService.confirmFreeBooking(user, bookingId);
+                session.setAttribute(BookingFlow.FLASH_SUCCESS, Messages.BOOKING_FREE_CONFIRMED);
             } else if (ACTION_CANCEL.equals(action)) {
                 bookingService.cancelBooking(user, bookingId);
                 session.setAttribute(BookingFlow.FLASH_SUCCESS, Messages.BOOKING_CANCELLED);
