@@ -51,23 +51,14 @@
     <!-- Main Content Container -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <!-- Page Title & Header Actions -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-                    <span class="material-symbols-outlined text-[#e50914] text-3xl">manage_accounts</span>
-                    Quản lý tài khoản & Phân quyền
-                </h1>
-                <p class="text-xs sm:text-sm text-[#8e919f] mt-1">
-                    Trang quản trị toàn quyền phân chia vai trò (Admin, Manager, Staff, Customer) và kiểm soát trạng thái tài khoản.
-                </p>
-            </div>
-            <div>
-                <button type="button" onclick="openCreateUserModal()"
-                        class="px-4 py-2.5 bg-gradient-to-r from-[#e50914] to-[#b80710] hover:from-[#f40d1a] hover:to-[#cb0812] text-white font-bold rounded-xl text-xs sm:text-sm shadow-[0_0_20px_-2px_rgba(229,9,20,0.5)] transition flex items-center gap-2">
-                    <span class="material-symbols-outlined text-lg">person_add</span>
-                    Thêm tài khoản mới
-                </button>
-            </div>
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                <span class="material-symbols-outlined text-[#e50914] text-3xl">manage_accounts</span>
+                Quản lý tài khoản & Phân quyền
+            </h1>
+            <p class="text-xs sm:text-sm text-[#8e919f] mt-1">
+                Trang quản trị toàn quyền phân chia vai trò (Admin, Manager, Staff, Customer) và kiểm soát trạng thái tài khoản.
+            </p>
         </div>
 
         <!-- Flash Messages -->
@@ -492,90 +483,6 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- Modal 3: Thêm tài khoản mới -->
-    <div id="createModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-[#171b26] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-            <div class="flex items-center justify-between pb-3 border-b border-white/10">
-                <div class="flex items-center gap-2 font-bold text-white text-lg">
-                    <span class="material-symbols-outlined text-[#e50914]">person_add</span>
-                    Thêm tài khoản mới
-                </div>
-                <button type="button" onclick="closeCreateUserModal()" class="text-gray-400 hover:text-white">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-
-            <form action="${pageContext.request.contextPath}/admin/users" method="POST" class="space-y-3.5">
-                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
-                <input type="hidden" name="action" value="create-user"/>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-                        Họ và tên <span class="text-[#e50914]">*</span>
-                    </label>
-                    <input type="text" name="fullName" required placeholder="Ví dụ: Nguyễn Văn An"
-                           class="w-full px-3.5 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-                            Email <span class="text-[#e50914]">*</span>
-                        </label>
-                        <input type="email" name="email" required placeholder="nhanvien@cinema.vn"
-                               class="w-full px-3.5 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-                            Số điện thoại <span class="text-[#e50914]">*</span>
-                        </label>
-                        <input type="tel" name="phone" required placeholder="0912345678" pattern="0[0-9]{9}"
-                               class="w-full px-3.5 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-                            Vai trò <span class="text-[#e50914]">*</span>
-                        </label>
-                        <select name="role" required
-                                class="w-full px-3 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#e50914]">
-                            <option value="Staff">Nhân viên (Staff)</option>
-                            <option value="Manager">Quản lý (Manager)</option>
-                            <option value="Admin">Quản trị viên (Admin)</option>
-                            <option value="Customer">Khách hàng (Customer)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-                            Mật khẩu khởi tạo <span class="text-[#e50914]">*</span>
-                        </label>
-                        <input type="password" name="password" required placeholder="Tối thiểu 8 ký tự (hoa, thường, số)"
-                               class="w-full px-3.5 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
-                    </div>
-                </div>
-
-                <div class="p-2.5 bg-[#0f131d] rounded-xl border border-white/5 text-[11px] text-gray-400">
-                    <span class="text-amber-400 font-bold">Lưu ý:</span> Mật khẩu phải có từ 8 - 32 ký tự, bao gồm ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số.
-                </div>
-
-                <div class="flex justify-end gap-2.5 pt-2">
-                    <button type="button" onclick="closeCreateUserModal()"
-                            class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-300 transition">
-                        Hủy
-                    </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-[#e50914] hover:bg-[#b80710] text-white font-bold rounded-xl text-xs transition shadow-[0_0_15px_rgba(229,9,20,0.5)] flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-sm">save</span>
-                        Tạo tài khoản
-                    </button>
-                </div>
-            </form>
-        </div>
     </div>
 
     <!-- Modal 4: Đặt lại mật khẩu -->
@@ -647,12 +554,7 @@
             document.getElementById('statusModal').classList.add('hidden');
         }
 
-        function openCreateUserModal() {
-            document.getElementById('createModal').classList.remove('hidden');
-        }
-        function closeCreateUserModal() {
-            document.getElementById('createModal').classList.add('hidden');
-        }
+
 
         function openResetPasswordModal(userId, fullName, email) {
             document.getElementById('resetPasswordModalUserId').value = userId;
