@@ -147,8 +147,8 @@ public class LoginServlet extends HttpServlet {
      * Xác định URL chuyển hướng sau khi đăng nhập:
      * - Ưu tiên returnUrl hợp lệ nếu có (và phù hợp quyền hạn)
      * - Phân quyền theo 4 vai trò:
-     *   1. Admin -> /manager/movies
-     *   2. Manager -> /manager/movies
+     *   1. Admin -> /admin/users (Quản lý tài khoản & phân quyền)
+     *   2. Manager -> /manager/movies (Quản lý nghiệp vụ rạp)
      *   3. Staff -> /staff/dashboard
      *   4. Customer -> / (trang chủ)
      */
@@ -161,26 +161,32 @@ public class LoginServlet extends HttpServlet {
             // Nếu returnUrl bắt đầu bằng contextPath hoặc dấu gạch chéo an toàn (không phải //)
             if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.startsWith("/\\")) {
                 // Kiểm tra phân quyền nhanh cho returnUrl
+                boolean isAdminArea = trimmed.contains("/admin/");
                 boolean isManagerArea = trimmed.contains("/manager/");
                 boolean isStaffArea = trimmed.contains("/staff/");
                 String role = user.getRole();
 
-                if (isManagerArea && (Role.ADMIN.equals(role) || Role.MANAGER.equals(role))) {
+                if (isAdminArea && Role.ADMIN.equals(role)) {
                     return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
                 }
-                if (isStaffArea && (Role.ADMIN.equals(role) || Role.MANAGER.equals(role) || Role.STAFF.equals(role))) {
+                if (isManagerArea && Role.MANAGER.equals(role)) {
                     return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
                 }
-                if (!isManagerArea && !isStaffArea) {
+                if (isStaffArea && (Role.STAFF.equals(role) || Role.MANAGER.equals(role))) {
+                    return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
+                }
+                if (!isAdminArea && !isManagerArea && !isStaffArea) {
                     return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
                 }
             }
         }
 
-        // 2. Chuyển hướng mặc định theo 4 vai trò
+        // 2. Chuyển hướng mặc định theo 4 vai trò:
+        // Admin quản lý tài khoản & phân quyền; Manager quản lý nghiệp vụ rạp
         String role = user.getRole() == null ? Role.CUSTOMER : user.getRole();
         return switch (role) {
-            case Role.ADMIN, Role.MANAGER -> ctx + "/manager/movies";
+            case Role.ADMIN -> ctx + "/admin/users";
+            case Role.MANAGER -> ctx + "/manager/movies";
             case Role.STAFF -> ctx + "/staff/dashboard";
             case Role.CUSTOMER -> ctx + "/";
             default -> ctx + "/";

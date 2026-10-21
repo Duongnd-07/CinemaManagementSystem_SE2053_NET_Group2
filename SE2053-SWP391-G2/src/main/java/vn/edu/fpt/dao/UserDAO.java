@@ -5,6 +5,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.util.DBContext;
@@ -182,6 +186,138 @@ public class UserDAO {
             ps.setInt(3, userId);
             return ps.executeUpdate() > 0;
         }
+    }
+
+    /**
+     * Admin: Lấy danh sách tài khoản kèm tìm kiếm, lọc theo vai trò và trạng thái, có phân trang.
+     */
+    public List<User> findUsers(String keyword, String role, String status, int offset, int limit) throws SQLException {
+        StringBuilder sql = new StringBuilder("""
+                SELECT UserID, FullName, Email, Phone, PasswordHash, Role, PointBalance, Status
+                FROM [User]
+                WHERE 1=1
+                """);
+        List<Object> params = new ArrayList<>();
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (LOWER(FullName) LIKE LOWER(?) OR LOWER(Email) LIKE LOWER(?) OR Phone LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (role != null && !role.trim().isEmpty() && !"ALL".equalsIgnoreCase(role)) {
+            sql.append(" AND Role = ?");
+            params.add(role.trim());
+        }
+        if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+            params.add(status.trim());
+        }
+        sql.append(" ORDER BY UserID DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        params.add(offset);
+        params.add(limit);
+
+        List<User> list = new ArrayList<>();
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapUser(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Admin: Đếm tổng số lượng tài khoản theo điều kiện lọc.
+     */
+    public int countUsers(String keyword, String role, String status) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM [User] WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (LOWER(FullName) LIKE LOWER(?) OR LOWER(Email) LIKE LOWER(?) OR Phone LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (role != null && !role.trim().isEmpty() && !"ALL".equalsIgnoreCase(role)) {
+            sql.append(" AND Role = ?");
+            params.add(role.trim());
+        }
+        if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+            params.add(status.trim());
+        }
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Admin: Cập nhật vai trò (Role) của tài khoản.
+     */
+    public boolean updateRole(int userId, String newRole) throws SQLException {
+        String sql = "UPDATE [User] SET Role = ? WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newRole);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Admin: Cập nhật trạng thái tài khoản (Active, Suspended, Deactivated).
+     */
+    public boolean updateStatus(int userId, String newStatus) throws SQLException {
+        String sql = "UPDATE [User] SET Status = ? WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newStatus);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Admin: Đếm số lượng tài khoản theo từng vai trò để hiển thị thống kê.
+     */
+    public Map<String, Integer> countStatsByRole() throws SQLException {
+        Map<String, Integer> stats = new LinkedHashMap<>();
+        stats.put("Total", 0);
+        stats.put(Role.ADMIN, 0);
+        stats.put(Role.MANAGER, 0);
+        stats.put(Role.STAFF, 0);
+        stats.put(Role.CUSTOMER, 0);
+
+        String sql = "SELECT Role, COUNT(*) AS Cnt FROM [User] GROUP BY Role";
+        int total = 0;
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                String r = rs.getString("Role");
+                int c = rs.getInt("Cnt");
+                stats.put(r, c);
+                total += c;
+            }
+        }
+        stats.put("Total", total);
+        return stats;
     }
 
     private User mapUser(ResultSet rs) throws SQLException {

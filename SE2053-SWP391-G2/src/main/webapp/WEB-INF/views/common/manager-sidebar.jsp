@@ -40,9 +40,6 @@
         <a class="${itemBase} ${active == 'equipment-reports' ? itemActive : itemIdle}" href="${ctx}/manager/equipment-reports">
             <span class="material-symbols-outlined mr-space-md">build</span>Sự cố thiết bị
         </a>
-        <a class="${itemBase} ${active == 'users' ? itemActive : itemIdle}" href="${ctx}/manager/users">
-            <span class="material-symbols-outlined mr-space-md">group</span>Người dùng
-        </a>
         <a class="${itemBase} ${active == 'reports' ? itemActive : itemIdle}" href="${ctx}/manager/reports">
             <span class="material-symbols-outlined mr-space-md">bar_chart</span>Báo cáo
         </a>
