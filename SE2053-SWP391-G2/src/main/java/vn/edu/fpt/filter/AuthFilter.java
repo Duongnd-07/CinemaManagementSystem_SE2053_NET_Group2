@@ -20,13 +20,14 @@ import vn.edu.fpt.service.ProfileService;
 import vn.edu.fpt.util.AppConfig;
 import vn.edu.fpt.util.Messages;
 
-// RBAC theo tiền tố URL: /staff/* cho Staff, /manager/* cho Manager và Admin, /customer/* cho Customer
-@WebFilter({"/staff/*", "/manager/*", "/customer/*"})
+// RBAC theo tiền tố URL: /admin/* cho Admin, /manager/* cho Manager, /staff/* cho Staff, /customer/* cho Customer
+@WebFilter({"/admin/*", "/staff/*", "/manager/*", "/customer/*"})
 public class AuthFilter implements Filter {
     public static final String SESSION_USER = "user";
     private static final String ACTIVE = "Active";
-    private static final List<String> STAFF_ROLES = List.of(Role.STAFF, Role.MANAGER, Role.ADMIN);
-    private static final List<String> MANAGER_ROLES = List.of(Role.MANAGER, Role.ADMIN);
+    private static final List<String> ADMIN_ROLES = List.of(Role.ADMIN);
+    private static final List<String> MANAGER_ROLES = List.of(Role.MANAGER);
+    private static final List<String> STAFF_ROLES = List.of(Role.STAFF, Role.MANAGER);
     private static final List<String> CUSTOMER_ROLES = List.of(Role.CUSTOMER);
     private static final Logger LOGGER = Logger.getLogger(AuthFilter.class.getName());
 
@@ -37,9 +38,14 @@ public class AuthFilter implements Filter {
             throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
+        boolean adminArea = req.getServletPath().startsWith("/admin");
+        boolean managerArea = req.getServletPath().startsWith("/manager");
         boolean staffArea = req.getServletPath().startsWith("/staff");
         boolean customerArea = req.getServletPath().startsWith("/customer");
-        List<String> allowedRoles = customerArea ? CUSTOMER_ROLES : staffArea ? STAFF_ROLES : MANAGER_ROLES;
+        List<String> allowedRoles = adminArea ? ADMIN_ROLES
+                : managerArea ? MANAGER_ROLES
+                : staffArea ? STAFF_ROLES
+                : CUSTOMER_ROLES;
 
         HttpSession session = req.getSession(false);
         User user = session == null ? null : (User) session.getAttribute(SESSION_USER);
