@@ -72,6 +72,7 @@ public class BookingService {
     private static final int DEFAULT_MAX_SEATS = 8;
     private static final String CONFIG_HOLD_MINUTES = "SEAT_HOLD_MINUTES";
     private static final String CONFIG_POINT_RATE = "POINT_EXCHANGE_RATE";
+    private static final String CONFIG_POINT_EARN_PERCENT = "POINT_EARN_PERCENT";
     private static final String CONFIG_MAX_SEATS = "BOOKING_MAX_SEATS";
     private static final String CONFIG_VIP_SURCHARGE = "SEAT_SURCHARGE_VIP";
     // SQL Server: vi phạm UNIQUE index / constraint
@@ -522,14 +523,45 @@ public class BookingService {
                 && !bookingDAO.deductPoints(conn, customerId, booking.getPointsRedeemed())) {
             throw error(ERROR_GENERAL, Messages.BOOKING_POINTS_INSUFFICIENT);
         }
+        if (booking.getPointsRedeemed() > 0) {
+            bookingDAO.insertLoyaltyTransaction(conn, customerId, bookingId, "Redeemed",
+                    -booking.getPointsRedeemed(), "Điểm sử dụng cho đơn vé đã thanh toán");
+        }
+        int pointsEarned = calculateEarnedPoints(conn, booking, tickets);
+        if (pointsEarned > 0) {
+            if (!bookingDAO.addPoints(conn, customerId, pointsEarned)) {
+                throw new SQLException("Customer loyalty balance exceeds the supported range.");
+            }
+            bookingDAO.insertLoyaltyTransaction(conn, customerId, bookingId, "Earned", pointsEarned,
+                    "Điểm từ đơn vé đã thanh toán");
+        }
         for (Ticket ticket : tickets) {
             ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
         }
         bookingDAO.updateTicketQrCodes(conn, tickets);
-        if (!bookingDAO.markBookingPaid(conn, bookingId, PaymentMethod.VNPAY)) {
+        if (!bookingDAO.markBookingPaid(conn, bookingId, PaymentMethod.VNPAY, pointsEarned)) {
             throw new SQLException("Booking status changed before payment settlement.");
         }
         bookingDAO.deleteHoldsBySession(conn, bookingHoldSession(bookingId));
+    }
+
+    private int calculateEarnedPoints(Connection conn, Booking booking, List<Ticket> tickets) throws SQLException {
+        BigDecimal ticketTotal = tickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        int exchangeRate = pointRate(conn);
+        BigDecimal totalDiscount = booking.getDiscountAmount() == null
+                ? BigDecimal.ZERO : booking.getDiscountAmount();
+        BigDecimal eligibleAmount = ticketTotal.subtract(totalDiscount).max(BigDecimal.ZERO);
+        BigDecimal earnPercent = configDAO.getDecimal(conn, CONFIG_POINT_EARN_PERCENT, BigDecimal.ONE);
+        if (earnPercent.signum() < 0 || earnPercent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new SQLException("POINT_EARN_PERCENT must be between 0 and 100.");
+        }
+        BigDecimal points = eligibleAmount.multiply(earnPercent)
+                .divide(BigDecimal.valueOf(100L * exchangeRate), 0, RoundingMode.DOWN);
+        try {
+            return points.intValueExact();
+        } catch (ArithmeticException e) {
+            throw new SQLException("Earned loyalty points exceed the supported range.", e);
+        }
     }
 
     private Set<Integer> ticketSeatIds(List<Ticket> tickets) {
@@ -722,11 +754,20 @@ public class BookingService {
         if (voucher == null || !VoucherService.ACTIVE.equals(voucher.getStatus())) {
             return false;
         }
+        if (voucher.getStartDate() == null || voucher.getExpiryDate() == null
+                || voucher.getStartDate().isAfter(LocalDateTime.now())
+                || !voucher.getExpiryDate().isAfter(LocalDateTime.now())) {
+            return false;
+        }
         Integer owner = voucher.getOwnerUserId();
         if (owner != null && owner != customer.getUserId()) {
             return false;
         }
         if (gross.compareTo(voucher.getMinOrderAmount()) < 0) {
+            return false;
+        }
+        if (voucher.getUsageLimit() != null
+                && bookingDAO.countActiveVoucherUses(conn, voucher.getVoucherId()) >= voucher.getUsageLimit()) {
             return false;
         }
         return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(),

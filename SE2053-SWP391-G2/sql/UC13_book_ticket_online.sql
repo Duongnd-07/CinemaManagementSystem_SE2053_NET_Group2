@@ -24,6 +24,7 @@ SELECT v.ConfigKey, v.ConfigValue, v.Description
 FROM (VALUES
     ('SEAT_HOLD_MINUTES', N'10', N'GB-01: số phút giữ ghế PENDING khi khách đặt vé online'),
     ('POINT_EXCHANGE_RATE', N'1000', N'BR-LOYALTY-01: giá trị (VND) của 1 điểm khi trừ vào tiền vé'),
+    ('POINT_EARN_PERCENT', N'1', N'GB-04: phần trăm điểm tích lũy theo tiền vé thực trả'),
     ('BOOKING_MAX_SEATS', N'8', N'UC-13: số ghế tối đa trong một đơn đặt vé online')
 ) v (ConfigKey, ConfigValue, Description)
 WHERE NOT EXISTS (SELECT 1 FROM SystemConfig s WHERE s.ConfigKey = v.ConfigKey);

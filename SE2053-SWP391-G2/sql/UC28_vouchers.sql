@@ -9,13 +9,16 @@ BEGIN
         DiscountValue DECIMAL(18,2) NOT NULL,
         DiscountType VARCHAR(20) NOT NULL,
         CreatedAt DATETIME NOT NULL CONSTRAINT DF_Voucher_CreatedAt DEFAULT GETDATE(),
+        StartDate DATETIME NOT NULL CONSTRAINT DF_Voucher_StartDate DEFAULT GETDATE(),
         ExpiryDate DATETIME NOT NULL,
+        UsageLimit INT NULL,
         OwnerUserID INT NULL CONSTRAINT FK_Voucher_OwnerUser REFERENCES [User](UserID),
         Status VARCHAR(20) NOT NULL CONSTRAINT DF_Voucher_Status DEFAULT 'Active',
         VoucherType VARCHAR(20) NOT NULL CONSTRAINT DF_Voucher_Type DEFAULT 'Promotion',
         MinOrderAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_Voucher_MinOrder DEFAULT 0,
         CreatedByUserID INT NULL CONSTRAINT FK_Voucher_CreatedBy REFERENCES [User](UserID),
         CONSTRAINT CK_Voucher_DiscountValue CHECK (DiscountValue > 0),
+        CONSTRAINT CK_Voucher_UsageLimit CHECK (UsageLimit IS NULL OR UsageLimit > 0),
         CONSTRAINT CK_Voucher_MinOrder CHECK (MinOrderAmount >= 0),
         CONSTRAINT CK_Voucher_DiscountType CHECK (DiscountType IN ('Amount', 'Percent')),
         CONSTRAINT CK_Voucher_Type CHECK (VoucherType IN ('Promotion', 'Refund80'))
@@ -34,6 +37,11 @@ IF COL_LENGTH('Voucher', 'CreatedByUserID') IS NULL
 IF COL_LENGTH('Voucher', 'CreatedAt') IS NULL
     ALTER TABLE Voucher ADD CreatedAt DATETIME NOT NULL
         CONSTRAINT DF_Voucher_CreatedAt DEFAULT GETDATE() WITH VALUES;
+IF COL_LENGTH('Voucher', 'StartDate') IS NULL
+    ALTER TABLE Voucher ADD StartDate DATETIME NOT NULL
+        CONSTRAINT DF_Voucher_StartDate DEFAULT GETDATE() WITH VALUES;
+IF COL_LENGTH('Voucher', 'UsageLimit') IS NULL
+    ALTER TABLE Voucher ADD UsageLimit INT NULL;
 GO
 
 IF NOT EXISTS (
@@ -80,6 +88,11 @@ IF NOT EXISTS (
 )
     ALTER TABLE Voucher ADD CONSTRAINT CK_Voucher_MinOrder CHECK (MinOrderAmount >= 0);
 IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_Voucher_UsageLimit' AND parent_object_id = OBJECT_ID('Voucher')
+)
+    ALTER TABLE Voucher ADD CONSTRAINT CK_Voucher_UsageLimit CHECK (UsageLimit IS NULL OR UsageLimit > 0);
+IF NOT EXISTS (
     SELECT 1
     FROM sys.indexes i
     JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
@@ -105,4 +118,8 @@ IF NOT EXISTS (
     SELECT 1 FROM sys.indexes WHERE name = 'IX_Voucher_Type_Status' AND object_id = OBJECT_ID('Voucher')
 )
     CREATE INDEX IX_Voucher_Type_Status ON Voucher (VoucherType, Status, ExpiryDate);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes WHERE name = 'IX_Booking_Voucher_Status' AND object_id = OBJECT_ID('Booking')
+)
+    CREATE INDEX IX_Booking_Voucher_Status ON Booking (VoucherID, Status, BookingID);
 GO
