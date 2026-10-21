@@ -70,6 +70,8 @@ public class BookingService {
     private static final int DEFAULT_HOLD_MINUTES = 10;
     private static final int DEFAULT_POINT_RATE = 1000;
     private static final int DEFAULT_MAX_SEATS = 8;
+    // Ghế VIP mặc định đắt hơn ghế thường 30.000đ khi SystemConfig chưa có SEAT_SURCHARGE_VIP
+    private static final BigDecimal DEFAULT_VIP_SURCHARGE = BigDecimal.valueOf(30000);
     private static final String CONFIG_HOLD_MINUTES = "SEAT_HOLD_MINUTES";
     private static final String CONFIG_POINT_RATE = "POINT_EXCHANGE_RATE";
     private static final String CONFIG_POINT_EARN_PERCENT = "POINT_EARN_PERCENT";
@@ -299,7 +301,9 @@ public class BookingService {
                     : bookingDAO.findVoucherCode(conn, booking.getVoucherId());
             long remaining = BookingStatus.PENDING.equals(booking.getStatus())
                     ? bookingDAO.findRemainingHoldSeconds(conn, bookingHoldSession(bookingId)) : 0;
-            return new BookingSummary(booking, showtime, movie, room, seats, concessions, voucherCode, remaining);
+            Integer pointBalance = bookingDAO.findPointBalance(conn, customer.getUserId(), false);
+            return new BookingSummary(booking, showtime, movie, room, seats, concessions, voucherCode, remaining,
+                    paymentDAO.findLatestStatusForBooking(conn, bookingId), pointBalance == null ? 0 : pointBalance);
         });
     }
 
@@ -425,7 +429,7 @@ public class BookingService {
                             "successful callback did not match the pending booking amount or status");
                 }
 
-                completeBookingPayment(conn, booking, attempt.getCustomerId());
+                completeBookingPayment(conn, booking, attempt.getCustomerId(), PaymentMethod.VNPAY);
                 if (!paymentDAO.markPaid(conn, payment.getTransactionReference(), payment.getProviderTransactionId(),
                         payment.getPaidAmount(), payment.getResponseCode(), payment.getPaidAt())) {
                     throw new SQLException("Could not record verified VNPay transaction.");
@@ -440,6 +444,24 @@ public class BookingService {
                     "booking settlement prerequisites failed: " + e.getMessage()));
             return recordedForReview;
         }
+    }
+
+    // Đơn 0đ (voucher/điểm trừ hết tiền): VNPay không nhận số tiền 0 nên chốt đơn ngay, cùng các bước như khi
+    // VNPay báo thành công (trừ kho, khóa voucher cá nhân, trừ điểm, sinh QR)
+    public void confirmFreeBooking(User customer, int bookingId) throws SQLException, ValidationException {
+        requireCustomer(customer);
+        inTransaction(conn -> {
+            expireIfNeeded(conn, customer, bookingId);
+            return null;
+        });
+        inTransaction(conn -> {
+            Booking booking = lockPendingBooking(conn, customer, bookingId);
+            if (booking.getFinalAmount() == null || booking.getFinalAmount().signum() != 0) {
+                throw error(ERROR_GENERAL, Messages.BOOKING_NOT_FREE);
+            }
+            completeBookingPayment(conn, booking, customer.getUserId(), null);
+            return null;
+        });
     }
 
     // AF2 khi đơn đã tạo nhưng chưa thanh toán: đơn và vé chuyển Cancelled, ghế về AVAILABLE ngay
@@ -496,7 +518,8 @@ public class BookingService {
         return recorded;
     }
 
-    private void completeBookingPayment(Connection conn, Booking booking, int customerId)
+    // paymentMethod = null khi đơn 0đ: không có giao dịch tiền nên không ghi phương thức thanh toán
+    private void completeBookingPayment(Connection conn, Booking booking, int customerId, String paymentMethod)
             throws SQLException, ValidationException {
         int bookingId = booking.getBookingId();
         List<Ticket> tickets = bookingDAO.findTickets(conn, bookingId);
@@ -539,7 +562,7 @@ public class BookingService {
             ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
         }
         bookingDAO.updateTicketQrCodes(conn, tickets);
-        if (!bookingDAO.markBookingPaid(conn, bookingId, PaymentMethod.VNPAY, pointsEarned)) {
+        if (!bookingDAO.markBookingPaid(conn, bookingId, paymentMethod)) {
             throw new SQLException("Booking status changed before payment settlement.");
         }
         bookingDAO.deleteHoldsBySession(conn, bookingHoldSession(bookingId));
@@ -819,7 +842,7 @@ public class BookingService {
 
     // Giá từng loại ghế theo TicketPricing (dùng chung với UC-19)
     private Map<String, BigDecimal> seatPrices(Connection conn, BigDecimal basePrice) throws SQLException {
-        BigDecimal vipSurcharge = configDAO.getDecimal(conn, CONFIG_VIP_SURCHARGE, BigDecimal.ZERO);
+        BigDecimal vipSurcharge = configDAO.getDecimal(conn, CONFIG_VIP_SURCHARGE, DEFAULT_VIP_SURCHARGE);
         Map<String, BigDecimal> prices = new LinkedHashMap<>();
         for (String type : SeatType.ALL) {
             prices.put(type, TicketPricing.priceOf(type, basePrice, vipSurcharge));

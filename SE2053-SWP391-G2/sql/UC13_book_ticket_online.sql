@@ -24,10 +24,16 @@ SELECT v.ConfigKey, v.ConfigValue, v.Description
 FROM (VALUES
     ('SEAT_HOLD_MINUTES', N'10', N'GB-01: số phút giữ ghế PENDING khi khách đặt vé online'),
     ('POINT_EXCHANGE_RATE', N'1000', N'BR-LOYALTY-01: giá trị (VND) của 1 điểm khi trừ vào tiền vé'),
-    ('POINT_EARN_PERCENT', N'1', N'GB-04: phần trăm điểm tích lũy theo tiền vé thực trả'),
-    ('BOOKING_MAX_SEATS', N'8', N'UC-13: số ghế tối đa trong một đơn đặt vé online')
+    ('BOOKING_MAX_SEATS', N'8', N'UC-13: số ghế tối đa trong một đơn đặt vé online'),
+    ('SEAT_SURCHARGE_VIP', N'30000', N'UC-19: phụ thu (VND) cho ghế VIP, cộng vào giá suất chiếu')
 ) v (ConfigKey, ConfigValue, Description)
 WHERE NOT EXISTS (SELECT 1 FROM SystemConfig s WHERE s.ConfigKey = v.ConfigKey);
+GO
+
+-- Ghế VIP đắt hơn ghế thường 30.000đ: DB tạo trước đó còn giá trị mặc định cũ 0 thì nâng lên 30000
+-- (giá trị khác 0 là đã được cấu hình riêng nên giữ nguyên)
+UPDATE SystemConfig SET ConfigValue = N'30000', UpdatedAt = GETDATE()
+WHERE ConfigKey = 'SEAT_SURCHARGE_VIP' AND ConfigValue = N'0';
 GO
 
 -- Tra cứu ghế đang giữ theo phiên/đơn và dọn ghế hết hạn (JOB-01)

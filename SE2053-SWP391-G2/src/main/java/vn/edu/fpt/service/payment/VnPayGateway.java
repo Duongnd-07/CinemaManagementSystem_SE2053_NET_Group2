@@ -65,8 +65,8 @@ public class VnPayGateway implements PaymentGateway {
         parameters.put("vnp_ExpireDate", VN_TIME.format(expiresAt));
         String signedData = canonicalQuery(parameters);
         String signature = hmac(secret, signedData);
-        parameters.put("vnp_SecureHashType", HASH_TYPE);
-        String url = paymentUrl + "?" + canonicalQuery(parameters) + "&vnp_SecureHash=" + signature;
+        // 2.1.0 chỉ gửi vnp_SecureHash (không có vnp_SecureHashType trong danh sách tham số tạo URL)
+        String url = paymentUrl + "?" + signedData + "&vnp_SecureHash=" + signature;
         if (url.length() > MAX_URL_LENGTH) {
             throw new PaymentGatewayException("The VNPay payment URL exceeds the supported length.");
         }
@@ -100,7 +100,9 @@ public class VnPayGateway implements PaymentGateway {
                 receivedHash.toLowerCase().getBytes(StandardCharsets.US_ASCII))) {
             throw new PaymentGatewayException("VNPay callback signature verification failed.");
         }
-        if (!HASH_TYPE.equalsIgnoreCase(callbackParameters.get("vnp_SecureHashType"))) {
+        // Bản 2.1.0 không trả vnp_SecureHashType (chữ ký luôn là HMAC-SHA512); chỉ từ chối khi có mà khác thuật toán
+        String hashType = callbackParameters.get("vnp_SecureHashType");
+        if (hashType != null && !HASH_TYPE.equalsIgnoreCase(hashType)) {
             throw new PaymentGatewayException("Unsupported VNPay signature algorithm.");
         }
 
@@ -116,7 +118,9 @@ public class VnPayGateway implements PaymentGateway {
         if (!terminalCode.equals(requiredConfig("payment.vnpay.tmn-code"))) {
             throw new PaymentGatewayException("VNPay terminal code does not match this merchant.");
         }
-        if (!"VND".equals(requiredCallbackValue(callbackParameters, "vnp_CurrCode", 3))) {
+        // IPN/Return 2.1.0 không có vnp_CurrCode (luôn là VND như lúc tạo URL); chỉ từ chối khi có mà khác VND
+        String currency = callbackParameters.get("vnp_CurrCode");
+        if (currency != null && !"VND".equals(currency)) {
             throw new PaymentGatewayException("Unsupported VNPay currency.");
         }
         BigDecimal amount;
@@ -130,9 +134,11 @@ public class VnPayGateway implements PaymentGateway {
             throw new PaymentGatewayException("Malformed VNPay transaction identifier.");
         }
         boolean successful = "00".equals(responseCode) && "00".equals(transactionStatus);
-        LocalDateTime paidAt = successful
-                ? parsePaidAt(requiredCallbackValue(callbackParameters, "vnp_PayDate", 14))
-                : null;
+        // vnp_PayDate là tham số tùy chọn theo tài liệu; thiếu thì lấy thời điểm nhận IPN đã xác minh chữ ký
+        String payDate = callbackParameters.get("vnp_PayDate");
+        LocalDateTime paidAt = !successful ? null
+                : payDate == null || payDate.isBlank() ? LocalDateTime.now(VN_ZONE)
+                : parsePaidAt(requiredCallbackValue(callbackParameters, "vnp_PayDate", 14));
         return new VerifiedPayment(reference, transactionId, successful, amount, paidAt, responseCode);
     }
 

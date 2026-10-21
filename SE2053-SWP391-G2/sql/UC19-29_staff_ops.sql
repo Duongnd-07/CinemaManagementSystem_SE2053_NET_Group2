@@ -18,7 +18,7 @@ FROM (VALUES
     ('LOW_MOVIE_OCCUPANCY_PERCENT', N'30', N'UC-29: tỷ lệ lấp đầy (%) dưới mức này là phim bán chậm'),
     ('BROKEN_SEAT_VOUCHER_VALUE', N'50000', N'UC-20: giá trị voucher đền bù (VND) khi không còn ghế để đổi'),
     ('BROKEN_SEAT_VOUCHER_DAYS', N'30', N'UC-20: số ngày hiệu lực của voucher đền bù'),
-    ('SEAT_SURCHARGE_VIP', N'0', N'UC-19: phụ thu (VND) cho ghế VIP, cộng vào giá suất chiếu')
+    ('SEAT_SURCHARGE_VIP', N'30000', N'UC-19: phụ thu (VND) cho ghế VIP, cộng vào giá suất chiếu')
     -- Ghế đôi (Sweetbox) không có phụ thu riêng: giá = giá 2 ghế thường (UC-25, TicketPricing)
 ) v (ConfigKey, ConfigValue, Description)
 WHERE NOT EXISTS (SELECT 1 FROM SystemConfig s WHERE s.ConfigKey = v.ConfigKey);

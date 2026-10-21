@@ -234,6 +234,8 @@ public final class Messages {
             "Không thể khởi tạo thanh toán VNPay. Vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ.";
     public static final String BOOKING_VNPAY_RETURN_PENDING =
             "VNPay đã tiếp nhận yêu cầu. Đơn chỉ được xác nhận sau khi hệ thống nhận kết quả thanh toán hợp lệ.";
+    public static final String BOOKING_FREE_CONFIRMED = "Đặt vé thành công! Vé điện tử đã được phát hành.";
+    public static final String BOOKING_NOT_FREE = "Đơn này cần được thanh toán qua VNPay.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

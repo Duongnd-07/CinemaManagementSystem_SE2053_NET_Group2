@@ -11,6 +11,17 @@ import vn.edu.fpt.model.PaymentAttempt;
 import vn.edu.fpt.model.PaymentMethod;
 
 public class PaymentDAO {
+    // Trạng thái lần thanh toán gần nhất của đơn (null nếu khách chưa bấm thanh toán)
+    public String findLatestStatusForBooking(Connection conn, int bookingId) throws SQLException {
+        String sql = "SELECT TOP 1 Status FROM OnlinePayment WHERE BookingID = ? ORDER BY OnlinePaymentID DESC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, bookingId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
+    }
+
     public void expireInitiatedForBooking(Connection conn, int bookingId) throws SQLException {
         String sql = "UPDATE OnlinePayment SET Status = ? WHERE BookingID = ? AND Status = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {

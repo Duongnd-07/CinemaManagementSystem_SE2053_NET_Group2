@@ -20,9 +20,20 @@ public class VnPayWebhookServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(VnPayWebhookServlet.class.getName());
     private final PaymentService paymentService = new PaymentService();
 
+    // VNPay gọi IPN bằng GET (tài liệu Thanh toán PAY 2.1.0: "Phương thức: GET"); POST vẫn nhận để tương thích
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        handleCallback(request, response);
+    }
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        handleCallback(request, response);
+    }
+
+    private void handleCallback(HttpServletRequest request, HttpServletResponse response) throws IOException {
         request.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
