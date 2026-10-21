@@ -61,17 +61,27 @@
             </p>
         </div>
 
-        <!-- Flash Messages -->
+        <!-- Flash Messages (Auto-dismiss in 5s) -->
         <c:if test="${not empty flashSuccess}">
-            <div class="p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-300 text-sm flex items-center gap-3 shadow-lg">
-                <span class="material-symbols-outlined text-emerald-400 text-2xl">check_circle</span>
-                <span class="font-medium"><c:out value="${flashSuccess}"/></span>
+            <div class="flash-alert p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-300 text-sm flex items-center justify-between gap-3 shadow-lg transition-all duration-500 overflow-hidden">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-emerald-400 text-2xl">check_circle</span>
+                    <span class="font-medium"><c:out value="${flashSuccess}"/></span>
+                </div>
+                <button type="button" onclick="dismissFlashAlert(this.closest('.flash-alert'))" class="text-emerald-400/70 hover:text-emerald-200 transition p-1 rounded-lg hover:bg-emerald-500/10" title="Đóng">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
             </div>
         </c:if>
         <c:if test="${not empty flashError}">
-            <div class="p-4 bg-red-950/80 border border-red-500/40 rounded-xl text-red-300 text-sm flex items-center gap-3 shadow-lg">
-                <span class="material-symbols-outlined text-red-400 text-2xl">error</span>
-                <span class="font-medium"><c:out value="${flashError}"/></span>
+            <div class="flash-alert p-4 bg-red-950/80 border border-red-500/40 rounded-xl text-red-300 text-sm flex items-center justify-between gap-3 shadow-lg transition-all duration-500 overflow-hidden">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-red-400 text-2xl">error</span>
+                    <span class="font-medium"><c:out value="${flashError}"/></span>
+                </div>
+                <button type="button" onclick="dismissFlashAlert(this.closest('.flash-alert'))" class="text-red-400/70 hover:text-red-200 transition p-1 rounded-lg hover:bg-red-500/10" title="Đóng">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
             </div>
         </c:if>
 
@@ -565,6 +575,36 @@
         function closeResetPasswordModal() {
             document.getElementById('resetPasswordModal').classList.add('hidden');
         }
+
+        // Tự động đóng thông báo flash sau 5 giây (5000ms)
+        function dismissFlashAlert(el) {
+            if (!el) return;
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease, max-height 0.6s ease, margin 0.6s ease, padding 0.6s ease';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-10px)';
+            el.style.maxHeight = el.scrollHeight + 'px';
+            setTimeout(() => {
+                el.style.maxHeight = '0px';
+                el.style.marginTop = '0px';
+                el.style.marginBottom = '0px';
+                el.style.paddingTop = '0px';
+                el.style.paddingBottom = '0px';
+            }, 50);
+            setTimeout(() => {
+                el.remove();
+            }, 650);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const alerts = document.querySelectorAll('.flash-alert');
+            if (alerts.length > 0) {
+                setTimeout(function () {
+                    alerts.forEach(function (alert) {
+                        dismissFlashAlert(alert);
+                    });
+                }, 5000);
+            }
+        });
     </script>
 </body>
 </html>
