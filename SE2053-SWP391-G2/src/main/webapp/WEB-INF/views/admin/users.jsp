@@ -50,16 +50,6 @@
 
     <!-- Main Content Container -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <!-- Page Title & Header Actions -->
-        <div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-                <span class="material-symbols-outlined text-[#e50914] text-3xl">manage_accounts</span>
-                Quản lý tài khoản & Phân quyền
-            </h1>
-            <p class="text-xs sm:text-sm text-[#8e919f] mt-1">
-                Trang quản trị toàn quyền phân chia vai trò (Admin, Manager, Staff, Customer) và kiểm soát trạng thái tài khoản.
-            </p>
-        </div>
 
         <!-- Flash Messages (Auto-dismiss in 5s) -->
         <c:if test="${not empty flashSuccess}">
