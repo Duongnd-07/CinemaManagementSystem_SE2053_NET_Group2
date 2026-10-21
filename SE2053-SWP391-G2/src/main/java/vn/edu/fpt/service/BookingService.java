@@ -70,6 +70,8 @@ public class BookingService {
     private static final int DEFAULT_HOLD_MINUTES = 10;
     private static final int DEFAULT_POINT_RATE = 1000;
     private static final int DEFAULT_MAX_SEATS = 8;
+    // Ghế VIP mặc định đắt hơn ghế thường 30.000đ khi SystemConfig chưa có SEAT_SURCHARGE_VIP
+    private static final BigDecimal DEFAULT_VIP_SURCHARGE = BigDecimal.valueOf(30000);
     private static final String CONFIG_HOLD_MINUTES = "SEAT_HOLD_MINUTES";
     private static final String CONFIG_POINT_RATE = "POINT_EXCHANGE_RATE";
     private static final String CONFIG_MAX_SEATS = "BOOKING_MAX_SEATS";
@@ -799,7 +801,7 @@ public class BookingService {
 
     // Giá từng loại ghế theo TicketPricing (dùng chung với UC-19)
     private Map<String, BigDecimal> seatPrices(Connection conn, BigDecimal basePrice) throws SQLException {
-        BigDecimal vipSurcharge = configDAO.getDecimal(conn, CONFIG_VIP_SURCHARGE, BigDecimal.ZERO);
+        BigDecimal vipSurcharge = configDAO.getDecimal(conn, CONFIG_VIP_SURCHARGE, DEFAULT_VIP_SURCHARGE);
         Map<String, BigDecimal> prices = new LinkedHashMap<>();
         for (String type : SeatType.ALL) {
             prices.put(type, TicketPricing.priceOf(type, basePrice, vipSurcharge));
