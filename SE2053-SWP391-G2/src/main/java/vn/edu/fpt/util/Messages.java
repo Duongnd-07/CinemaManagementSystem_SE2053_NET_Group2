@@ -172,6 +172,15 @@ public final class Messages {
     public static final String LOGOUT_SUCCESS = "Bạn đã đăng xuất an toàn khỏi hệ thống.";
     public static final String ACCESS_DENIED = "Bạn không có quyền truy cập vào khu vực này.";
 
+    // UC-03 Forgot & Reset Password
+    public static final String FORGOT_PASSWORD_EMAIL_SENT =
+            "Đường link khôi phục mật khẩu đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư (hiệu lực trong 15 phút).";
+    public static final String FORGOT_PASSWORD_EMAIL_NOT_FOUND = "Email này chưa được đăng ký trong hệ thống.";
+    public static final String RESET_PASSWORD_SUCCESS = "Khôi phục mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.";
+    public static final String RESET_PASSWORD_TOKEN_INVALID =
+            "Đường link khôi phục mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng gửi lại yêu cầu mới.";
+    public static final String RESET_PASSWORD_SAME_AS_OLD = "Mật khẩu mới không được trùng với mật khẩu hiện tại.";
+
     // UC-09 View Real-Time Seat Map
     public static final String SEAT_MAP_SHOWTIME_NOT_FOUND = "Suất chiếu không tồn tại hoặc không còn mở bán.";
     public static final String SEAT_MAP_SHOWTIME_STARTED =
