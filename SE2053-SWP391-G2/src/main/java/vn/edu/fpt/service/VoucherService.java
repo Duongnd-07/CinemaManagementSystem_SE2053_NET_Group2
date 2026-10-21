@@ -79,7 +79,9 @@ public class VoucherService {
         voucher.setDiscountType(form.getDiscountType());
         voucher.setDiscountValue(new BigDecimal(form.getDiscountValue().trim()));
         voucher.setMinOrderAmount(new BigDecimal(form.getMinOrderAmount().trim()));
+        voucher.setStartDate(LocalDateTime.parse(form.getStartDate().trim()));
         voucher.setExpiryDate(LocalDateTime.parse(form.getExpiryDate().trim()));
+        voucher.setUsageLimit(Integer.valueOf(form.getUsageLimit().trim()));
         voucher.setVoucherType(VoucherType.PROMOTION);
         voucher.setStatus(ACTIVE);
         voucher.setCreatedByUserId(createdByUserId);
@@ -93,6 +95,10 @@ public class VoucherService {
                 voucher.setOwnerUserId(existing.getOwnerUserId());
                 voucher.setCreatedByUserId(existing.getCreatedByUserId());
                 if (!voucherDAO.update(voucher)) {
+                    if (voucherDAO.countActiveUses(voucherId) > voucher.getUsageLimit()) {
+                        throw new ValidationException(Map.of(
+                                "usageLimit", Messages.VOUCHER_USAGE_LIMIT_BELOW_USAGE));
+                    }
                     throw new ValidationException(Map.of("general", Messages.VOUCHER_NOT_FOUND));
                 }
             }
@@ -167,16 +173,41 @@ public class VoucherService {
             errors.put("minOrderAmount", Messages.VOUCHER_MIN_ORDER_INVALID);
         }
 
+        LocalDateTime startDate = parseDateTime(form.getStartDate(), "startDate", errors);
         LocalDateTime expiryDate = null;
-        try {
-            expiryDate = LocalDateTime.parse(form.getExpiryDate() == null ? "" : form.getExpiryDate().trim());
-        } catch (DateTimeParseException e) {
+        if (form.getExpiryDate() != null && !form.getExpiryDate().isBlank()) {
+            expiryDate = parseDateTime(form.getExpiryDate(), "expiryDate", errors);
+        } else {
             errors.put("expiryDate", Messages.VOUCHER_EXPIRY_INVALID);
         }
         if (expiryDate != null && !expiryDate.isAfter(LocalDateTime.now())) {
             errors.put("expiryDate", Messages.VOUCHER_EXPIRY_INVALID);
         }
+        if (startDate != null && expiryDate != null && !expiryDate.isAfter(startDate)) {
+            errors.put("expiryDate", Messages.VOUCHER_CAMPAIGN_RANGE_INVALID);
+        }
+
+        Integer usageLimit = null;
+        try {
+            usageLimit = Integer.valueOf(form.getUsageLimit() == null ? "" : form.getUsageLimit().trim());
+            if (usageLimit < 1) {
+                errors.put("usageLimit", Messages.VOUCHER_USAGE_LIMIT_INVALID);
+            } else if (voucherId != null && voucherDAO.countActiveUses(voucherId) > usageLimit) {
+                errors.put("usageLimit", Messages.VOUCHER_USAGE_LIMIT_BELOW_USAGE);
+            }
+        } catch (NumberFormatException e) {
+            errors.put("usageLimit", Messages.VOUCHER_USAGE_LIMIT_INVALID);
+        }
         return errors;
+    }
+
+    private LocalDateTime parseDateTime(String value, String field, Map<String, String> errors) {
+        try {
+            return LocalDateTime.parse(value == null ? "" : value.trim());
+        } catch (DateTimeParseException e) {
+            errors.put(field, Messages.VOUCHER_CAMPAIGN_RANGE_INVALID);
+            return null;
+        }
     }
 
     private BigDecimal parseDecimal(String value, String field, Map<String, String> errors) {

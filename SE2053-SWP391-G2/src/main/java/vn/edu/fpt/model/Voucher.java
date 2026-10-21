@@ -9,7 +9,10 @@ public class Voucher {
     private BigDecimal discountValue;
     private String discountType;
     private LocalDateTime createdAt;
+    private LocalDateTime startDate;
     private LocalDateTime expiryDate;
+    private Integer usageLimit;
+    private int usageCount;
     private Integer ownerUserId;
     private String status;
     private String voucherType;
@@ -59,12 +62,36 @@ public class Voucher {
         this.createdAt = createdAt;
     }
 
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
     public LocalDateTime getExpiryDate() {
         return expiryDate;
     }
 
     public void setExpiryDate(LocalDateTime expiryDate) {
         this.expiryDate = expiryDate;
+    }
+
+    public Integer getUsageLimit() {
+        return usageLimit;
+    }
+
+    public void setUsageLimit(Integer usageLimit) {
+        this.usageLimit = usageLimit;
+    }
+
+    public int getUsageCount() {
+        return usageCount;
+    }
+
+    public void setUsageCount(int usageCount) {
+        this.usageCount = usageCount;
     }
 
     public Integer getOwnerUserId() {

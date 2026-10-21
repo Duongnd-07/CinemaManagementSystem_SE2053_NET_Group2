@@ -328,13 +328,39 @@ public class BookingDAO {
         }
     }
 
+    public boolean addPoints(Connection conn, int userId, int points) throws SQLException {
+        String sql = "UPDATE [User] SET PointBalance = PointBalance + ? "
+                + "WHERE UserID = ? AND PointBalance <= 2147483647 - ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, points);
+            ps.setInt(2, userId);
+            ps.setInt(3, points);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    public void insertLoyaltyTransaction(Connection conn, int userId, int bookingId, String type, int points,
+                                         String description) throws SQLException {
+        String sql = "INSERT INTO LoyaltyPointHistory "
+                + "(UserID, BookingID, TransactionType, PointsChange, Description) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, bookingId);
+            ps.setString(3, type);
+            ps.setInt(4, points);
+            ps.setString(5, description);
+            ps.executeUpdate();
+        }
+    }
+
     // ===== Voucher =====
 
     // Trạng thái hiệu lực giống VoucherDAO: Active nhưng quá hạn thì coi là Expired
     public Voucher findVoucherByCode(Connection conn, String voucherCode) throws SQLException {
-        String sql = "SELECT VoucherID, VoucherCode, DiscountValue, DiscountType, ExpiryDate, OwnerUserID, "
-                + "CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() THEN 'Expired' ELSE Status END AS Status, "
-                + "VoucherType, MinOrderAmount FROM Voucher WHERE VoucherCode = ?";
+        String sql = "SELECT VoucherID, VoucherCode, DiscountValue, DiscountType, StartDate, ExpiryDate, UsageLimit, "
+                + "OwnerUserID, CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() THEN 'Expired' "
+                + "WHEN Status = 'Active' AND StartDate > GETDATE() THEN 'Scheduled' ELSE Status END AS Status, "
+                + "VoucherType, MinOrderAmount FROM Voucher WITH (UPDLOCK, HOLDLOCK) WHERE VoucherCode = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, voucherCode);
             try (ResultSet rs = ps.executeQuery()) {
@@ -346,8 +372,11 @@ public class BookingDAO {
                 voucher.setVoucherCode(rs.getString("VoucherCode"));
                 voucher.setDiscountValue(rs.getBigDecimal("DiscountValue"));
                 voucher.setDiscountType(rs.getString("DiscountType"));
+                Timestamp start = rs.getTimestamp("StartDate");
+                voucher.setStartDate(start == null ? null : start.toLocalDateTime());
                 Timestamp expiry = rs.getTimestamp("ExpiryDate");
                 voucher.setExpiryDate(expiry == null ? null : expiry.toLocalDateTime());
+                voucher.setUsageLimit(rs.getObject("UsageLimit", Integer.class));
                 voucher.setOwnerUserId(rs.getObject("OwnerUserID", Integer.class));
                 voucher.setStatus(rs.getString("Status"));
                 voucher.setVoucherType(rs.getString("VoucherType"));
@@ -370,11 +399,25 @@ public class BookingDAO {
             if (customerId != null) {
                 ps.setInt(idx++, customerId);
             }
+
             ps.setString(idx++, BookingStatus.PAID);
             ps.setString(idx++, BookingStatus.PENDING);
             ps.setString(idx, BOOKING_HOLD_PREFIX);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    public int countActiveVoucherUses(Connection conn, int voucherId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Booking b WHERE b.VoucherID = ? AND " + ACTIVE_BOOKING;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, voucherId);
+            ps.setString(2, BookingStatus.PAID);
+            ps.setString(3, BookingStatus.PENDING);
+            ps.setString(4, BOOKING_HOLD_PREFIX);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
             }
         }
     }
@@ -602,13 +645,16 @@ public class BookingDAO {
         }
     }
 
-    public boolean markBookingPaid(Connection conn, int bookingId, String paymentMethod) throws SQLException {
-        String sql = "UPDATE Booking SET Status = ?, PaymentMethod = ? WHERE BookingID = ? AND Status = ?";
+    public boolean markBookingPaid(Connection conn, int bookingId, String paymentMethod, int pointsEarned)
+            throws SQLException {
+        String sql = "UPDATE Booking SET Status = ?, PaymentMethod = ?, PointsEarned = ? "
+                + "WHERE BookingID = ? AND Status = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, BookingStatus.PAID);
             ps.setString(2, paymentMethod);
-            ps.setInt(3, bookingId);
-            ps.setString(4, BookingStatus.PENDING);
+            ps.setInt(3, pointsEarned);
+            ps.setInt(4, bookingId);
+            ps.setString(5, BookingStatus.PENDING);
             return ps.executeUpdate() == 1;
         }
     }
