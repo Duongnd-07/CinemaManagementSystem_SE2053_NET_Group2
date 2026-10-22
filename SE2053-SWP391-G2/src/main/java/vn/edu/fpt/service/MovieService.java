@@ -27,7 +27,7 @@ import vn.edu.fpt.util.Page;
 import vn.edu.fpt.util.PosterStorage;
 
 public class MovieService {
-    public static final int PAGE_SIZE = 3;
+    public static final int PAGE_SIZE = 8;
     public static final int MAX_DURATION = 600;
     public static final int MAX_SYNOPSIS = 4000;
     public static final int MAX_KEYWORD = 100;
