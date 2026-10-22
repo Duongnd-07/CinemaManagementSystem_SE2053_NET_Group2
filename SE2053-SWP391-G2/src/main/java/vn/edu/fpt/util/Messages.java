@@ -260,6 +260,16 @@ public final class Messages {
     public static final String BOOKING_FREE_CONFIRMED = "Đặt vé thành công! Vé điện tử đã được phát hành.";
     public static final String BOOKING_NOT_FREE = "Đơn này cần được thanh toán qua VNPay.";
 
+    // UC-33: Manage System Configurations
+    public static final String CONFIG_SAVED = "Lưu cấu hình thành công ({0} tham số được cập nhật).";
+    public static final String CONFIG_NO_CHANGES = "Không có thay đổi nào để lưu.";
+    public static final String CONFIG_INVALID = "Cấu hình chưa được lưu. Vui lòng sửa các giá trị không hợp lệ.";
+    public static final String CONFIG_NOT_NUMBER = "{0} phải là số.";
+    public static final String CONFIG_NOT_INTEGER = "{0} phải là số nguyên.";
+    public static final String CONFIG_TOO_MANY_DECIMALS = "{0} chỉ được có tối đa {1} chữ số thập phân.";
+    public static final String CONFIG_OUT_OF_RANGE = "{0} phải từ {1} đến {2} {3}.";
+    public static final String CONFIG_OCCUPANCY_ORDER = "Ngưỡng phim bán chạy phải lớn hơn ngưỡng phim bán chậm.";
+
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
