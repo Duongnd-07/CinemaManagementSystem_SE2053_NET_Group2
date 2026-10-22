@@ -355,36 +355,57 @@ public class BookingDAO {
 
     // ===== Voucher =====
 
-    // Trạng thái hiệu lực giống VoucherDAO: Active nhưng quá hạn thì coi là Expired
+    // Trạng thái hiệu lực giống VoucherDAO: Active nhưng quá hạn thì coi là Expired, chưa tới StartDate thì Scheduled
+    private static final String VOUCHER_COLUMNS = "SELECT VoucherID, VoucherCode, DiscountValue, DiscountType, "
+            + "StartDate, ExpiryDate, UsageLimit, OwnerUserID, "
+            + "CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() THEN 'Expired' "
+            + "WHEN Status = 'Active' AND StartDate > GETDATE() THEN 'Scheduled' ELSE Status END AS Status, "
+            + "VoucherType, MinOrderAmount FROM Voucher ";
+
     public Voucher findVoucherByCode(Connection conn, String voucherCode) throws SQLException {
-        String sql = "SELECT VoucherID, VoucherCode, DiscountValue, DiscountType, StartDate, ExpiryDate, UsageLimit, "
-                + "OwnerUserID, CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() THEN 'Expired' "
-                + "WHEN Status = 'Active' AND StartDate > GETDATE() THEN 'Scheduled' ELSE Status END AS Status, "
-                + "VoucherType, MinOrderAmount FROM Voucher WITH (UPDLOCK, HOLDLOCK) WHERE VoucherCode = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        // Khóa ghi voucher trong lúc đọc để tránh race condition khi nhiều booking cùng dùng 1 voucher
+        try (PreparedStatement ps = conn.prepareStatement(
+                VOUCHER_COLUMNS + "WITH (UPDLOCK, HOLDLOCK) WHERE VoucherCode = ?")) {
             ps.setString(1, voucherCode);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return null;
-                }
-                Voucher voucher = new Voucher();
-                voucher.setVoucherId(rs.getInt("VoucherID"));
-                voucher.setVoucherCode(rs.getString("VoucherCode"));
-                voucher.setDiscountValue(rs.getBigDecimal("DiscountValue"));
-                voucher.setDiscountType(rs.getString("DiscountType"));
-                Timestamp start = rs.getTimestamp("StartDate");
-                voucher.setStartDate(start == null ? null : start.toLocalDateTime());
-                Timestamp expiry = rs.getTimestamp("ExpiryDate");
-                voucher.setExpiryDate(expiry == null ? null : expiry.toLocalDateTime());
-                voucher.setUsageLimit(rs.getObject("UsageLimit", Integer.class));
-                voucher.setOwnerUserId(rs.getObject("OwnerUserID", Integer.class));
-                voucher.setStatus(rs.getString("Status"));
-                voucher.setVoucherType(rs.getString("VoucherType"));
-                BigDecimal minOrder = rs.getBigDecimal("MinOrderAmount");
-                voucher.setMinOrderAmount(minOrder == null ? BigDecimal.ZERO : minOrder);
-                return voucher;
+                return rs.next() ? mapVoucher(rs) : null;
             }
         }
+    }
+
+    // Voucher còn hiệu lực trong ví của khách (voucher cá nhân, kể cả hoàn vé 80%), hạn gần nhất lên trước
+    public List<Voucher> findActiveVouchersOfOwner(Connection conn, int ownerUserId) throws SQLException {
+        String sql = VOUCHER_COLUMNS + "WHERE OwnerUserID = ? AND Status = 'Active' AND ExpiryDate > GETDATE() "
+                + "ORDER BY ExpiryDate, VoucherID";
+        List<Voucher> vouchers = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ownerUserId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    vouchers.add(mapVoucher(rs));
+                }
+            }
+        }
+        return vouchers;
+    }
+
+    private Voucher mapVoucher(ResultSet rs) throws SQLException {
+        Voucher voucher = new Voucher();
+        voucher.setVoucherId(rs.getInt("VoucherID"));
+        voucher.setVoucherCode(rs.getString("VoucherCode"));
+        voucher.setDiscountValue(rs.getBigDecimal("DiscountValue"));
+        voucher.setDiscountType(rs.getString("DiscountType"));
+        Timestamp start = rs.getTimestamp("StartDate");
+        voucher.setStartDate(start == null ? null : start.toLocalDateTime());
+        Timestamp expiry = rs.getTimestamp("ExpiryDate");
+        voucher.setExpiryDate(expiry == null ? null : expiry.toLocalDateTime());
+        voucher.setUsageLimit(rs.getObject("UsageLimit", Integer.class));
+        voucher.setOwnerUserId(rs.getObject("OwnerUserID", Integer.class));
+        voucher.setStatus(rs.getString("Status"));
+        voucher.setVoucherType(rs.getString("VoucherType"));
+        BigDecimal minOrder = rs.getBigDecimal("MinOrderAmount");
+        voucher.setMinOrderAmount(minOrder == null ? BigDecimal.ZERO : minOrder);
+        return voucher;
     }
 
     // Voucher đã nằm trong đơn Paid hoặc đơn Pending còn hiệu lực; customerId != null thì chỉ xét đơn của khách đó

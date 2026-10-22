@@ -36,8 +36,8 @@
     // Bước 6-8: mỗi khi đổi bắp nước / voucher / điểm thì gửi ngầm action=update (server kiểm tra và tính lại như
     // khi bấm nút), rồi thay các vùng tổng tiền và thông báo bằng bản mới của trang checkout - không tải lại trang
     function setupAutoQuote(form) {
-        var REGION_IDS = ['generalAlert', 'concessionFeedback', 'voucherFeedback', 'pointsInfo', 'pointsFeedback',
-            'orderTotals'];
+        var REGION_IDS = ['generalAlert', 'concessionFeedback', 'voucherFeedback', 'voucherOptions', 'pointsInfo',
+            'pointsFeedback', 'orderTotals'];
         var status = document.getElementById('quoteStatus');
         // Không dùng form.action: form có nút name="action" nên thuộc tính đó trả về chính nút này
         var url = form.getAttribute('action');
@@ -140,6 +140,18 @@
             if (event.target.name === 'voucherCode' || event.target.name === 'points') {
                 schedule(0);
             }
+        });
+        // Chọn voucher từ ví: điền mã vào ô rồi tính lại ngay. Gắn trên form vì vùng danh sách được thay sau mỗi lần tính.
+        form.addEventListener('click', function (event) {
+            var apply = event.target.closest('[data-voucher-apply]');
+            var clear = event.target.closest('[data-voucher-clear]');
+            if (!apply && !clear) {
+                return;
+            }
+            var input = document.getElementById('voucherCode');
+            input.value = apply ? apply.dataset.voucherApply : '';
+            input.classList.remove('is-invalid');
+            schedule(0);
         });
         // Enter trong ô nhập chỉ áp dụng ngay, không gửi form (tránh vô tình xác nhận đơn)
         form.addEventListener('keydown', function (event) {
