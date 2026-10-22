@@ -41,6 +41,7 @@ import vn.edu.fpt.model.Ticket;
 import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.model.Voucher;
+import vn.edu.fpt.model.VoucherType;
 import vn.edu.fpt.service.payment.PaymentGateway;
 import vn.edu.fpt.service.payment.PaymentGatewayException;
 import vn.edu.fpt.service.payment.PaymentRequest;
@@ -653,8 +654,27 @@ public class BookingService {
                                       Map<Integer, Concession> forSale, Map<Integer, Integer> picked,
                                       BookingQuote quote, Map<String, String> errors) throws SQLException {
         return new CheckoutView(context.showtime, context.movie, context.room, context.seats,
-                concessionLines(forSale, picked), quote, availablePoints(conn, customer.getUserId()),
-                pointRate(conn), context.remainingSeconds, errors);
+                concessionLines(forSale, picked), quote, walletVouchers(conn, customer, quote),
+                availablePoints(conn, customer.getUserId()), pointRate(conn), context.remainingSeconds, errors);
+    }
+
+    // Bước 7: voucher còn hiệu lực trong ví của khách để chọn nhanh thay vì phải nhớ mã.
+    // Cùng điều kiện với isVoucherUsable: đủ đơn tối thiểu (GB-05), voucher cá nhân chưa nằm trong đơn khác.
+    private List<CheckoutVoucherOption> walletVouchers(Connection conn, User customer, BookingQuote quote)
+            throws SQLException {
+        BigDecimal gross = quote.getGrossTotal();
+        List<CheckoutVoucherOption> options = new ArrayList<>();
+        for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, customer.getUserId())) {
+            boolean applied = voucher.getVoucherCode().equals(quote.getVoucherCode());
+            boolean belowMinOrder = gross.compareTo(voucher.getMinOrderAmount()) < 0;
+            boolean inOtherOrder = !applied && bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
+            options.add(new CheckoutVoucherOption(voucher.getVoucherCode(), voucher.getDiscountType(),
+                    voucher.getDiscountValue(), voucher.getMinOrderAmount(), voucher.getExpiryDate(),
+                    VoucherType.REFUND_80.equals(voucher.getVoucherType()),
+                    belowMinOrder ? BigDecimal.ZERO : discountOf(voucher, gross), belowMinOrder, inOtherOrder,
+                    applied));
+        }
+        return options;
     }
 
     private Applied apply(Connection conn, User customer, BookingCheckout checkout, CheckoutContext context,

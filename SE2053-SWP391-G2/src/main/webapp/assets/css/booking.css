@@ -418,6 +418,65 @@ button.seat:focus-visible {
     font-weight: 600;
 }
 
+/* Ví voucher ở trang checkout */
+.voucher-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.voucher-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    background: var(--cl-card-raised);
+}
+
+.voucher-option.is-applied {
+    border-style: solid;
+    border-color: rgba(52, 211, 153, 0.6);
+    background: rgba(52, 211, 153, 0.08);
+}
+
+.voucher-option.is-disabled {
+    opacity: 0.55;
+}
+
+.voucher-code {
+    color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.voucher-tag {
+    padding: 1px 8px;
+    border-radius: 9999px;
+    background: rgba(96, 165, 250, 0.15);
+    color: #93c5fd;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.voucher-reason {
+    margin-top: 2px;
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.voucher-action {
+    flex: none;
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
 .ticket-card {
     display: flex;
     flex-wrap: wrap;

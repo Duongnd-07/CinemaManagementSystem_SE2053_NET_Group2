@@ -14,6 +14,8 @@ public class CheckoutView {
     private final List<BookingSeatLine> seats;
     private final List<BookingConcessionLine> concessions;
     private final BookingQuote quote;
+    // Voucher còn hiệu lực trong ví của khách để chọn nhanh
+    private final List<CheckoutVoucherOption> vouchers;
     private final int availablePoints;
     private final int pointRate;
     private final long remainingSeconds;
@@ -21,14 +23,16 @@ public class CheckoutView {
     private final Map<String, String> errors;
 
     public CheckoutView(Showtime showtime, Movie movie, Room room, List<BookingSeatLine> seats,
-                        List<BookingConcessionLine> concessions, BookingQuote quote, int availablePoints,
-                        int pointRate, long remainingSeconds, Map<String, String> errors) {
+                        List<BookingConcessionLine> concessions, BookingQuote quote,
+                        List<CheckoutVoucherOption> vouchers, int availablePoints, int pointRate,
+                        long remainingSeconds, Map<String, String> errors) {
         this.showtime = showtime;
         this.movie = movie;
         this.room = room;
         this.seats = seats;
         this.concessions = concessions;
         this.quote = quote;
+        this.vouchers = vouchers;
         this.availablePoints = availablePoints;
         this.pointRate = pointRate;
         this.remainingSeconds = remainingSeconds;
@@ -37,6 +41,10 @@ public class CheckoutView {
 
     public Showtime getShowtime() {
         return showtime;
+    }
+
+    public List<CheckoutVoucherOption> getVouchers() {
+        return vouchers;
     }
 
     public Movie getMovie() {

@@ -129,7 +129,7 @@
                 <section class="cl-card p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <h2 class="booking-section-title"><span class="material-symbols-outlined">confirmation_number</span>Mã giảm giá</h2>
-                        <label for="voucherCode" class="booking-hint">Mỗi đơn áp dụng tối đa 1 mã</label>
+                        <label for="voucherCode" class="booking-hint">Mỗi đơn áp dụng tối đa 1 mã · nhập mã hoặc chọn từ ví bên dưới</label>
                         <input id="voucherCode" name="voucherCode" maxlength="50" autocomplete="off"
                                class="booking-input mt-2 uppercase ${not empty errors['voucher'] ? 'is-invalid' : ''}"
                                value="<c:out value='${voucherInput}'/>" placeholder="Nhập mã voucher"/>
@@ -140,6 +140,59 @@
                             <c:if test="${not empty quote.voucherCode and empty errors['voucher']}">
                                 <p class="mt-2 text-sm text-[#34d399]">Đã áp dụng mã <strong><c:out value="${quote.voucherCode}"/></strong></p>
                             </c:if>
+                        </div>
+                        <%-- Ví voucher của khách: bấm Dùng để áp mã (booking-checkout.js điền vào ô mã và tự tính lại tiền) --%>
+                        <div id="voucherOptions" class="mt-4">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <span class="seat-map-meta-label">Voucher của bạn (${fn:length(checkout.vouchers)})</span>
+                                <a href="${ctx}/customer/vouchers" target="_blank" rel="noopener" class="booking-hint underline hover:text-white">Xem ví voucher</a>
+                            </div>
+                            <c:choose>
+                                <c:when test="${empty checkout.vouchers}">
+                                    <p class="booking-hint">Bạn chưa có voucher nào còn hạn. Nếu có mã khuyến mãi, hãy nhập vào ô bên trên.</p>
+                                </c:when>
+                                <c:otherwise>
+                                    <ul class="voucher-list">
+                                        <c:forEach var="v" items="${checkout.vouchers}">
+                                            <li class="voucher-option ${v.applied ? 'is-applied' : ''} ${v.usable or v.applied ? '' : 'is-disabled'}">
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <span class="voucher-code"><c:out value="${v.voucherCode}"/></span>
+                                                        <c:if test="${v.refundVoucher}"><span class="voucher-tag">Hoàn vé 80%</span></c:if>
+                                                    </div>
+                                                    <div class="text-sm text-white font-semibold mt-1">
+                                                        <c:choose>
+                                                            <c:when test="${v.percent}">Giảm <fmt:formatNumber value="${v.discountValue}" maxFractionDigits="2"/>%</c:when>
+                                                            <c:otherwise>Giảm <fmt:formatNumber value="${v.discountValue}" maxFractionDigits="0"/>đ</c:otherwise>
+                                                        </c:choose>
+                                                        <c:if test="${v.usable and v.estimatedDiscount > 0}">
+                                                            <span class="text-[#34d399]"> · đơn này −<fmt:formatNumber value="${v.estimatedDiscount}" maxFractionDigits="0"/>đ</span>
+                                                        </c:if>
+                                                    </div>
+                                                    <div class="booking-hint mt-0.5">
+                                                        <c:if test="${v.minOrderAmount > 0}">Đơn từ <fmt:formatNumber value="${v.minOrderAmount}" maxFractionDigits="0"/>đ · </c:if>HSD ${v.expiryDate.format(dateFormat)}
+                                                    </div>
+                                                    <c:if test="${v.belowMinOrder and not v.applied}">
+                                                        <div class="voucher-reason">Đơn chưa đạt giá trị tối thiểu <fmt:formatNumber value="${v.minOrderAmount}" maxFractionDigits="0"/>đ</div>
+                                                    </c:if>
+                                                    <c:if test="${v.inOtherOrder}">
+                                                        <div class="voucher-reason">Đang dùng cho một đơn khác chưa thanh toán</div>
+                                                    </c:if>
+                                                </div>
+                                                <c:choose>
+                                                    <c:when test="${v.applied}">
+                                                        <button type="button" class="booking-btn booking-btn--ghost voucher-action" data-voucher-clear>Bỏ chọn</button>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <button type="button" class="booking-btn booking-btn--primary voucher-action"
+                                                                data-voucher-apply="<c:out value='${v.voucherCode}'/>" ${v.usable ? '' : 'disabled'}>Dùng</button>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </li>
+                                        </c:forEach>
+                                    </ul>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
                     <div>
