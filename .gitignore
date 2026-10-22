@@ -3,7 +3,7 @@ target/
 *.iml
 .vscode/
 
-# Machine-specific application configuration; use the committed .example templates.
+# Machine-specific configuration. src/main/resources/config.properties is shared by the team and committed;
+# put per-machine overrides in SE2053-SWP391-G2/config.properties (see README section 10).
 SE2053-SWP391-G2/src/main/resources/ConnectDB.properties
-SE2053-SWP391-G2/src/main/resources/config.properties
 SE2053-SWP391-G2/config.properties
