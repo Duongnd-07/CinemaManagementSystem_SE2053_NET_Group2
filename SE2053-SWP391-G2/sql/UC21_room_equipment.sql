@@ -3,6 +3,8 @@
 -- Chạy sau UC19-29_staff_ops.sql và các script dữ liệu mẫu (cinemaDB_data.sql, UC09_seed_seat_map.sql)
 -- vì cần có sẵn phòng để nạp thiết bị mẫu; chạy lại nhiều lần không lỗi.
 SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
 GO
 
 IF OBJECT_ID('RoomEquipment', 'U') IS NULL

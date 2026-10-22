@@ -11,8 +11,12 @@ public class Showtime {
     private LocalDateTime endTime;
     private BigDecimal basePrice;
     private String status;
-    // Phòng chiếu của suất (nạp kèm khi cần hiển thị tên phòng/định dạng, ví dụ UC-08)
+    // Phòng chiếu của suất (nạp kèm khi cần hiển thị tên phòng/định dạng, ví dụ UC-08, UC-24)
     private Room room;
+    // Phim của suất chiếu (nạp kèm khi cần hiển thị tên phim/thời lượng, ví dụ UC-24)
+    private Movie movie;
+    // Số vé đã bán / giữ chỗ
+    private int bookedTickets;
 
     public Showtime() {
     }
@@ -79,5 +83,21 @@ public class Showtime {
 
     public void setRoom(Room room) {
         this.room = room;
+    }
+
+    public Movie getMovie() {
+        return movie;
+    }
+
+    public void setMovie(Movie movie) {
+        this.movie = movie;
+    }
+
+    public int getBookedTickets() {
+        return bookedTickets;
+    }
+
+    public void setBookedTickets(int bookedTickets) {
+        this.bookedTickets = bookedTickets;
     }
 }

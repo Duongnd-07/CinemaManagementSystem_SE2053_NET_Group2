@@ -61,4 +61,23 @@ public class RoomDAO {
             }
         }
     }
+
+    public Room findById(int roomId) throws SQLException {
+        String sql = "SELECT RoomID, RoomName, Format, TotalSeats, Status FROM Room WHERE RoomID = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Room room = new Room();
+                    room.setRoomId(rs.getInt("RoomID"));
+                    room.setRoomName(rs.getString("RoomName"));
+                    room.setFormat(rs.getString("Format"));
+                    room.setTotalSeats(rs.getInt("TotalSeats"));
+                    room.setStatus(rs.getString("Status"));
+                    return room;
+                }
+            }
+        }
+        return null;
+    }
 }
