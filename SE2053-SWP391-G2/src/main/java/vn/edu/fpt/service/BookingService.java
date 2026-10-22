@@ -41,7 +41,6 @@ import vn.edu.fpt.model.Ticket;
 import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.model.Voucher;
-import vn.edu.fpt.model.VoucherType;
 import vn.edu.fpt.service.payment.PaymentGateway;
 import vn.edu.fpt.service.payment.PaymentGatewayException;
 import vn.edu.fpt.service.payment.PaymentRequest;
@@ -701,10 +700,8 @@ public class BookingService {
             boolean belowMinOrder = gross.compareTo(voucher.getMinOrderAmount()) < 0;
             boolean inOtherOrder = !applied && bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
             options.add(new CheckoutVoucherOption(voucher.getVoucherCode(), voucher.getDiscountType(),
-                    voucher.getDiscountValue(), voucher.getMinOrderAmount(), voucher.getExpiryDate(),
-                    VoucherType.REFUND_80.equals(voucher.getVoucherType()),
-                    belowMinOrder ? BigDecimal.ZERO : discountOf(voucher, gross), belowMinOrder, inOtherOrder,
-                    applied));
+                    voucher.getDiscountValue(), voucher.getMinOrderAmount(), voucher.getExpiryDate(), belowMinOrder,
+                    inOtherOrder, applied));
         }
         return options;
     }

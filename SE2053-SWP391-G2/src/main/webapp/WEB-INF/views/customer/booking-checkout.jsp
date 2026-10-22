@@ -129,10 +129,57 @@
                 <section class="cl-card p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <h2 class="booking-section-title"><span class="material-symbols-outlined">confirmation_number</span>Mã giảm giá</h2>
-                        <label for="voucherCode" class="booking-hint">Mỗi đơn áp dụng tối đa 1 mã · nhập mã hoặc chọn từ ví bên dưới</label>
-                        <input id="voucherCode" name="voucherCode" maxlength="50" autocomplete="off"
-                               class="booking-input mt-2 uppercase ${not empty errors['voucher'] ? 'is-invalid' : ''}"
-                               value="<c:out value='${voucherInput}'/>" placeholder="Nhập mã voucher"/>
+                        <label for="voucherCode" class="booking-hint">Mỗi đơn áp dụng tối đa 1 mã · nhập tay hoặc chọn từ danh sách</label>
+                        <%-- Ô nhập kiêm danh sách thả xuống (combobox): gõ tay mã bất kỳ, hoặc mở danh sách voucher trong ví
+                             để chọn. booking-checkout.js mở/đóng, lọc theo chữ đã gõ và tự tính lại tiền khi chọn. --%>
+                        <div id="voucherCombo" class="voucher-combo mt-2">
+                            <input id="voucherCode" name="voucherCode" maxlength="50" autocomplete="off"
+                                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="voucherListbox"
+                                   class="booking-input voucher-combo-input uppercase ${not empty errors['voucher'] ? 'is-invalid' : ''}"
+                                   value="<c:out value='${voucherInput}'/>" placeholder="Nhập hoặc chọn mã voucher"/>
+                            <button type="button" class="voucher-combo-icon voucher-combo-clear" data-voucher-clear
+                                    aria-label="Xóa mã voucher" tabindex="-1" ${empty voucherInput ? 'hidden' : ''}>
+                                <span class="material-symbols-outlined">close</span>
+                            </button>
+                            <button type="button" class="voucher-combo-icon" data-voucher-toggle
+                                    aria-label="Mở danh sách voucher của bạn" tabindex="-1">
+                                <span class="material-symbols-outlined">expand_more</span>
+                            </button>
+                            <div class="voucher-dropdown" data-voucher-dropdown hidden>
+                                <%-- Vùng này được thay mỗi lần tự tính lại tiền (thêm bắp nước có thể làm mã đủ đơn tối thiểu) --%>
+                                <div id="voucherOptions">
+                                    <c:choose>
+                                        <c:when test="${empty checkout.vouchers}">
+                                            <p class="voucher-empty">Bạn chưa có voucher nào còn hạn.</p>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <ul id="voucherListbox" class="voucher-list" role="listbox" aria-label="Voucher của bạn">
+                                                <c:forEach var="v" items="${checkout.vouchers}">
+                                                    <fmt:formatNumber var="minOrderText" value="${v.minOrderAmount}" maxFractionDigits="0"/>
+                                                    <c:set var="reason" value="${v.inOtherOrder ? 'Đang dùng cho một đơn khác chưa thanh toán'
+                                                            : (v.belowMinOrder and not v.applied
+                                                                ? 'Đơn chưa đạt giá trị tối thiểu '.concat(minOrderText).concat('đ') : '')}"/>
+                                                    <li role="option" class="voucher-option ${v.applied ? 'is-applied' : ''}"
+                                                        data-voucher-apply="<c:out value='${v.voucherCode}'/>"
+                                                        aria-selected="${v.applied}" aria-disabled="${not (v.usable or v.applied)}"
+                                                        <c:if test="${not empty reason}">title="<c:out value='${reason}'/>"</c:if>>
+                                                        <span class="voucher-code"><c:out value="${v.voucherCode}"/></span>
+                                                        <span class="voucher-amount">
+                                                            <c:choose>
+                                                                <c:when test="${v.percent}">Giảm <fmt:formatNumber value="${v.discountValue}" maxFractionDigits="2"/>%</c:when>
+                                                                <c:otherwise>Giảm <fmt:formatNumber value="${v.discountValue}" maxFractionDigits="0"/>đ</c:otherwise>
+                                                            </c:choose>
+                                                        </span>
+                                                        <span class="voucher-expiry">HSD ${v.expiryDate.format(dateFormat)}</span>
+                                                    </li>
+                                                </c:forEach>
+                                            </ul>
+                                            <p class="voucher-empty" data-voucher-nomatch hidden>Không có voucher trong ví khớp với mã đã nhập.</p>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </div>
+                        </div>
                         <div id="voucherFeedback">
                             <c:if test="${not empty errors['voucher']}">
                                 <p class="booking-field-error"><c:out value="${errors['voucher']}"/></p>
@@ -140,59 +187,6 @@
                             <c:if test="${not empty quote.voucherCode and empty errors['voucher']}">
                                 <p class="mt-2 text-sm text-[#34d399]">Đã áp dụng mã <strong><c:out value="${quote.voucherCode}"/></strong></p>
                             </c:if>
-                        </div>
-                        <%-- Ví voucher của khách: bấm Dùng để áp mã (booking-checkout.js điền vào ô mã và tự tính lại tiền) --%>
-                        <div id="voucherOptions" class="mt-4">
-                            <div class="flex items-center justify-between gap-2 mb-2">
-                                <span class="seat-map-meta-label">Voucher của bạn (${fn:length(checkout.vouchers)})</span>
-                                <a href="${ctx}/customer/vouchers" target="_blank" rel="noopener" class="booking-hint underline hover:text-white">Xem ví voucher</a>
-                            </div>
-                            <c:choose>
-                                <c:when test="${empty checkout.vouchers}">
-                                    <p class="booking-hint">Bạn chưa có voucher nào còn hạn. Nếu có mã khuyến mãi, hãy nhập vào ô bên trên.</p>
-                                </c:when>
-                                <c:otherwise>
-                                    <ul class="voucher-list">
-                                        <c:forEach var="v" items="${checkout.vouchers}">
-                                            <li class="voucher-option ${v.applied ? 'is-applied' : ''} ${v.usable or v.applied ? '' : 'is-disabled'}">
-                                                <div class="min-w-0 flex-1">
-                                                    <div class="flex flex-wrap items-center gap-2">
-                                                        <span class="voucher-code"><c:out value="${v.voucherCode}"/></span>
-                                                        <c:if test="${v.refundVoucher}"><span class="voucher-tag">Hoàn vé 80%</span></c:if>
-                                                    </div>
-                                                    <div class="text-sm text-white font-semibold mt-1">
-                                                        <c:choose>
-                                                            <c:when test="${v.percent}">Giảm <fmt:formatNumber value="${v.discountValue}" maxFractionDigits="2"/>%</c:when>
-                                                            <c:otherwise>Giảm <fmt:formatNumber value="${v.discountValue}" maxFractionDigits="0"/>đ</c:otherwise>
-                                                        </c:choose>
-                                                        <c:if test="${v.usable and v.estimatedDiscount > 0}">
-                                                            <span class="text-[#34d399]"> · đơn này −<fmt:formatNumber value="${v.estimatedDiscount}" maxFractionDigits="0"/>đ</span>
-                                                        </c:if>
-                                                    </div>
-                                                    <div class="booking-hint mt-0.5">
-                                                        <c:if test="${v.minOrderAmount > 0}">Đơn từ <fmt:formatNumber value="${v.minOrderAmount}" maxFractionDigits="0"/>đ · </c:if>HSD ${v.expiryDate.format(dateFormat)}
-                                                    </div>
-                                                    <c:if test="${v.belowMinOrder and not v.applied}">
-                                                        <div class="voucher-reason">Đơn chưa đạt giá trị tối thiểu <fmt:formatNumber value="${v.minOrderAmount}" maxFractionDigits="0"/>đ</div>
-                                                    </c:if>
-                                                    <c:if test="${v.inOtherOrder}">
-                                                        <div class="voucher-reason">Đang dùng cho một đơn khác chưa thanh toán</div>
-                                                    </c:if>
-                                                </div>
-                                                <c:choose>
-                                                    <c:when test="${v.applied}">
-                                                        <button type="button" class="booking-btn booking-btn--ghost voucher-action" data-voucher-clear>Bỏ chọn</button>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <button type="button" class="booking-btn booking-btn--primary voucher-action"
-                                                                data-voucher-apply="<c:out value='${v.voucherCode}'/>" ${v.usable ? '' : 'disabled'}>Dùng</button>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </li>
-                                        </c:forEach>
-                                    </ul>
-                                </c:otherwise>
-                            </c:choose>
                         </div>
                     </div>
                     <div>
