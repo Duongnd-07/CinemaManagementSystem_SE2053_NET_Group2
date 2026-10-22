@@ -177,7 +177,7 @@ Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `Serv
 ## 12. Ghế đôi (Sweetbox)
 
 - Ghế đôi là **một** bản ghi `Seat` chiếm **2 cột liền nhau**; `ColNumber` là cột bên trái (ghế đôi `H1` chiếm cột 1–2, ghế kế tiếp trong hàng bắt đầu từ cột 3). Không tạo bản ghi cho cột bên phải.
-- Một vé ghế đôi dành cho 2 người: **giá = giá 2 ghế thường**; ghế VIP = giá suất chiếu + phụ thu `SEAT_SURCHARGE_VIP`. Dùng chung `vn.edu.fpt.service.TicketPricing.priceOf(...)` khi đặt vé (UC-13) và bán tại quầy (UC-19), không tự tính lại.
+- Một vé ghế đôi dành cho 2 người: **giá = giá 2 ghế thường**; ghế VIP = giá suất chiếu + phụ thu `SEAT_SURCHARGE_VIP` (mặc định 30.000đ, đổi trong bảng `SystemConfig`). Dùng chung `vn.edu.fpt.service.TicketPricing.priceOf(...)` khi đặt vé (UC-13) và bán tại quầy (UC-19), không tự tính lại.
 - **Sức chứa** tính theo người: ghế đôi = 2 (`SeatType.capacityOf`). `Room.TotalSeats` lưu sức chứa; tỷ lệ lấp đầy (UC-29) tính số chỗ đã bán và sức chứa theo cùng quy tắc.
 - Số cột ghế chiếm trên sơ đồ: `SeatType.widthOf` (UC-09 cho ghế đôi trải 2 cột, UC-25 thiết kế theo ô).
 - Ghế đã bán vé cho suất chưa kết thúc không được đổi loại, khóa hay xóa (UC-25).

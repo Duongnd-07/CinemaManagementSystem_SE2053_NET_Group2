@@ -35,11 +35,11 @@
         <a href="${ctx}/manager/vouchers?add=1${fn:escapeXml(fn:replace(listQuery, '?', '&'))}"
            class="flex items-center gap-space-sm bg-primary hover:bg-primary/90 text-on-primary px-space-lg py-2 rounded-full font-label-lg whitespace-nowrap">
             <span class="material-symbols-outlined text-[20px]">add</span>
-            <span>Tạo mã khuyến mãi</span>
+            <span>Tạo campaign</span>
         </a>
     </div>
 
-    <section class="grid grid-cols-1 md:grid-cols-4 gap-space-md mb-space-xl" aria-label="Tổng quan voucher">
+    <section class="grid grid-cols-1 md:grid-cols-5 gap-space-md mb-space-xl" aria-label="Tổng quan voucher">
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
             <p class="text-on-surface-variant">Voucher khuyến mãi còn hiệu lực</p>
             <p class="text-headline-lg text-primary mt-space-xs">${promotionActive}</p>
@@ -47,6 +47,10 @@
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
             <p class="text-on-surface-variant">Voucher khuyến mãi hết hạn</p>
             <p class="text-headline-lg mt-space-xs">${promotionExpired}</p>
+        </div>
+        <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
+            <p class="text-on-surface-variant">Campaign sắp bắt đầu</p>
+            <p class="text-headline-lg mt-space-xs">${promotionScheduled}</p>
         </div>
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
             <p class="text-on-surface-variant">Voucher hoàn 80% còn hiệu lực</p>
@@ -84,7 +88,9 @@
                     <th class="py-4 px-5">Phân loại</th>
                     <th class="py-4 px-5">Mức giảm</th>
                     <th class="py-4 px-5">Đơn tối thiểu</th>
+                    <th class="py-4 px-5">Đã dùng / đang giữ</th>
                     <th class="py-4 px-5">Ngày tạo</th>
+                    <th class="py-4 px-5">Bắt đầu</th>
                     <th class="py-4 px-5">Hạn sử dụng</th>
                     <th class="py-4 px-5">Trạng thái</th>
                     <th class="py-4 px-5 text-right">Thao tác</th>
@@ -109,7 +115,16 @@
                             </c:choose>
                         </td>
                         <td class="py-4 px-5"><c:out value="${voucher.minOrderAmount}"/>đ</td>
+                        <td class="py-4 px-5">
+                            <c:choose>
+                                <c:when test="${voucher.voucherType == 'Promotion'}">
+                                    <c:out value="${voucher.usageCount}"/> / <c:out value="${voucher.usageLimit}"/>
+                                </c:when>
+                                <c:otherwise>Cá nhân</c:otherwise>
+                            </c:choose>
+                        </td>
                         <td class="py-4 px-5"><c:out value="${voucher.createdAt}"/></td>
+                        <td class="py-4 px-5"><c:out value="${voucher.startDate}"/></td>
                         <td class="py-4 px-5"><c:out value="${voucher.expiryDate}"/></td>
                         <td class="py-4 px-5"><c:out value="${voucher.status}"/></td>
                         <td class="py-4 px-5 text-right">
@@ -132,7 +147,7 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty voucherPage.items}">
-                    <tr><td colspan="8" class="py-12 px-6 text-center text-on-surface-variant">
+                    <tr><td colspan="10" class="py-12 px-6 text-center text-on-surface-variant">
                         <c:out value="${msgNoResult}"/>
                     </td></tr>
                 </c:if>
@@ -155,7 +170,7 @@
                href="${ctx}/manager/vouchers${listQuery}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
             </a>
-            <h2 class="text-headline-md text-on-surface mb-space-lg">${empty editingVoucherId ? 'Tạo mã khuyến mãi' : 'Cập nhật mã khuyến mãi'}</h2>
+            <h2 class="text-headline-md text-on-surface mb-space-lg">${empty editingVoucherId ? 'Tạo campaign khuyến mãi' : 'Cập nhật campaign khuyến mãi'}</h2>
             <c:if test="${not empty errors.general}">
                 <div class="mb-space-md form-error-banner"><c:out value="${errors.general}"/></div>
             </c:if>
@@ -198,15 +213,27 @@
                         <c:if test="${not empty errors.minOrderAmount}"><p class="form-error"><c:out value="${errors.minOrderAmount}"/></p></c:if>
                     </div>
                     <div>
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="expiryDate">Hạn sử dụng</label>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="startDate">Bắt đầu hiệu lực</label>
+                        <input id="startDate" name="startDate" class="${inputClass} w-full"
+                               type="datetime-local" required value="<c:out value='${form.startDate}'/>"/>
+                        <c:if test="${not empty errors.startDate}"><p class="form-error"><c:out value="${errors.startDate}"/></p></c:if>
+                    </div>
+                    <div>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="expiryDate">Kết thúc hiệu lực</label>
                         <input id="expiryDate" name="expiryDate" class="${inputClass} w-full"
                                type="datetime-local" required value="<c:out value='${form.expiryDate}'/>"/>
                         <c:if test="${not empty errors.expiryDate}"><p class="form-error"><c:out value="${errors.expiryDate}"/></p></c:if>
                     </div>
+                    <div>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="usageLimit">Giới hạn lượt dùng</label>
+                        <input id="usageLimit" name="usageLimit" class="${inputClass} w-full"
+                               type="number" min="1" step="1" required value="<c:out value='${form.usageLimit}'/>"/>
+                        <c:if test="${not empty errors.usageLimit}"><p class="form-error"><c:out value="${errors.usageLimit}"/></p></c:if>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-space-sm pt-space-sm">
                     <a class="px-space-lg py-2 rounded-full bg-surface-container-high" href="${ctx}/manager/vouchers${listQuery}">Hủy</a>
-                    <button class="px-space-lg py-2 rounded-full bg-primary text-on-primary" type="submit">${empty editingVoucherId ? 'Tạo voucher' : 'Cập nhật voucher'}</button>
+                    <button class="px-space-lg py-2 rounded-full bg-primary text-on-primary" type="submit">${empty editingVoucherId ? 'Tạo campaign' : 'Cập nhật campaign'}</button>
                 </div>
             </form>
         </div>

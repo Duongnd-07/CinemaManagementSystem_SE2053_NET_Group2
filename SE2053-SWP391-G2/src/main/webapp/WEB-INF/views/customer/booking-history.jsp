@@ -52,8 +52,15 @@
                             </div>
                             <div class="mt-4 grid gap-3 border-t border-white/10 pt-4 md:grid-cols-2">
                                 <div>
-                                    <p class="text-xs text-gray-400">Mã QR vé</p>
-                                    <code class="mt-1 block break-all rounded-lg bg-[#0f131d] p-3 text-xs text-[#ffb95f]"><c:out value="${ticket.qrCode}"/></code>
+                                    <c:choose>
+                                        <c:when test="${ticket.bookingStatus == 'Paid' and ticket.ticketStatus != 'Cancelled'}">
+                                            <p class="text-xs text-gray-400">Mã QR vé</p>
+                                            <code class="mt-1 block break-all rounded-lg bg-[#0f131d] p-3 text-xs text-[#ffb95f]"><c:out value="${ticket.qrCode}"/></code>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <p class="text-xs text-gray-400">Mã QR chỉ hiển thị với vé đã thanh toán và còn hiệu lực.</p>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </div>
                                 <div class="flex flex-col justify-center gap-2 text-sm text-gray-300">
                                     <p>Trạng thái đơn:

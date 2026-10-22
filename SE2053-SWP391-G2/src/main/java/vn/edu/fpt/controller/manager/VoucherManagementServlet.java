@@ -136,6 +136,7 @@ public class VoucherManagementServlet extends HttpServlet {
         request.setAttribute("voucherTypes", VoucherType.ALL);
         request.setAttribute("promotionActive", overview.getOrDefault("PromotionActive", 0));
         request.setAttribute("promotionExpired", overview.getOrDefault("PromotionExpired", 0));
+        request.setAttribute("promotionScheduled", overview.getOrDefault("PromotionScheduled", 0));
         request.setAttribute("refund80Active", overview.getOrDefault("Refund80Active", 0));
         request.setAttribute("refund80Expired", overview.getOrDefault("Refund80Expired", 0));
         request.setAttribute("listQuery", listQuery(request));
@@ -165,8 +166,9 @@ public class VoucherManagementServlet extends HttpServlet {
         form.setDiscountType(voucher.getDiscountType());
         form.setDiscountValue(voucher.getDiscountValue() == null ? "" : voucher.getDiscountValue().toPlainString());
         form.setMinOrderAmount(voucher.getMinOrderAmount() == null ? "" : voucher.getMinOrderAmount().toPlainString());
-        form.setExpiryDate(voucher.getExpiryDate() == null ? "" : voucher.getExpiryDate().toLocalDate().toString() + "T"
-                + voucher.getExpiryDate().toLocalTime().toString().substring(0, 5));
+        form.setStartDate(toDateTimeInput(voucher.getStartDate()));
+        form.setExpiryDate(toDateTimeInput(voucher.getExpiryDate()));
+        form.setUsageLimit(voucher.getUsageLimit() == null ? "" : voucher.getUsageLimit().toString());
         return form;
     }
 
@@ -176,8 +178,14 @@ public class VoucherManagementServlet extends HttpServlet {
         form.setDiscountType(trim(request.getParameter("discountType")));
         form.setDiscountValue(trim(request.getParameter("discountValue")));
         form.setMinOrderAmount(trim(request.getParameter("minOrderAmount")));
+        form.setStartDate(trim(request.getParameter("startDate")));
         form.setExpiryDate(trim(request.getParameter("expiryDate")));
+        form.setUsageLimit(trim(request.getParameter("usageLimit")));
         return form;
+    }
+
+    private String toDateTimeInput(java.time.LocalDateTime value) {
+        return value == null ? "" : value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
     }
 
     private String listQuery(HttpServletRequest request) {
