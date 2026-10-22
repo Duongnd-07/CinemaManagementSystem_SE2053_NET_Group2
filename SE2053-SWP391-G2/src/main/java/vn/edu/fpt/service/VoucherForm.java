@@ -5,7 +5,9 @@ public class VoucherForm {
     private String discountType;
     private String discountValue;
     private String minOrderAmount;
+    private String startDate;
     private String expiryDate;
+    private String usageLimit;
 
     public String getVoucherCode() {
         return voucherCode;
@@ -39,11 +41,27 @@ public class VoucherForm {
         this.minOrderAmount = minOrderAmount;
     }
 
+    public String getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate;
+    }
+
     public String getExpiryDate() {
         return expiryDate;
     }
 
     public void setExpiryDate(String expiryDate) {
         this.expiryDate = expiryDate;
+    }
+
+    public String getUsageLimit() {
+        return usageLimit;
+    }
+
+    public void setUsageLimit(String usageLimit) {
+        this.usageLimit = usageLimit;
     }
 }

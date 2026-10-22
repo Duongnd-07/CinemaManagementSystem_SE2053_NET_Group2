@@ -47,11 +47,16 @@
 
     <!-- Main Content -->
     <main class="flex-1 max-w-6xl w-full mx-auto p-6 space-y-6">
-        <!-- Flash Alert -->
+        <!-- Flash Alert (Tự động ẩn sau 5s) -->
         <c:if test="${not empty flashSuccess}">
-            <div class="p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-300 text-sm flex items-center gap-3">
-                <span class="material-symbols-outlined text-emerald-400 text-xl">check_circle</span>
-                <span><c:out value="${flashSuccess}"/></span>
+            <div class="flash-alert p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-300 text-sm flex items-center justify-between gap-3 shadow-lg transition-all duration-500 overflow-hidden">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="material-symbols-outlined text-emerald-400 text-xl flex-shrink-0">check_circle</span>
+                    <span class="break-words"><c:out value="${flashSuccess}"/></span>
+                </div>
+                <button type="button" onclick="dismissFlashAlert(this.closest('.flash-alert'))" class="text-emerald-400/70 hover:text-emerald-200 transition p-1 rounded-lg hover:bg-emerald-500/10 flex-shrink-0" title="Đóng">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
             </div>
         </c:if>
 
@@ -126,5 +131,35 @@
         <span>&copy; 2026 CineLuxe Cinema - Nhân viên tác nghiệp</span>
         <span>Hệ thống phân quyền Role-Based Access Control (RBAC)</span>
     </footer>
+    <script>
+        function dismissFlashAlert(el) {
+            if (!el) return;
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease, max-height 0.5s ease, margin 0.5s ease, padding 0.5s ease';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-8px)';
+            el.style.maxHeight = el.scrollHeight + 'px';
+            setTimeout(function () {
+                el.style.maxHeight = '0px';
+                el.style.marginTop = '0px';
+                el.style.marginBottom = '0px';
+                el.style.paddingTop = '0px';
+                el.style.paddingBottom = '0px';
+            }, 50);
+            setTimeout(function () {
+                el.remove();
+            }, 550);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const alerts = document.querySelectorAll('.flash-alert');
+            if (alerts.length > 0) {
+                setTimeout(function () {
+                    alerts.forEach(function (alert) {
+                        dismissFlashAlert(alert);
+                    });
+                }, 5000);
+            }
+        });
+    </script>
 </body>
 </html>

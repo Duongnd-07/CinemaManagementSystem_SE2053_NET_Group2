@@ -10,11 +10,14 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.ReminderTicket;
+import vn.edu.fpt.model.ShowtimeReminder;
 
 // UC-01: Gửi email chứa mã OTP xác thực đăng ký tài khoản thành viên
 public final class EmailService {
@@ -91,6 +94,70 @@ public final class EmailService {
             LOGGER.log(Level.SEVERE, "Lỗi khi gửi email OTP tới: " + recipientEmail, e);
             return false;
         }
+    }
+
+    public static boolean sendShowtimeReminderSync(ShowtimeReminder reminder) {
+        String senderEmail = AppConfig.get("mail.sender.email", "");
+        String senderPassword = AppConfig.get("mail.sender.password", "").replace(" ", "");
+        if (senderEmail.isEmpty() || senderPassword.isEmpty()) {
+            LOGGER.warning("JOB-02: SMTP chưa được cấu hình, không gửi email nhắc suất chiếu.");
+            return false;
+        }
+
+        Properties props = new Properties();
+        props.put("mail.smtp.host", AppConfig.get("mail.smtp.host", "smtp.gmail.com"));
+        props.put("mail.smtp.port", AppConfig.get("mail.smtp.port", "587"));
+        props.put("mail.smtp.auth", String.valueOf(AppConfig.getBoolean("mail.smtp.auth", true)));
+        props.put("mail.smtp.starttls.enable", String.valueOf(AppConfig.getBoolean("mail.smtp.starttls.enable", true)));
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        Session session = Session.getInstance(props, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(senderEmail, senderPassword);
+            }
+        });
+
+        try {
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(senderEmail, "CineLuxe Cinema", StandardCharsets.UTF_8.name()));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(reminder.getRecipientEmail()));
+            message.setSubject("[CineLuxe] Nhắc lịch xem phim");
+            message.setContent(showtimeReminderHtml(reminder), "text/html; charset=UTF-8");
+            Transport.send(message);
+            return true;
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            LOGGER.log(Level.WARNING, "JOB-02: không gửi được email nhắc suất chiếu", e);
+            return false;
+        }
+    }
+
+    private static String showtimeReminderHtml(ShowtimeReminder reminder) {
+        StringBuilder tickets = new StringBuilder();
+        for (ReminderTicket ticket : reminder.getTickets()) {
+            tickets.append("<li>Ghế ").append(escapeHtml(ticket.getSeatLabel()))
+                    .append(" · Mã vé ").append(escapeHtml(ticket.getTicketCode()))
+                    .append(" · QR ").append(escapeHtml(ticket.getQrCode())).append("</li>");
+        }
+        String showtime = reminder.getShowtimeStart() == null ? ""
+                : reminder.getShowtimeStart().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        return """
+                <!DOCTYPE html>
+                <html lang="vi"><body>
+                    <h2>Xin chào %s,</h2>
+                    <p>Đây là lời nhắc lịch xem phim <strong>%s</strong> vào lúc <strong>%s</strong>.</p>
+                    <p>Vé của bạn:</p><ul>%s</ul>
+                    <p>Vui lòng xuất trình mã QR trên vé tại rạp.</p>
+                </body></html>
+                """.formatted(escapeHtml(reminder.getRecipientName()), escapeHtml(reminder.getMovieTitle()),
+                escapeHtml(showtime), tickets);
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private static String buildOtpEmailHtml(String fullName, String otpCode, int expiryMinutes) {
@@ -239,4 +306,3 @@ public final class EmailService {
                 """.formatted(fullName, resetLink, expiryMinutes, resetLink);
     }
 }
-

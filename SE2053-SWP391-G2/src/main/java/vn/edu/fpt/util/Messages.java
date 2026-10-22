@@ -43,6 +43,29 @@ public final class Messages {
     public static final String MOVIE_DETAIL_UNAVAILABLE = "Phim này không còn tồn tại hoặc đã ngừng chiếu.";
     // UC-08 View Showtimes
     public static final String SHOWTIME_NONE_FOR_DATE = "Không có suất chiếu nào cho ngày này. Vui lòng chọn ngày khác.";
+    // UC-24 Manage Showtimes
+    public static final String SHOWTIME_SAVED = "Suất chiếu đã được tạo thành công.";
+    public static final String SHOWTIME_UPDATED = "Suất chiếu đã được cập nhật thành công.";
+    public static final String SHOWTIME_NOT_FOUND = "Không tìm thấy suất chiếu.";
+    public static final String SHOWTIME_CANCELLED = "Đã hủy suất chiếu thành công.";
+    public static final String SHOWTIME_DELETED = "Đã xóa suất chiếu thành công.";
+    public static final String SHOWTIME_MOVIE_INVALID = "Vui lòng chọn phim hợp lệ (phim đang chiếu hoặc sắp chiếu).";
+    public static final String SHOWTIME_ROOM_INVALID = "Vui lòng chọn phòng chiếu đang hoạt động.";
+    public static final String SHOWTIME_ROOM_INACTIVE = "Phòng chiếu đã dừng hoạt động, không thể tạo suất chiếu mới.";
+    public static final String SHOWTIME_ROOM_MAINTENANCE = "Phòng chiếu đang bảo trì sự cố thiết bị, không thể tạo suất chiếu mới.";
+    public static final String SHOWTIME_START_TIME_REQUIRED = "Vui lòng chọn thời gian bắt đầu chiếu.";
+    public static final String SHOWTIME_START_TIME_PAST = "Thời gian bắt đầu suất chiếu phải ở tương lai.";
+    public static final String SHOWTIME_PAST_START = SHOWTIME_START_TIME_PAST;
+    public static final String SHOWTIME_PRICE_INVALID = "Giá vé cơ bản phải từ 10.000đ trở lên và là bội số của 1.000đ.";
+    public static final String SHOWTIME_COLLISION =
+            "Phòng {0} đã có suất chiếu \"{1}\" ({2} - {3}). Vui lòng chọn khung giờ khác hoặc phòng khác.";
+    public static final String SHOWTIME_IMMUTABLE_BOOKED =
+            "Suất chiếu đã có vé đặt hoặc ghế đang giữ chỗ, không thể đổi phim, phòng hoặc giờ chiếu.";
+    public static final String SHOWTIME_HAS_BOOKINGS = SHOWTIME_IMMUTABLE_BOOKED;
+    public static final String SHOWTIME_DELETE_HAS_BOOKINGS =
+            "Suất chiếu đã có vé hoặc dữ liệu liên quan, chỉ có thể hủy suất chiếu thay vì xóa.";
+    public static final String SHOWTIME_CANCEL_ALREADY = "Suất chiếu này đã bị hủy trước đó.";
+    public static final String SHOWTIME_STATUS_INVALID = "Trạng thái suất chiếu không hợp lệ.";
     // UC-25 Manage Rooms & Seat Layout
     public static final String ROOM_SAVED = "Đã lưu phòng chiếu và sơ đồ ghế.";
     public static final String ROOM_NOT_FOUND = "Không tìm thấy phòng chiếu.";
@@ -133,6 +156,10 @@ public final class Messages {
     public static final String VOUCHER_MIN_ORDER_INVALID = "Giá trị đơn tối thiểu phải là số nguyên không âm.";
     public static final String VOUCHER_NUMBER_INVALID = "Giá trị phải là số hợp lệ.";
     public static final String VOUCHER_EXPIRY_INVALID = "Hạn sử dụng phải là thời điểm trong tương lai.";
+    public static final String VOUCHER_CAMPAIGN_RANGE_INVALID = "Thời gian bắt đầu phải trước thời gian kết thúc.";
+    public static final String VOUCHER_USAGE_LIMIT_INVALID = "Giới hạn lượt dùng phải là số nguyên dương.";
+    public static final String VOUCHER_USAGE_LIMIT_BELOW_USAGE =
+            "Giới hạn lượt dùng không được thấp hơn số lượt đã dùng hoặc đang giữ.";
     public static final String CUSTOMER_DATA_NOT_FOUND = "Không tìm thấy dữ liệu tài khoản.";
     public static final String BOOKING_HISTORY_EMPTY = "Bạn chưa có lịch sử đặt vé nào.";
     public static final String VOUCHER_WALLET_EMPTY = "Ví voucher của bạn hiện đang trống.";
@@ -232,6 +259,7 @@ public final class Messages {
             "VNPay đã tiếp nhận yêu cầu. Đơn chỉ được xác nhận sau khi hệ thống nhận kết quả thanh toán hợp lệ.";
     public static final String BOOKING_FREE_CONFIRMED = "Đặt vé thành công! Vé điện tử đã được phát hành.";
     public static final String BOOKING_NOT_FREE = "Đơn này cần được thanh toán qua VNPay.";
+
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

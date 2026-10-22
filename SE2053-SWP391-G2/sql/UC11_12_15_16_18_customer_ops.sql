@@ -16,6 +16,21 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('BookingReminderEmail', 'U') IS NULL
+BEGIN
+    CREATE TABLE BookingReminderEmail (
+        BookingID INT NOT NULL PRIMARY KEY
+            CONSTRAINT FK_BookingReminderEmail_Booking REFERENCES Booking(BookingID),
+        AttemptCount TINYINT NOT NULL CONSTRAINT DF_BookingReminderEmail_AttemptCount DEFAULT 0,
+        NextAttemptAt DATETIME NOT NULL CONSTRAINT DF_BookingReminderEmail_NextAttemptAt DEFAULT GETDATE(),
+        LastAttemptAt DATETIME NULL,
+        SentAt DATETIME NULL,
+        LastError NVARCHAR(1000) NULL,
+        CONSTRAINT CK_BookingReminderEmail_AttemptCount CHECK (AttemptCount BETWEEN 0 AND 3)
+    );
+END
+GO
+
 IF OBJECT_ID('LoyaltyPointHistory', 'U') IS NULL
 BEGIN
     CREATE TABLE LoyaltyPointHistory (
