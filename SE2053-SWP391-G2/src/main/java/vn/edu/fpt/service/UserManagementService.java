@@ -9,10 +9,15 @@ import vn.edu.fpt.dao.UserDAO;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.util.Messages;
+import vn.edu.fpt.util.Page;
 import vn.edu.fpt.util.PasswordUtil;
 
-// Nghiệp vụ Quản lý tài khoản & Phân quyền dành riêng cho Admin
+/**
+ * Nghiệp vụ Quản lý tài khoản & Phân quyền dành riêng cho Admin (UC-30).
+ * Tuân thủ GB-12: Không hard-delete tài khoản; chỉ khóa hoặc đổi trạng thái.
+ */
 public class UserManagementService {
+    public static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_FULLNAME = 50;
     private static final int MAX_EMAIL = 100;
     private static final int MIN_PASSWORD = 8;
@@ -36,9 +41,20 @@ public class UserManagementService {
     }
 
     /**
-     * Lấy danh sách tài khoản theo trang kèm bộ lọc.
+     * Lấy danh sách tài khoản theo trang kèm bộ lọc và phân trang dùng Page utility.
      */
-    public List<User> getUsers(String keyword, String role, String status, int page, int pageSize) throws SQLException {
+    public Page<User> listUsers(String keyword, String role, String status, int page, int pageSize)
+            throws SQLException {
+        int total = userDAO.countUsers(keyword, role, status);
+        return Page.of(page, pageSize, total,
+                (offset, limit) -> userDAO.findUsers(keyword, role, status, offset, limit));
+    }
+
+    /**
+     * Lấy danh sách tài khoản theo trang kèm bộ lọc (offset/limit).
+     */
+    public List<User> getUsers(String keyword, String role, String status, int page, int pageSize)
+            throws SQLException {
         int offset = Math.max(0, (page - 1) * pageSize);
         return userDAO.findUsers(keyword, role, status, offset, pageSize);
     }
@@ -58,19 +74,70 @@ public class UserManagementService {
     }
 
     /**
-     * Phân quyền (đổi Role) cho tài khoản.
-     * Ràng buộc an toàn: Admin không được tự đổi quyền của chính mình.
+     * Lấy thông tin chi tiết một tài khoản theo ID.
      */
-    public void updateUserRole(int currentAdminId, int targetUserId, String newRole) throws SQLException, ValidationException {
+    public User getUserById(int userId) throws SQLException {
+        return userDAO.findById(userId);
+    }
+
+    /**
+     * Cập nhật thông tin cơ bản của tài khoản (Họ và tên, Số điện thoại).
+     */
+    public void updateUserProfile(int targetUserId, String fullName, String phone)
+            throws SQLException, ValidationException {
+        Map<String, String> errors = new LinkedHashMap<>();
+        User targetUser = userDAO.findById(targetUserId);
+        if (targetUser == null) {
+            throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
+        }
+
+        String trimmedName = fullName == null ? "" : fullName.trim();
+        if (trimmedName.isEmpty()) {
+            errors.put("fullName", Messages.format(Messages.MSG02, "Họ và tên"));
+        } else if (trimmedName.length() > MAX_FULLNAME) {
+            errors.put("fullName", Messages.format(Messages.MSG08, MAX_FULLNAME));
+        }
+
+        String trimmedPhone = phone == null ? "" : phone.trim();
+        if (trimmedPhone.isEmpty()) {
+            errors.put("phone", Messages.format(Messages.MSG02, "Số điện thoại"));
+        } else if (!PHONE_PATTERN.matcher(trimmedPhone).matches()) {
+            errors.put("phone", Messages.REGISTER_PHONE_INVALID);
+        } else if (userDAO.existsByPhoneExceptUser(trimmedPhone, targetUserId)) {
+            errors.put("phone", Messages.REGISTER_PHONE_DUPLICATE);
+        }
+
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+
+        userDAO.updateProfile(targetUserId, trimmedName, trimmedPhone);
+    }
+
+    /**
+     * Phân quyền (đổi Role) cho tài khoản.
+     * Ràng buộc an toàn:
+     * 1. Admin không được tự đổi quyền của chính mình.
+     * 2. Không được hạ quyền tài khoản Admin hoạt động duy nhất trong hệ thống.
+     */
+    public void updateUserRole(int currentAdminId, int targetUserId, String newRole)
+            throws SQLException, ValidationException {
         if (!Role.isValid(newRole)) {
-            throw new ValidationException(Map.of("role", "Vai trò không hợp lệ. Chỉ chấp nhận Admin, Manager, Staff hoặc Customer."));
+            throw new ValidationException(Map.of("role", Messages.USER_ROLE_INVALID));
         }
         if (currentAdminId == targetUserId) {
-            throw new ValidationException(Map.of("role", "Bạn không thể tự thay đổi vai trò quản trị của chính tài khoản đang đăng nhập."));
+            throw new ValidationException(Map.of("role", Messages.USER_ROLE_SELF_LOCKED));
         }
         User targetUser = userDAO.findById(targetUserId);
         if (targetUser == null) {
-            throw new ValidationException(Map.of("general", "Không tìm thấy tài khoản người dùng cần cập nhật."));
+            throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
+        }
+
+        // Quy tắc bảo vệ Admin cuối cùng
+        if (Role.ADMIN.equalsIgnoreCase(targetUser.getRole()) && !Role.ADMIN.equalsIgnoreCase(newRole)) {
+            if (userDAO.countActiveAdmins() <= 1) {
+                throw new ValidationException(Map.of("role", Messages.USER_LAST_ADMIN_ROLE_LOCKED));
+            }
         }
 
         userDAO.updateRole(targetUserId, newRole);
@@ -78,18 +145,29 @@ public class UserManagementService {
 
     /**
      * Cập nhật trạng thái tài khoản (Active, Suspended, Deactivated).
-     * Ràng buộc an toàn: Admin không được tự khóa hoặc hủy kích hoạt tài khoản của chính mình.
+     * Ràng buộc an toàn:
+     * 1. Admin không được tự khóa hoặc hủy kích hoạt tài khoản của chính mình.
+     * 2. Không được khóa tài khoản Admin hoạt động duy nhất trong hệ thống.
+     * 3. Tuân thủ GB-12: Không xóa cứng khỏi CSDL.
      */
-    public void updateUserStatus(int currentAdminId, int targetUserId, String newStatus) throws SQLException, ValidationException {
+    public void updateUserStatus(int currentAdminId, int targetUserId, String newStatus)
+            throws SQLException, ValidationException {
         if (newStatus == null || !VALID_STATUSES.contains(newStatus)) {
-            throw new ValidationException(Map.of("status", "Trạng thái không hợp lệ. Chỉ chấp nhận Active, Suspended hoặc Deactivated."));
+            throw new ValidationException(Map.of("status", Messages.USER_STATUS_INVALID));
         }
         if (currentAdminId == targetUserId && !"Active".equalsIgnoreCase(newStatus)) {
-            throw new ValidationException(Map.of("status", "Bạn không thể tự khóa tài khoản quản trị của chính mình."));
+            throw new ValidationException(Map.of("status", Messages.USER_STATUS_SELF_LOCKED));
         }
         User targetUser = userDAO.findById(targetUserId);
         if (targetUser == null) {
-            throw new ValidationException(Map.of("general", "Không tìm thấy tài khoản người dùng cần cập nhật."));
+            throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
+        }
+
+        // Quy tắc bảo vệ Admin cuối cùng
+        if (Role.ADMIN.equalsIgnoreCase(targetUser.getRole()) && !"Active".equalsIgnoreCase(newStatus)) {
+            if (userDAO.countActiveAdmins() <= 1) {
+                throw new ValidationException(Map.of("status", Messages.USER_LAST_ADMIN_STATUS_LOCKED));
+            }
         }
 
         userDAO.updateStatus(targetUserId, newStatus);
@@ -134,7 +212,7 @@ public class UserManagementService {
 
         // 4. Vai trò
         if (role == null || !Role.isValid(role)) {
-            errors.put("role", "Vai trò không hợp lệ.");
+            errors.put("role", Messages.USER_ROLE_INVALID);
         }
 
         // 5. Mật khẩu
@@ -169,13 +247,15 @@ public class UserManagementService {
     /**
      * Admin đặt lại mật khẩu cho người dùng.
      */
-    public void resetPassword(int targetUserId, String newPassword) throws SQLException, ValidationException {
+    public void resetPassword(int targetUserId, String newPassword)
+            throws SQLException, ValidationException {
         User targetUser = userDAO.findById(targetUserId);
         if (targetUser == null) {
-            throw new ValidationException(Map.of("general", "Không tìm thấy người dùng."));
+            throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
         }
         if (newPassword == null || newPassword.length() < MIN_PASSWORD || newPassword.length() > MAX_PASSWORD) {
-            throw new ValidationException(Map.of("newPassword", Messages.format(Messages.REGISTER_PASSWORD_LENGTH, MIN_PASSWORD, MAX_PASSWORD)));
+            throw new ValidationException(Map.of("newPassword",
+                    Messages.format(Messages.REGISTER_PASSWORD_LENGTH, MIN_PASSWORD, MAX_PASSWORD)));
         }
         if (!PASSWORD_PATTERN.matcher(newPassword).matches()) {
             throw new ValidationException(Map.of("newPassword", Messages.REGISTER_PASSWORD_WEAK));

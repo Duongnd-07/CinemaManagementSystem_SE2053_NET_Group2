@@ -51,6 +51,26 @@
     <!-- Main Content Container -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
+        <!-- Page Title & Header Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                    <span class="material-symbols-outlined text-[#e50914] text-3xl">manage_accounts</span>
+                    Quản lý tài khoản &amp; Phân quyền
+                </h1>
+                <p class="text-xs sm:text-sm text-[#8e919f] mt-1">
+                    Trang quản trị toàn quyền phân chia vai trò (Admin, Manager, Staff, Customer), cập nhật thông tin và kiểm soát trạng thái tài khoản.
+                </p>
+            </div>
+            <div>
+                <button type="button" onclick="openCreateUserModal()"
+                        class="px-4 py-2.5 bg-gradient-to-r from-[#e50914] to-[#b80710] hover:from-[#f40d1a] hover:to-[#cb0812] text-white font-bold rounded-xl text-xs sm:text-sm shadow-[0_0_20px_-2px_rgba(229,9,20,0.5)] transition flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg">person_add</span>
+                    Thêm tài khoản mới
+                </button>
+            </div>
+        </div>
+
         <!-- Flash Messages (Auto-dismiss in 5s) -->
         <c:if test="${not empty flashSuccess}">
             <div class="flash-alert p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-300 text-sm flex items-center justify-between gap-3 shadow-lg transition-all duration-500 overflow-hidden">
@@ -307,6 +327,15 @@
                                         <!-- Actions -->
                                         <td class="py-3.5 px-4 text-right pr-6">
                                             <div class="inline-flex items-center gap-1.5">
+                                                <!-- Nút Sửa thông tin (Edit Profile) -->
+                                                <button type="button"
+                                                        onclick="openEditModal('${u.userId}', '<c:out value="${u.fullName}"/>', '<c:out value="${u.email}"/>', '<c:out value="${u.phone}"/>')"
+                                                        class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/5 hover:bg-emerald-500/20 text-emerald-300 border border-white/10 hover:border-emerald-500/40 transition flex items-center gap-1"
+                                                        title="Sửa thông tin tài khoản">
+                                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                                    <span>Sửa</span>
+                                                </button>
+
                                                 <!-- Nút Phân quyền (Role) -->
                                                 <button type="button"
                                                         ${isSelf ? 'disabled title="Không thể tự đổi quyền của chính mình"' : ''}
@@ -387,7 +416,152 @@
 
     <!-- ==================== MODALS ==================== -->
 
-    <!-- Modal 1: Phân quyền vai trò (Role) -->
+    <!-- Modal 1: Thêm tài khoản mới -->
+    <div id="createModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#171b26] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2 font-bold text-white text-lg">
+                    <span class="material-symbols-outlined text-[#e50914]">person_add</span>
+                    Thêm tài khoản mới
+                </div>
+                <button type="button" onclick="closeCreateUserModal()" class="text-gray-400 hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form action="${pageContext.request.contextPath}/admin/users" method="POST" class="space-y-3.5">
+                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                <input type="hidden" name="action" value="create-user"/>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+                        Họ và tên <span class="text-[#e50914]">*</span>
+                    </label>
+                    <input type="text" name="fullName" required placeholder="Ví dụ: Nguyễn Văn An" maxlength="50"
+                           class="w-full px-3.5 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+                            Email <span class="text-[#e50914]">*</span>
+                        </label>
+                        <input type="email" name="email" required placeholder="nhanvien@cinema.vn" maxlength="100"
+                               class="w-full px-3.5 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+                            Số điện thoại <span class="text-[#e50914]">*</span>
+                        </label>
+                        <input type="tel" name="phone" required placeholder="0912345678" pattern="0[0-9]{9}" maxlength="10"
+                               class="w-full px-3.5 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+                            Vai trò <span class="text-[#e50914]">*</span>
+                        </label>
+                        <select name="role" required
+                                class="w-full px-3 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#e50914]">
+                            <option value="Staff">Nhân viên (Staff)</option>
+                            <option value="Manager">Quản lý (Manager)</option>
+                            <option value="Admin">Quản trị viên (Admin)</option>
+                            <option value="Customer">Khách hàng (Customer)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+                            Mật khẩu khởi tạo <span class="text-[#e50914]">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="createPasswordInput" name="password" required placeholder="Tối thiểu 8 ký tự (hoa, thường, số)" minlength="8" maxlength="32"
+                                   class="w-full pl-3.5 pr-10 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
+                            <button type="button" onclick="togglePasswordVisibility('createPasswordInput', this)"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                                <span class="material-symbols-outlined text-lg">visibility</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-[#0f131d] rounded-xl border border-white/5 text-[11px] text-gray-400">
+                    <span class="text-amber-400 font-bold">Lưu ý:</span> Mật khẩu phải có từ 8 - 32 ký tự, bao gồm ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số.
+                </div>
+
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button type="button" onclick="closeCreateUserModal()"
+                            class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-300 transition">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-[#e50914] hover:bg-[#b80710] text-white font-bold rounded-xl text-xs transition shadow-[0_0_15px_rgba(229,9,20,0.5)] flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-sm">save</span>
+                        Tạo tài khoản
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Chỉnh sửa thông tin tài khoản -->
+    <div id="editProfileModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#171b26] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2 font-bold text-white text-lg">
+                    <span class="material-symbols-outlined text-emerald-400">edit</span>
+                    Cập nhật thông tin tài khoản
+                </div>
+                <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form action="${pageContext.request.contextPath}/admin/users" method="POST" class="space-y-4">
+                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                <input type="hidden" name="action" value="update-profile"/>
+                <input type="hidden" id="editModalUserId" name="userId" value=""/>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                        Email đăng nhập (Không thể thay đổi)
+                    </label>
+                    <input type="email" id="editModalEmail" readonly
+                           class="w-full px-3.5 py-2.5 bg-[#0f131d]/60 border border-white/5 rounded-xl text-gray-400 text-sm cursor-not-allowed"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+                        Họ và tên <span class="text-[#e50914]">*</span>
+                    </label>
+                    <input type="text" id="editModalFullName" name="fullName" required maxlength="50"
+                           class="w-full px-3.5 py-2.5 bg-[#0f131d] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#e50914]"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
+                        Số điện thoại <span class="text-[#e50914]">*</span>
+                    </label>
+                    <input type="tel" id="editModalPhone" name="phone" required pattern="0[0-9]{9}" maxlength="10"
+                           class="w-full px-3.5 py-2.5 bg-[#0f131d] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#e50914]"/>
+                </div>
+
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button type="button" onclick="closeEditModal()"
+                            class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-300 transition">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-[#e50914] hover:bg-[#b80710] text-white font-bold rounded-xl text-xs transition shadow-[0_0_15px_rgba(229,9,20,0.5)]">
+                        Lưu thông tin
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Phân quyền vai trò (Role) -->
     <div id="roleModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#171b26] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
@@ -416,11 +590,15 @@
                     </label>
                     <select id="roleModalSelect" name="newRole" required
                             class="w-full px-3 py-2.5 bg-[#0f131d] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#e50914]">
-                        <option value="Admin">Quản trị viên (Admin - Toàn quyền phân quyền)</option>
-                        <option value="Manager">Quản lý (Manager - Quản lý nghiệp vụ rạp phim)</option>
-                        <option value="Staff">Nhân viên (Staff - Bán vé POS &amp; Báo cáo)</option>
-                        <option value="Customer">Khách hàng (Customer - Đặt vé online &amp; Tích điểm)</option>
+                        <option value="Admin">Quản trị viên (Admin - Toàn quyền phân quyền & tài khoản)</option>
+                        <option value="Manager">Quản lý (Manager - Quản lý phim, suất chiếu, phòng, giá vé)</option>
+                        <option value="Staff">Nhân viên (Staff - Bán vé POS & Báo cáo sự cố)</option>
+                        <option value="Customer">Khách hàng (Customer - Đặt vé online & Tích điểm)</option>
                     </select>
+                </div>
+
+                <div class="p-2.5 bg-[#0f131d] rounded-xl border border-white/5 text-[11px] text-gray-400">
+                    <span class="text-amber-400 font-bold">Lưu ý an toàn:</span> Không thể hạ quyền tài khoản Admin hoạt động duy nhất trong hệ thống.
                 </div>
 
                 <div class="flex justify-end gap-2.5 pt-2">
@@ -437,7 +615,7 @@
         </div>
     </div>
 
-    <!-- Modal 2: Đổi trạng thái (Status) -->
+    <!-- Modal 4: Đổi trạng thái (Status) -->
     <div id="statusModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#171b26] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
@@ -472,6 +650,10 @@
                     </select>
                 </div>
 
+                <div class="p-2.5 bg-[#0f131d] rounded-xl border border-white/5 text-[11px] text-gray-400">
+                    <span class="text-amber-400 font-bold">GB-12:</span> Hệ thống không xóa cứng tài khoản để bảo toàn toàn vẹn lịch sử giao dịch và đối soát tài chính.
+                </div>
+
                 <div class="flex justify-end gap-2.5 pt-2">
                     <button type="button" onclick="closeStatusModal()"
                             class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-300 transition">
@@ -483,9 +665,10 @@
                     </button>
                 </div>
             </form>
+        </div>
     </div>
 
-    <!-- Modal 4: Đặt lại mật khẩu -->
+    <!-- Modal 5: Đặt lại mật khẩu -->
     <div id="resetPasswordModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#171b26] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
@@ -512,8 +695,18 @@
                     <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
                         Mật khẩu mới <span class="text-[#e50914]">*</span>
                     </label>
-                    <input type="password" name="newPassword" required placeholder="Nhập mật khẩu mới (8-32 ký tự)"
-                           class="w-full px-3.5 py-2.5 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
+                    <div class="relative">
+                        <input type="password" id="resetPasswordInput" name="newPassword" required placeholder="Nhập mật khẩu mới (8-32 ký tự)" minlength="8" maxlength="32"
+                               class="w-full pl-3.5 pr-10 py-2.5 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914]"/>
+                        <button type="button" onclick="togglePasswordVisibility('resetPasswordInput', this)"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                            <span class="material-symbols-outlined text-lg">visibility</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-[#0f131d] rounded-xl border border-white/5 text-[11px] text-gray-400">
+                    Mật khẩu phải có từ 8 - 32 ký tự, bao gồm ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số.
                 </div>
 
                 <div class="flex justify-end gap-2.5 pt-2">
@@ -532,6 +725,27 @@
 
     <!-- JavaScript Handlers -->
     <script>
+        // Modal Tạo tài khoản
+        function openCreateUserModal() {
+            document.getElementById('createModal').classList.remove('hidden');
+        }
+        function closeCreateUserModal() {
+            document.getElementById('createModal').classList.add('hidden');
+        }
+
+        // Modal Sửa thông tin tài khoản
+        function openEditModal(userId, fullName, email, phone) {
+            document.getElementById('editModalUserId').value = userId;
+            document.getElementById('editModalEmail').value = email;
+            document.getElementById('editModalFullName').value = fullName;
+            document.getElementById('editModalPhone').value = phone;
+            document.getElementById('editProfileModal').classList.remove('hidden');
+        }
+        function closeEditModal() {
+            document.getElementById('editProfileModal').classList.add('hidden');
+        }
+
+        // Modal Phân quyền vai trò
         function openRoleModal(userId, fullName, email, currentRole) {
             document.getElementById('roleModalUserId').value = userId;
             document.getElementById('roleModalUserName').innerText = fullName;
@@ -543,6 +757,7 @@
             document.getElementById('roleModal').classList.add('hidden');
         }
 
+        // Modal Trạng thái
         function openStatusModal(userId, fullName, email, currentStatus) {
             document.getElementById('statusModalUserId').value = userId;
             document.getElementById('statusModalUserName').innerText = fullName;
@@ -554,17 +769,53 @@
             document.getElementById('statusModal').classList.add('hidden');
         }
 
-
-
+        // Modal Đặt lại mật khẩu
         function openResetPasswordModal(userId, fullName, email) {
             document.getElementById('resetPasswordModalUserId').value = userId;
             document.getElementById('resetPasswordModalUserName').innerText = fullName;
             document.getElementById('resetPasswordModalUserEmail').innerText = email;
+            document.getElementById('resetPasswordInput').value = '';
             document.getElementById('resetPasswordModal').classList.remove('hidden');
         }
         function closeResetPasswordModal() {
             document.getElementById('resetPasswordModal').classList.add('hidden');
         }
+
+        // Hiện/ẩn mật khẩu
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const icon = btn.querySelector('.material-symbols-outlined');
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.innerText = 'visibility_off';
+            } else {
+                input.type = 'password';
+                if (icon) icon.innerText = 'visibility';
+            }
+        }
+
+        // Đóng modal khi bấm ESC hoặc click ra ngoài vùng backdrop
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeCreateUserModal();
+                closeEditModal();
+                closeRoleModal();
+                closeStatusModal();
+                closeResetPasswordModal();
+            }
+        });
+
+        ['createModal', 'editProfileModal', 'roleModal', 'statusModal', 'resetPasswordModal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('click', function (e) {
+                    if (e.target === el) {
+                        el.classList.add('hidden');
+                    }
+                });
+            }
+        });
 
         // Tự động đóng thông báo flash sau 5 giây (5000ms)
         function dismissFlashAlert(el) {

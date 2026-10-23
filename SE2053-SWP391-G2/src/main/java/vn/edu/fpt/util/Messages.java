@@ -244,6 +244,24 @@ public final class Messages {
     public static final String PROFILE_SESSION_REVOKED =
             "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
 
+    // UC-30 Manage Accounts (Admin)
+    public static final String USER_ROLE_SELF_LOCKED =
+            "Bạn không thể tự thay đổi vai trò quản trị của chính tài khoản đang đăng nhập.";
+    public static final String USER_STATUS_SELF_LOCKED =
+            "Bạn không thể tự khóa hoặc hủy kích hoạt tài khoản quản trị của chính mình.";
+    public static final String USER_LAST_ADMIN_ROLE_LOCKED =
+            "Không thể thay đổi vai trò của tài khoản này vì đây là Quản trị viên (Admin) hoạt động duy nhất trong hệ thống.";
+    public static final String USER_LAST_ADMIN_STATUS_LOCKED =
+            "Không thể khóa hoặc hủy kích hoạt tài khoản này vì đây là Quản trị viên (Admin) hoạt động duy nhất trong hệ thống.";
+    public static final String USER_NOT_FOUND = "Không tìm thấy tài khoản người dùng.";
+    public static final String USER_ROLE_INVALID = "Vai trò không hợp lệ. Chỉ chấp nhận Admin, Manager, Staff hoặc Customer.";
+    public static final String USER_STATUS_INVALID = "Trạng thái không hợp lệ. Chỉ chấp nhận Active, Suspended hoặc Deactivated.";
+    public static final String USER_CREATED = "Tạo tài khoản mới thành công!";
+    public static final String USER_PROFILE_UPDATED = "Cập nhật thông tin tài khoản thành công!";
+    public static final String USER_ROLE_UPDATED = "Phân quyền vai trò tài khoản thành công!";
+    public static final String USER_STATUS_UPDATED = "Cập nhật trạng thái tài khoản thành công!";
+    public static final String USER_PASSWORD_RESET = "Đặt lại mật khẩu cho tài khoản thành công!";
+
     // UC-13 Book Ticket Online (E1-E4 theo đúng câu chữ SRS)
     public static final String BOOKING_HOLD_EXPIRED = "Phiên đặt vé đã hết hạn. Vui lòng chọn lại ghế.";
     public static final String BOOKING_SEAT_TAKEN =

@@ -320,6 +320,24 @@ public class UserDAO {
         return stats;
     }
 
+    /**
+     * Admin: Đếm số lượng tài khoản Quản trị viên (Admin) đang ở trạng thái Hoạt động (Active).
+     * Phục vụ quy tắc bảo vệ: không cho phép khóa hoặc hạ quyền Admin duy nhất trong hệ thống.
+     */
+    public int countActiveAdmins() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM [User] WHERE Role = ? AND Status = 'Active'";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, Role.ADMIN);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
     private User mapUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setUserId(rs.getInt("UserID"));
