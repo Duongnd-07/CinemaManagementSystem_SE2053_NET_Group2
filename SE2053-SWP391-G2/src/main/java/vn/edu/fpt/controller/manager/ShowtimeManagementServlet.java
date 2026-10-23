@@ -17,10 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.Showtime;
 import vn.edu.fpt.model.ShowtimeStatus;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ShowtimeForm;
 import vn.edu.fpt.service.ShowtimeService;
 import vn.edu.fpt.service.ValidationException;
@@ -101,6 +103,10 @@ public class ShowtimeManagementServlet extends HttpServlet {
 
         try {
             showtimeService.save(showtimeId, form);
+            boolean created = showtimeId == null || showtimeId <= 0;
+            ActivityLogger.info(request, LogEventType.CATALOG, created ? "Thêm suất chiếu" : "Cập nhật suất chiếu",
+                    "Showtime", created ? null : showtimeId, "Phim #" + form.getMovieId() + ", phòng #"
+                            + form.getRoomId() + ", bắt đầu " + form.getStartTime() + ", giá " + form.getBasePrice());
             request.getSession().setAttribute(FLASH_SUCCESS,
                     showtimeId == null || showtimeId <= 0 ? Messages.SHOWTIME_SAVED : Messages.SHOWTIME_UPDATED);
             response.sendRedirect(request.getContextPath() + "/manager/showtimes" + listQuery(request));
@@ -118,6 +124,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
         int showtimeId = parseInt(request.getParameter("showtimeId"));
         try {
             showtimeService.cancel(showtimeId);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Hủy suất chiếu", "Showtime", showtimeId, null);
             request.getSession().setAttribute(FLASH_SUCCESS, Messages.SHOWTIME_CANCELLED);
         } catch (ValidationException e) {
             request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());
@@ -130,6 +137,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
         int showtimeId = parseInt(request.getParameter("showtimeId"));
         try {
             showtimeService.delete(showtimeId);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Xóa suất chiếu", "Showtime", showtimeId, null);
             request.getSession().setAttribute(FLASH_SUCCESS, Messages.SHOWTIME_DELETED);
         } catch (ValidationException e) {
             request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());

@@ -18,9 +18,11 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.filter.AuthFilter;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.Shift;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.CounterQuote;
 import vn.edu.fpt.service.CounterReceipt;
 import vn.edu.fpt.service.CounterSaleForm;
@@ -90,12 +92,19 @@ public class CounterSaleServlet extends HttpServlet {
         try {
             switch (action) {
                 case "openShift" -> {
-                    runAndFlash(request, () -> saleService.openShift(staffId, trim(request.getParameter("counterNo"))),
-                            SHIFT_OPENED);
+                    runAndFlash(request, () -> {
+                        String counterNo = trim(request.getParameter("counterNo"));
+                        saleService.openShift(staffId, counterNo);
+                        ActivityLogger.info(request, LogEventType.COUNTER, "Mở ca bán hàng", "Shift", null,
+                                "Quầy " + counterNo);
+                    }, SHIFT_OPENED);
                     redirect(request, response, "");
                 }
                 case "closeShift" -> {
-                    runAndFlash(request, () -> saleService.closeShift(staffId), SHIFT_CLOSED);
+                    runAndFlash(request, () -> {
+                        saleService.closeShift(staffId);
+                        ActivityLogger.info(request, LogEventType.COUNTER, "Đóng ca bán hàng", "Shift", null, null);
+                    }, SHIFT_CLOSED);
                     redirect(request, response, "");
                 }
                 case "quote", "confirm" -> sell(request, response, staffId, "confirm".equals(action));
@@ -119,6 +128,12 @@ public class CounterSaleServlet extends HttpServlet {
         try {
             if (confirm) {
                 CounterQuote paid = saleService.confirm(form, staffId);
+                ActivityLogger.info(request, LogEventType.COUNTER, "Bán vé tại quầy", "Booking", paid.getBookingId(),
+                        // getConcessions() gồm cả món số lượng 0 trong menu nên cộng theo số lượng đã bán
+                        paid.getSeats().size() + " ghế, "
+                                + paid.getConcessions().stream().mapToInt(line -> line.getQuantity()).sum()
+                                + " món bắp nước, thu "
+                                + paid.getFinalAmount() + " VND (" + form.getPaymentMethod() + ")");
                 flash(request, FLASH_SUCCESS, SALE_DONE);
                 request.getSession().setAttribute(FLASH_CHANGE, paid.getChangeDue());
                 redirect(request, response, "?receipt=" + paid.getBookingId());

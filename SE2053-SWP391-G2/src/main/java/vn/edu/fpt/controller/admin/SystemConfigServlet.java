@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import vn.edu.fpt.filter.AuthFilter;
-import vn.edu.fpt.model.User;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.SystemConfigItem;
 import vn.edu.fpt.service.SystemConfigParam;
 import vn.edu.fpt.service.SystemConfigService;
@@ -54,14 +54,17 @@ public class SystemConfigServlet extends HttpServlet {
         for (SystemConfigParam param : SystemConfigParam.values()) {
             input.put(param.getKey(), request.getParameter(param.getKey()));
         }
-        User admin = (User) request.getSession().getAttribute(AuthFilter.SESSION_USER);
-        int adminId = admin == null ? 0 : admin.getUserId();
         try {
             try {
-                int changed = configService.save(input, adminId);
+                Map<String, String> changes = configService.save(input);
+                for (Map.Entry<String, String> change : changes.entrySet()) {
+                    // BR-33-04 / UC-32: mỗi tham số đổi là một dòng nhật ký
+                    ActivityLogger.info(request, LogEventType.CONFIG, "Đổi cấu hình hệ thống", "SystemConfig",
+                            change.getKey(), change.getKey() + ": " + change.getValue());
+                }
                 // Post/Redirect/Get để F5 không gửi lại form
-                request.getSession().setAttribute(FLASH_SUCCESS, changed == 0
-                        ? Messages.CONFIG_NO_CHANGES : Messages.format(Messages.CONFIG_SAVED, changed));
+                request.getSession().setAttribute(FLASH_SUCCESS, changes.isEmpty()
+                        ? Messages.CONFIG_NO_CHANGES : Messages.format(Messages.CONFIG_SAVED, changes.size()));
                 response.sendRedirect(request.getContextPath() + "/admin/configurations");
             } catch (ValidationException e) {
                 // E1: giữ lại giá trị đã nhập, báo lỗi dưới từng ô, không lưu gì

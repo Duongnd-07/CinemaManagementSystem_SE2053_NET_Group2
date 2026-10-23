@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import vn.edu.fpt.dao.SystemConfigManagementDAO;
 import vn.edu.fpt.model.SystemConfig;
@@ -16,7 +15,6 @@ import vn.edu.fpt.util.Messages;
 
 // UC-33: Manage System Configurations
 public class SystemConfigService {
-    private static final Logger LOGGER = Logger.getLogger(SystemConfigService.class.getName());
     public static final String GENERAL_ERROR = "general";
     // Chỉ nhận số viết thường (không dấu phẩy nghìn, không dạng 1e3)
     private static final Pattern NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?");
@@ -47,14 +45,14 @@ public class SystemConfigService {
         }
     }
 
-    // Trả về số tham số đã đổi; 0 = không có thay đổi (A1)
-    public int save(Map<String, String> input, int adminId) throws ValidationException, SQLException {
+    // Trả về các tham số đã đổi (khóa -> "cũ -> mới"); rỗng = không có thay đổi (A1)
+    public Map<String, String> save(Map<String, String> input) throws ValidationException, SQLException {
         Map<SystemConfigParam, BigDecimal> values = validate(input);
         try (Connection conn = DBContext.getConnection()) {
             conn.setAutoCommit(false);
             try {
                 Map<String, SystemConfig> current = configDAO.findAll(conn, true);
-                int changed = 0;
+                Map<String, String> changes = new LinkedHashMap<>();
                 for (Map.Entry<SystemConfigParam, BigDecimal> entry : values.entrySet()) {
                     SystemConfigParam param = entry.getKey();
                     String newValue = normalize(param, entry.getValue());
@@ -66,13 +64,12 @@ public class SystemConfigService {
                     } else {
                         continue;
                     }
-                    changed++;
-                    // BR-33-04: tạm ghi vào server log; chuyển sang System Activity Log khi có UC-32
-                    LOGGER.info(String.format("UC-33: Admin #%d đổi %s: %s -> %s", adminId, param.getKey(),
-                            stored == null ? "(chưa có)" : stored.getConfigValue(), newValue));
+                    // BR-33-04: Servlet ghi từng thay đổi vào System Activity Log (UC-32) sau khi commit
+                    changes.put(param.getKey(),
+                            (stored == null ? "(chưa có)" : stored.getConfigValue()) + " -> " + newValue);
                 }
                 conn.commit();
-                return changed;
+                return changes;
             } catch (SQLException e) {
                 conn.rollback();
                 throw e;

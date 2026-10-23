@@ -13,7 +13,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.filter.AuthFilter;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.UserManagementService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
@@ -98,12 +100,16 @@ public class UserManagementServlet extends HttpServlet {
                     int targetUserId = Integer.parseInt(request.getParameter("userId"));
                     String newRole = request.getParameter("newRole");
                     userManagementService.updateUserRole(currentAdminId, targetUserId, newRole);
+                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi vai trò tài khoản", "User",
+                            targetUserId, "Vai trò mới: " + newRole);
                     flash(request, "flashSuccess", "Phân quyền vai trò tài khoản thành công!");
                 }
                 case "change-status" -> {
                     int targetUserId = Integer.parseInt(request.getParameter("userId"));
                     String newStatus = request.getParameter("newStatus");
                     userManagementService.updateUserStatus(currentAdminId, targetUserId, newStatus);
+                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi trạng thái tài khoản", "User",
+                            targetUserId, "Trạng thái mới: " + newStatus);
                     flash(request, "flashSuccess", "Cập nhật trạng thái tài khoản thành công!");
                 }
                 case "create-user" -> {
@@ -112,13 +118,18 @@ public class UserManagementServlet extends HttpServlet {
                     String phone = request.getParameter("phone");
                     String role = request.getParameter("role");
                     String password = request.getParameter("password");
-                    userManagementService.createUser(fullName, email, phone, role, password);
+                    User created = userManagementService.createUser(fullName, email, phone, role, password);
+                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Tạo tài khoản", "User",
+                            created == null ? null : created.getUserId(), email + " - vai trò " + role);
                     flash(request, "flashSuccess", "Tạo tài khoản mới thành công!");
                 }
                 case "reset-password" -> {
                     int targetUserId = Integer.parseInt(request.getParameter("userId"));
                     String newPassword = request.getParameter("newPassword");
                     userManagementService.resetPassword(targetUserId, newPassword);
+                    // BR-06: không ghi mật khẩu mới
+                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Admin đặt lại mật khẩu", "User",
+                            targetUserId, null);
                     flash(request, "flashSuccess", "Đặt lại mật khẩu cho tài khoản thành công!");
                 }
                 default -> flash(request, "flashError", "Hành động không hợp lệ.");

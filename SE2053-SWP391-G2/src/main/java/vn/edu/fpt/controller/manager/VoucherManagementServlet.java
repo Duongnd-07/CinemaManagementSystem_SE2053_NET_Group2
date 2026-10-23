@@ -17,9 +17,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.model.Voucher;
 import vn.edu.fpt.model.VoucherType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.service.VoucherForm;
 import vn.edu.fpt.service.VoucherService;
@@ -93,6 +95,10 @@ public class VoucherManagementServlet extends HttpServlet {
             User manager = session == null ? null : (User) session.getAttribute("user");
             Integer managerId = manager == null ? null : manager.getUserId();
             voucherService.save(voucherId, form, managerId);
+            boolean created = voucherId == null || voucherId <= 0;
+            ActivityLogger.info(request, LogEventType.CATALOG, created ? "Thêm voucher" : "Cập nhật voucher",
+                    "Voucher", created ? null : voucherId, "Mã " + form.getVoucherCode() + ", giảm "
+                            + form.getDiscountValue() + " (" + form.getDiscountType() + "), hết hạn " + form.getExpiryDate());
             request.getSession().setAttribute(FLASH_SUCCESS,
                     voucherId == null || voucherId <= 0 ? Messages.VOUCHER_SAVED : Messages.VOUCHER_UPDATED);
             response.sendRedirect(request.getContextPath() + "/manager/vouchers" + listQuery(request));
@@ -106,6 +112,7 @@ public class VoucherManagementServlet extends HttpServlet {
         int voucherId = parseInt(request.getParameter("voucherId"));
         try {
             voucherService.delete(voucherId);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Xóa voucher", "Voucher", voucherId, null);
             request.getSession().setAttribute(FLASH_SUCCESS, Messages.VOUCHER_DELETED);
         } catch (ValidationException e) {
             request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());

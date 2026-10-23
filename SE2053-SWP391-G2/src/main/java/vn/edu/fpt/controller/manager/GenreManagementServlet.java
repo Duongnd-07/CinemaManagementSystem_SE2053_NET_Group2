@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.model.Genre;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.GenreService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
@@ -81,6 +83,8 @@ public class GenreManagementServlet extends HttpServlet {
         String name = trim(request.getParameter("name"));
         try {
             genreService.save(genreId, name);
+            ActivityLogger.info(request, LogEventType.CATALOG, genreId > 0 ? "Cập nhật thể loại" : "Thêm thể loại",
+                    "Genre", genreId > 0 ? genreId : null, name);
         } catch (ValidationException e) {
             render(request, response, true, genreId, name, e.getErrors());
             return;
@@ -92,7 +96,9 @@ public class GenreManagementServlet extends HttpServlet {
     private void delete(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, IOException {
         try {
-            genreService.delete(parseInt(request.getParameter("genreId")));
+            int genreId = parseInt(request.getParameter("genreId"));
+            genreService.delete(genreId);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Xóa thể loại", "Genre", genreId, null);
             flash(request, FLASH_SUCCESS, Messages.GENRE_DELETED);
         } catch (ValidationException e) {
             flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());

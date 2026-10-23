@@ -270,6 +270,13 @@ public final class Messages {
     public static final String CONFIG_OUT_OF_RANGE = "{0} phải từ {1} đến {2} {3}.";
     public static final String CONFIG_OCCUPANCY_ORDER = "Ngưỡng phim bán chạy phải lớn hơn ngưỡng phim bán chậm.";
 
+    // UC-32: View System Logs
+    public static final String LOG_NOT_FOUND = "Không có nhật ký nào khớp với bộ lọc đã chọn.";
+    public static final String LOG_INVALID_DATE = "Ngày không hợp lệ.";
+    public static final String LOG_DATE_ORDER = "Ngày bắt đầu không được sau ngày kết thúc.";
+    public static final String LOG_INVALID_FILTER = "Bộ lọc không hợp lệ. Vui lòng kiểm tra lại khoảng ngày.";
+    public static final String LOG_LOAD_FAILED = "Không thể tải nhật ký hệ thống. Vui lòng thử lại sau.";
+
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

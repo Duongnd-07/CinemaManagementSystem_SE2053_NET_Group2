@@ -12,6 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.PasswordResetService;
 import vn.edu.fpt.service.ResetPasswordForm;
 import vn.edu.fpt.service.ValidationException;
@@ -76,7 +79,9 @@ public class ResetPasswordServlet extends HttpServlet {
 
         try {
             // Thực hiện đặt lại mật khẩu mới
-            passwordResetService.resetPassword(form);
+            User user = passwordResetService.resetPassword(form);
+            ActivityLogger.infoForEmail(request, user.getEmail(), LogEventType.AUTH, "Đặt lại mật khẩu qua email",
+                    "User", user.getUserId(), null);
 
             // Đổi mật khẩu thành công -> chuyển về trang đăng nhập
             flash(request, FLASH_SUCCESS, Messages.RESET_PASSWORD_SUCCESS);

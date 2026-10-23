@@ -12,6 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.RegisterForm;
 import vn.edu.fpt.service.RegisterService;
 import vn.edu.fpt.service.ValidationException;
@@ -77,7 +80,9 @@ public class VerifyEmailServlet extends HttpServlet {
             } else {
                 // Người dùng nhập OTP để hoàn tất đăng ký
                 String otp = request.getParameter("otp");
-                registerService.verifyOtpAndComplete(form, otp);
+                User created = registerService.verifyOtpAndComplete(form, otp);
+                ActivityLogger.infoForEmail(request, form.getEmail(), LogEventType.ACCOUNT, "Đăng ký tài khoản",
+                        "User", created == null ? null : created.getUserId(), null);
 
                 // Đăng ký thành công -> Xóa dữ liệu tạm khỏi Session
                 session.removeAttribute(RegisterServlet.SESSION_PENDING_REGISTER);

@@ -10,7 +10,9 @@ import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.model.CancellableTicket;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.TicketCancellationService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
@@ -62,6 +64,8 @@ public class TicketCancellationServlet extends HttpServlet {
         User user = (User) request.getSession(false).getAttribute("user");
         try {
             cancellationService.cancel(ticketId, user.getUserId());
+            ActivityLogger.info(request, LogEventType.BOOKING, "Hủy vé online", "Ticket", ticketId,
+                    "Hoàn voucher tài khoản theo chính sách hủy vé");
             request.getSession().setAttribute(FLASH_SUCCESS, Messages.TICKET_CANCELLATION_SUCCESS);
             response.sendRedirect(request.getContextPath() + "/customer/bookings");
         } catch (ValidationException e) {
