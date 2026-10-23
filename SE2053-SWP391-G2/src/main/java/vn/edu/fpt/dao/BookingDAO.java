@@ -47,7 +47,7 @@ public class BookingDAO {
 
     public Showtime findShowtimeWithRoom(Connection conn, int showtimeId) throws SQLException {
         String sql = "SELECT s.ShowtimeID, s.MovieID, s.RoomID, s.StartTime, s.EndTime, s.BasePrice, s.Status, "
-                + "r.RoomName, r.Format, r.TotalSeats, r.Status AS RoomStatus "
+                + "s.TranslationType, r.RoomName, r.Format, r.TotalSeats, r.Status AS RoomStatus "
                 + "FROM Showtime s JOIN Room r ON r.RoomID = s.RoomID WHERE s.ShowtimeID = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, showtimeId);
@@ -65,6 +65,7 @@ public class BookingDAO {
                 showtime.setEndTime(end == null ? null : end.toLocalDateTime());
                 showtime.setBasePrice(rs.getBigDecimal("BasePrice"));
                 showtime.setStatus(rs.getString("Status"));
+                showtime.setTranslationType(rs.getString("TranslationType"));
                 Room room = new Room();
                 room.setRoomId(rs.getInt("RoomID"));
                 room.setRoomName(rs.getString("RoomName"));

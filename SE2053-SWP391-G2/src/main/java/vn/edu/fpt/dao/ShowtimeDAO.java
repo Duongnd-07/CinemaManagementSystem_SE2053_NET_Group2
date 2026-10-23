@@ -23,7 +23,7 @@ import vn.edu.fpt.util.DBContext;
 public class ShowtimeDAO {
 
     private static final String SELECT_DETAILS = "SELECT s.ShowtimeID, s.MovieID, s.RoomID, s.StartTime, s.EndTime, "
-            + "s.BasePrice, s.Status, r.RoomName, r.Format, r.TotalSeats, r.Status AS RoomStatus, "
+            + "s.BasePrice, s.Status, s.TranslationType, r.RoomName, r.Format, r.TotalSeats, r.Status AS RoomStatus, "
             + "m.Title AS MovieTitle, m.DurationMinutes, m.AgeRating, m.PosterUrl, m.Formats AS MovieFormats, "
             + "m.ReleaseDate, m.Status AS MovieStatus, "
             + "(SELECT COUNT(*) FROM Ticket t WHERE t.ShowtimeID = s.ShowtimeID AND t.Status <> 'Cancelled') AS BookedTickets, "
@@ -40,7 +40,7 @@ public class ShowtimeDAO {
             return showtimes;
         }
         String sql = "SELECT s.ShowtimeID, s.MovieID, s.RoomID, s.StartTime, s.EndTime, s.BasePrice, s.Status, "
-                + "r.RoomName, r.Format, r.TotalSeats, r.Status AS RoomStatus "
+                + "s.TranslationType, r.RoomName, r.Format, r.TotalSeats, r.Status AS RoomStatus "
                 + "FROM Showtime s "
                 + "JOIN Room r ON r.RoomID = s.RoomID "
                 + "JOIN Movie m ON m.MovieID = s.MovieID "
@@ -90,13 +90,18 @@ public class ShowtimeDAO {
     // UC-24: Danh sách suất chiếu theo bộ lọc tìm kiếm cho Manager (phân trang)
     public List<Showtime> search(Integer movieId, Integer roomId, LocalDate date, String status, int offset, int limit)
             throws SQLException {
+        return search(movieId, roomId, date, status, null, offset, limit);
+    }
+
+    public List<Showtime> search(Integer movieId, Integer roomId, LocalDate date, String status,
+                                 String translationType, int offset, int limit) throws SQLException {
         updateEndedShowtimes();
-        String sql = SELECT_DETAILS + buildWhere(movieId, roomId, date, status)
+        String sql = SELECT_DETAILS + buildWhere(movieId, roomId, date, status, translationType)
                 + "ORDER BY s.StartTime DESC, s.ShowtimeID DESC "
                 + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
         List<Showtime> list = new ArrayList<>();
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            int idx = bindFilter(ps, movieId, roomId, date, status);
+            int idx = bindFilter(ps, movieId, roomId, date, status, translationType);
             ps.setInt(idx++, offset);
             ps.setInt(idx, limit);
             try (ResultSet rs = ps.executeQuery()) {
@@ -110,13 +115,18 @@ public class ShowtimeDAO {
 
     // UC-24: Tổng số suất chiếu thỏa bộ lọc
     public int count(Integer movieId, Integer roomId, LocalDate date, String status) throws SQLException {
+        return count(movieId, roomId, date, status, null);
+    }
+
+    public int count(Integer movieId, Integer roomId, LocalDate date, String status, String translationType)
+            throws SQLException {
         updateEndedShowtimes();
         String sql = "SELECT COUNT(*) FROM Showtime s "
                 + "JOIN Room r ON r.RoomID = s.RoomID "
                 + "JOIN Movie m ON m.MovieID = s.MovieID "
-                + buildWhere(movieId, roomId, date, status);
+                + buildWhere(movieId, roomId, date, status, translationType);
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            bindFilter(ps, movieId, roomId, date, status);
+            bindFilter(ps, movieId, roomId, date, status, translationType);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : 0;
             }
@@ -125,15 +135,20 @@ public class ShowtimeDAO {
 
     // UC-24: Số lượng suất chiếu theo từng trạng thái (để hiển thị tab filter)
     public Map<String, Integer> countByStatus(Integer movieId, Integer roomId, LocalDate date) throws SQLException {
+        return countByStatus(movieId, roomId, date, null);
+    }
+
+    public Map<String, Integer> countByStatus(Integer movieId, Integer roomId, LocalDate date, String translationType)
+            throws SQLException {
         updateEndedShowtimes();
         String sql = "SELECT s.Status, COUNT(*) AS Total FROM Showtime s "
                 + "JOIN Room r ON r.RoomID = s.RoomID "
                 + "JOIN Movie m ON m.MovieID = s.MovieID "
-                + buildWhere(movieId, roomId, date, null)
+                + buildWhere(movieId, roomId, date, null, translationType)
                 + "GROUP BY s.Status";
         Map<String, Integer> result = new HashMap<>();
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            bindFilter(ps, movieId, roomId, date, null);
+            bindFilter(ps, movieId, roomId, date, null, translationType);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     result.put(rs.getString("Status"), rs.getInt("Total"));
@@ -228,8 +243,8 @@ public class ShowtimeDAO {
 
     // UC-24: Thêm mới 1 suất chiếu
     public int insert(Connection conn, Showtime showtime) throws SQLException {
-        String sql = "INSERT INTO Showtime (MovieID, RoomID, StartTime, EndTime, BasePrice, Status) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Showtime (MovieID, RoomID, StartTime, EndTime, BasePrice, Status, TranslationType) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, showtime.getMovieId());
             ps.setInt(2, showtime.getRoomId());
@@ -237,6 +252,7 @@ public class ShowtimeDAO {
             ps.setTimestamp(4, Timestamp.valueOf(showtime.getEndTime()));
             ps.setBigDecimal(5, showtime.getBasePrice());
             ps.setString(6, ShowtimeStatus.ACTIVE);
+            ps.setString(7, showtime.getTranslationType());
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 return keys.next() ? keys.getInt(1) : 0;
@@ -246,8 +262,8 @@ public class ShowtimeDAO {
 
     // UC-24: Thêm mới danh sách suất chiếu hàng loạt trong 1 transaction
     public int[] insertBatch(Connection conn, List<Showtime> showtimes) throws SQLException {
-        String sql = "INSERT INTO Showtime (MovieID, RoomID, StartTime, EndTime, BasePrice, Status) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Showtime (MovieID, RoomID, StartTime, EndTime, BasePrice, Status, TranslationType) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             for (Showtime s : showtimes) {
                 ps.setInt(1, s.getMovieId());
@@ -256,6 +272,7 @@ public class ShowtimeDAO {
                 ps.setTimestamp(4, Timestamp.valueOf(s.getEndTime()));
                 ps.setBigDecimal(5, s.getBasePrice());
                 ps.setString(6, ShowtimeStatus.ACTIVE);
+                ps.setString(7, s.getTranslationType());
                 ps.addBatch();
             }
             return ps.executeBatch();
@@ -265,14 +282,15 @@ public class ShowtimeDAO {
     // UC-24: Cập nhật thông tin suất chiếu
     public boolean update(Connection conn, Showtime showtime) throws SQLException {
         String sql = "UPDATE Showtime SET MovieID = ?, RoomID = ?, StartTime = ?, EndTime = ?, "
-                + "BasePrice = ? WHERE ShowtimeID = ?";
+                + "BasePrice = ?, TranslationType = ? WHERE ShowtimeID = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, showtime.getMovieId());
             ps.setInt(2, showtime.getRoomId());
             ps.setTimestamp(3, Timestamp.valueOf(showtime.getStartTime()));
             ps.setTimestamp(4, Timestamp.valueOf(showtime.getEndTime()));
             ps.setBigDecimal(5, showtime.getBasePrice());
-            ps.setInt(6, showtime.getShowtimeId());
+            ps.setString(6, showtime.getTranslationType());
+            ps.setInt(7, showtime.getShowtimeId());
             return ps.executeUpdate() > 0;
         }
     }
@@ -312,7 +330,7 @@ public class ShowtimeDAO {
         }
     }
 
-    private String buildWhere(Integer movieId, Integer roomId, LocalDate date, String status) {
+    private String buildWhere(Integer movieId, Integer roomId, LocalDate date, String status, String translationType) {
         List<String> conditions = new ArrayList<>();
         if (movieId != null && movieId > 0) {
             conditions.add("s.MovieID = ?");
@@ -326,11 +344,14 @@ public class ShowtimeDAO {
         if (status != null && !status.isEmpty()) {
             conditions.add("s.Status = ?");
         }
+        if (translationType != null && !translationType.isEmpty()) {
+            conditions.add("s.TranslationType = ?");
+        }
         return conditions.isEmpty() ? " " : " WHERE " + String.join(" AND ", conditions) + " ";
     }
 
-    private int bindFilter(PreparedStatement ps, Integer movieId, Integer roomId, LocalDate date, String status)
-            throws SQLException {
+    private int bindFilter(PreparedStatement ps, Integer movieId, Integer roomId, LocalDate date, String status,
+                           String translationType) throws SQLException {
         int idx = 1;
         if (movieId != null && movieId > 0) {
             ps.setInt(idx++, movieId);
@@ -343,6 +364,9 @@ public class ShowtimeDAO {
         }
         if (status != null && !status.isEmpty()) {
             ps.setString(idx++, status);
+        }
+        if (translationType != null && !translationType.isEmpty()) {
+            ps.setString(idx++, translationType);
         }
         return idx;
     }
@@ -357,6 +381,13 @@ public class ShowtimeDAO {
         showtime.setEndTime(end == null ? null : end.toLocalDateTime());
         showtime.setBasePrice(rs.getBigDecimal("BasePrice"));
         showtime.setStatus(rs.getString("Status"));
+
+        try {
+            String trans = rs.getString("TranslationType");
+            showtime.setTranslationType(trans != null && !trans.isEmpty() ? trans : "Phụ đề");
+        } catch (SQLException ignored) {
+            showtime.setTranslationType("Phụ đề");
+        }
 
         Room room = new Room();
         room.setRoomId(rs.getInt("RoomID"));

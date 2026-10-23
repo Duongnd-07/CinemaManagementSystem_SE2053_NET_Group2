@@ -107,6 +107,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
         form.setEndDate(trim(request.getParameter("endDate")));
         form.setBasePrice(trim(request.getParameter("batchBasePrice")));
         form.setSkipCollisions("1".equals(request.getParameter("skipCollisions")));
+        form.setTranslationType(trim(request.getParameter("batchTranslationType")));
 
         String[] days = request.getParameterValues("daysOfWeek");
         if (days != null) {
@@ -163,7 +164,8 @@ public class ShowtimeManagementServlet extends HttpServlet {
             boolean created = showtimeId == null || showtimeId <= 0;
             ActivityLogger.info(request, LogEventType.CATALOG, created ? "Thêm suất chiếu" : "Cập nhật suất chiếu",
                     "Showtime", created ? null : showtimeId, "Phim #" + form.getMovieId() + ", phòng #"
-                            + form.getRoomId() + ", bắt đầu " + form.getStartTime() + ", giá " + form.getBasePrice());
+                            + form.getRoomId() + ", bắt đầu " + form.getStartTime() + ", giá " + form.getBasePrice()
+                            + ", bản chiếu " + form.getTranslationType());
             request.getSession().setAttribute(FLASH_SUCCESS,
                     showtimeId == null || showtimeId <= 0 ? Messages.SHOWTIME_SAVED : Messages.SHOWTIME_UPDATED);
             response.sendRedirect(request.getContextPath() + "/manager/showtimes" + listQuery(request));
@@ -218,10 +220,11 @@ public class ShowtimeManagementServlet extends HttpServlet {
         if (!ShowtimeStatus.isValid(status)) {
             status = "";
         }
+        String translationType = trim(request.getParameter("translationType"));
         int page = parseInt(request.getParameter("page"));
 
-        Page<Showtime> showtimePage = showtimeService.listManager(movieId, roomId, dateStr, status, page);
-        Map<String, Integer> statusCounts = showtimeService.countByStatus(movieId, roomId, dateStr);
+        Page<Showtime> showtimePage = showtimeService.listManager(movieId, roomId, dateStr, status, translationType, page);
+        Map<String, Integer> statusCounts = showtimeService.countByStatus(movieId, roomId, dateStr, translationType);
         List<Movie> movies = showtimeService.findPublicMovies();
         List<Room> rooms = showtimeService.findAllRooms();
 
@@ -242,6 +245,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
         request.setAttribute("selectedMovieId", movieId);
         request.setAttribute("selectedRoomId", roomId);
         request.setAttribute("selectedStatus", status);
+        request.setAttribute("selectedTranslationType", translationType);
         request.setAttribute("listQuery", listQuery(request));
         request.setAttribute("csrfToken", CsrfToken.get(session));
         request.setAttribute("activeMenu", "showtimes");
@@ -268,6 +272,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
             form.setBasePrice(s.getBasePrice().stripTrailingZeros().toPlainString());
         }
         form.setStatus(s.getStatus() != null ? s.getStatus() : ShowtimeStatus.ACTIVE);
+        form.setTranslationType(s.getTranslationType());
         return form;
     }
 
@@ -277,13 +282,13 @@ public class ShowtimeManagementServlet extends HttpServlet {
         form.setRoomId(trim(request.getParameter("roomId")));
         form.setStartTime(trim(request.getParameter("startTime")));
         form.setBasePrice(trim(request.getParameter("basePrice")));
-        // Bỏ ô chọn status theo Góp ý 4
+        form.setTranslationType(trim(request.getParameter("translationType")));
         return form;
     }
 
     private String listQuery(HttpServletRequest request) {
         List<String> parts = new ArrayList<>();
-        for (String name : List.of("date", "movieId", "roomId", "status", "page")) {
+        for (String name : List.of("date", "movieId", "roomId", "status", "translationType", "page")) {
             String val = trim(request.getParameter(name));
             if (!val.isEmpty()) {
                 parts.add(name + "=" + URLEncoder.encode(val, StandardCharsets.UTF_8));

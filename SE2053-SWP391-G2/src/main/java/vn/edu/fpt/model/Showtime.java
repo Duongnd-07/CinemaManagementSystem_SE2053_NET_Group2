@@ -11,6 +11,8 @@ public class Showtime {
     private LocalDateTime endTime;
     private BigDecimal basePrice;
     private String status;
+    // Hình thức bản chiếu: "Phụ đề" hoặc "Lồng tiếng" (mặc định "Phụ đề")
+    private String translationType = "Phụ đề";
     // Phòng chiếu của suất (nạp kèm khi cần hiển thị tên phòng/định dạng, ví dụ UC-08, UC-24)
     private Room room;
     // Phim của suất chiếu (nạp kèm khi cần hiển thị tên phim/thời lượng, ví dụ UC-24)
@@ -99,5 +101,14 @@ public class Showtime {
 
     public void setBookedTickets(int bookedTickets) {
         this.bookedTickets = bookedTickets;
+    }
+
+    public String getTranslationType() {
+        return translationType != null && !translationType.isEmpty() ? translationType : "Phụ đề";
+    }
+
+    public void setTranslationType(String translationType) {
+        this.translationType = (translationType != null && translationType.trim().equalsIgnoreCase("Lồng tiếng"))
+                ? "Lồng tiếng" : "Phụ đề";
     }
 }

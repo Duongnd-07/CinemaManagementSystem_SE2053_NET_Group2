@@ -72,7 +72,13 @@
                             </div>
                             <div>
                                 <div class="seat-map-meta-label">Giờ chiếu</div>
-                                <div class="text-white font-semibold">${showtime.startTime.format(timeFormat)} · ${movie.durationMinutes} phút</div>
+                                <div class="text-white font-semibold flex items-center gap-1.5">
+                                    <span>${showtime.startTime.format(timeFormat)}</span>
+                                    <span class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded leading-none ${showtime.translationType == 'Lồng tiếng' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'}">
+                                        <c:out value="${empty showtime.translationType ? 'Phụ đề' : showtime.translationType}"/>
+                                    </span>
+                                    <span>· ${movie.durationMinutes}p</span>
+                                </div>
                             </div>
                             <div>
                                 <div class="seat-map-meta-label">Phòng chiếu</div>

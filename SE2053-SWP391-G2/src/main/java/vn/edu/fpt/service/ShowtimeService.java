@@ -50,7 +50,14 @@ public class ShowtimeService {
 
     // UC-08: lịch chiếu của phim trong khung hôm nay + 7 ngày, lọc theo ngày/định dạng/phòng (rỗng = tất cả),
     // nhóm Ngày -> Định dạng -> Phòng. Chỉ suất chưa bắt đầu nên suất đã qua của hôm nay tự bị ẩn.
+    // UC-08: lịch chiếu của phim trong khung hôm nay + 7 ngày, lọc theo ngày/định dạng/phòng/bản chiếu (rỗng = tất cả),
+    // nhóm Ngày -> Định dạng -> Phòng. Chỉ suất chưa bắt đầu nên suất đã qua của hôm nay tự bị ẩn.
     public ShowtimeSchedule getSchedule(int movieId, String date, String format, String roomId) throws SQLException {
+        return getSchedule(movieId, date, format, roomId, null);
+    }
+
+    public ShowtimeSchedule getSchedule(int movieId, String date, String format, String roomId, String translationType)
+            throws SQLException {
         LocalDate today = LocalDate.now();
         LocalDate lastDay = today.plusDays(SCHEDULE_DAYS_AHEAD);
         List<Showtime> showtimes = findInWindow(movieId);
@@ -62,6 +69,7 @@ public class ShowtimeService {
         }
         schedule.setFormats(formatsOf(showtimes));
         schedule.setRooms(roomsOf(showtimes));
+        schedule.setTranslationTypes(translationTypesOf(showtimes));
 
         // Lựa chọn không hợp lệ (sai định dạng, ngoài khung, không có suất) thì bỏ qua bộ lọc đó
         LocalDate selectedDate = parseDate(date);
@@ -71,6 +79,8 @@ public class ShowtimeService {
         int selectedRoom = parseInt(roomId);
         boolean roomExists = schedule.getRooms().stream().anyMatch(r -> r.getRoomId() == selectedRoom);
         schedule.setSelectedRoomId(roomExists ? selectedRoom : 0);
+        String selectedTrans = translationType == null ? "" : translationType.trim();
+        schedule.setSelectedTranslationType(schedule.getTranslationTypes().contains(selectedTrans) ? selectedTrans : "");
 
         for (Showtime showtime : showtimes) {
             Room room = showtime.getRoom();
@@ -78,6 +88,10 @@ public class ShowtimeService {
                 continue;
             }
             if (schedule.getSelectedRoomId() > 0 && schedule.getSelectedRoomId() != room.getRoomId()) {
+                continue;
+            }
+            if (!schedule.getSelectedTranslationType().isEmpty()
+                    && !schedule.getSelectedTranslationType().equalsIgnoreCase(showtime.getTranslationType())) {
                 continue;
             }
             LocalDate day = showtime.getStartTime().toLocalDate();
@@ -118,6 +132,17 @@ public class ShowtimeService {
         return formats;
     }
 
+    private List<String> translationTypesOf(List<Showtime> showtimes) {
+        List<String> types = new ArrayList<>();
+        for (Showtime showtime : showtimes) {
+            String type = showtime.getTranslationType();
+            if (type != null && !type.trim().isEmpty() && !types.contains(type.trim())) {
+                types.add(type.trim());
+            }
+        }
+        return types;
+    }
+
     private List<Room> roomsOf(List<Showtime> showtimes) {
         Map<Integer, Room> rooms = new LinkedHashMap<>();
         for (Showtime showtime : showtimes) {
@@ -142,19 +167,29 @@ public class ShowtimeService {
      */
     public Page<Showtime> listManager(Integer movieId, Integer roomId, String dateStr, String status, int page)
             throws SQLException {
+        return listManager(movieId, roomId, dateStr, status, null, page);
+    }
+
+    public Page<Showtime> listManager(Integer movieId, Integer roomId, String dateStr, String status,
+                                      String translationType, int page) throws SQLException {
         LocalDate date = parseDate(dateStr);
         String normalizedStatus = (status != null && ShowtimeStatus.isValid(status)) ? status : null;
-        int total = showtimeDAO.count(movieId, roomId, date, normalizedStatus);
+        int total = showtimeDAO.count(movieId, roomId, date, normalizedStatus, translationType);
         return Page.of(page, MANAGER_PAGE_SIZE, total,
-                (offset, limit) -> showtimeDAO.search(movieId, roomId, date, normalizedStatus, offset, limit));
+                (offset, limit) -> showtimeDAO.search(movieId, roomId, date, normalizedStatus, translationType, offset, limit));
     }
 
     /**
      * Thống kê số lượng suất chiếu theo trạng thái để phục vụ các tab đếm trên giao diện.
      */
     public Map<String, Integer> countByStatus(Integer movieId, Integer roomId, String dateStr) throws SQLException {
+        return countByStatus(movieId, roomId, dateStr, null);
+    }
+
+    public Map<String, Integer> countByStatus(Integer movieId, Integer roomId, String dateStr, String translationType)
+            throws SQLException {
         LocalDate date = parseDate(dateStr);
-        return showtimeDAO.countByStatus(movieId, roomId, date);
+        return showtimeDAO.countByStatus(movieId, roomId, date, translationType);
     }
 
     /**
@@ -331,6 +366,7 @@ public class ShowtimeService {
                 showtime.setStartTime(startTime);
                 showtime.setEndTime(endTime);
                 showtime.setBasePrice(basePrice);
+                showtime.setTranslationType(form.getTranslationType());
 
                 if (showtimeId == null || showtimeId <= 0) {
                     // Tạo mới luôn là Active (Góp ý 4)
@@ -480,6 +516,7 @@ public class ShowtimeService {
                 st.setEndTime(end);
                 st.setBasePrice(price);
                 st.setStatus(ShowtimeStatus.ACTIVE);
+                st.setTranslationType(form.getTranslationType());
                 plannedShowtimes.add(st);
             }
         }

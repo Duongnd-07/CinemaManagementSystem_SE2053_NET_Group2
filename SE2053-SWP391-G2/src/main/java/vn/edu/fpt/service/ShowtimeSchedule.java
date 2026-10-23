@@ -18,9 +18,11 @@ public class ShowtimeSchedule {
     private LocalDate selectedDate;
     private String selectedFormat = "";
     private int selectedRoomId;
-    // Các định dạng/phòng có suất trong khung xem, làm lựa chọn cho bộ lọc
+    private String selectedTranslationType = "";
+    // Các định dạng/phòng/bản chiếu có suất trong khung xem, làm lựa chọn cho bộ lọc
     private List<String> formats = new ArrayList<>();
     private List<Room> rooms = new ArrayList<>();
+    private List<String> translationTypes = new ArrayList<>();
     // Ngày -> Định dạng -> Tên phòng -> các suất (đã sắp theo giờ)
     private Map<LocalDate, Map<String, Map<String, List<Showtime>>>> groups = new LinkedHashMap<>();
 
@@ -78,6 +80,22 @@ public class ShowtimeSchedule {
 
     public void setRooms(List<Room> rooms) {
         this.rooms = rooms;
+    }
+
+    public String getSelectedTranslationType() {
+        return selectedTranslationType;
+    }
+
+    public void setSelectedTranslationType(String selectedTranslationType) {
+        this.selectedTranslationType = selectedTranslationType;
+    }
+
+    public List<String> getTranslationTypes() {
+        return translationTypes;
+    }
+
+    public void setTranslationTypes(List<String> translationTypes) {
+        this.translationTypes = translationTypes;
     }
 
     public Map<LocalDate, Map<String, Map<String, List<Showtime>>>> getGroups() {

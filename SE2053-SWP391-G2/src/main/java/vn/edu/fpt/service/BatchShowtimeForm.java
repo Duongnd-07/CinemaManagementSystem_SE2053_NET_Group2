@@ -15,6 +15,7 @@ public class BatchShowtimeForm {
     private List<String> timeSlots = new ArrayList<>();
     private String basePrice = "";
     private boolean skipCollisions = false;
+    private String translationType = "Phụ đề";
 
     public BatchShowtimeForm() {
     }
@@ -81,5 +82,14 @@ public class BatchShowtimeForm {
 
     public void setSkipCollisions(boolean skipCollisions) {
         this.skipCollisions = skipCollisions;
+    }
+
+    public String getTranslationType() {
+        return translationType;
+    }
+
+    public void setTranslationType(String translationType) {
+        this.translationType = (translationType != null && translationType.trim().equalsIgnoreCase("Lồng tiếng"))
+                ? "Lồng tiếng" : "Phụ đề";
     }
 }
