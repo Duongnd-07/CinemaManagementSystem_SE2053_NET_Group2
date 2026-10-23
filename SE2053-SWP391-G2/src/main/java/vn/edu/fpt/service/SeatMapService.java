@@ -101,6 +101,7 @@ public class SeatMapService {
             }
             byRow.computeIfAbsent(cell.getRowName(), k -> new SeatMapCell[columnCount])[cell.getColNumber() - 1] = cell;
         }
+        byRow = withAisleRows(byRow, columnCount);
         List<SeatMapRow> rows = new ArrayList<>();
         for (Map.Entry<String, SeatMapCell[]> entry : byRow.entrySet()) {
             SeatMapCell[] line = entry.getValue();
@@ -114,6 +115,24 @@ public class SeatMapService {
             rows.add(new SeatMapRow(entry.getKey(), rowCells));
         }
         return rows;
+    }
+
+    // Hàng không có ghế là lối đi ngang (UC-25 lưu phòng không tạo ghế cho hàng đó): dựng đủ hàng A..hàng cuối
+    // như sơ đồ của Manager. Tên hàng không phải một chữ A-Z thì giữ nguyên các hàng có ghế.
+    private Map<String, SeatMapCell[]> withAisleRows(Map<String, SeatMapCell[]> byRow, int columnCount) {
+        char last = 'A' - 1;
+        for (String rowName : byRow.keySet()) {
+            if (rowName == null || rowName.length() != 1 || rowName.charAt(0) < 'A' || rowName.charAt(0) > 'Z') {
+                return byRow;
+            }
+            last = (char) Math.max(last, rowName.charAt(0));
+        }
+        Map<String, SeatMapCell[]> full = new LinkedHashMap<>();
+        for (char c = 'A'; c <= last; c++) {
+            String rowName = String.valueOf(c);
+            full.put(rowName, byRow.getOrDefault(rowName, new SeatMapCell[columnCount]));
+        }
+        return full;
     }
 
     private ValidationException error(String message) {
