@@ -20,7 +20,7 @@ import vn.edu.fpt.util.DBContext;
 public class SeatMapDAO {
 
     public Showtime findShowtime(int showtimeId) throws SQLException {
-        String sql = "SELECT ShowtimeID, MovieID, RoomID, StartTime, EndTime, BasePrice, Status "
+        String sql = "SELECT ShowtimeID, MovieID, RoomID, StartTime, EndTime, BasePrice, Status, TranslationType "
                 + "FROM Showtime WHERE ShowtimeID = ?";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, showtimeId);
@@ -38,6 +38,7 @@ public class SeatMapDAO {
                 showtime.setEndTime(end == null ? null : end.toLocalDateTime());
                 showtime.setBasePrice(rs.getBigDecimal("BasePrice"));
                 showtime.setStatus(rs.getString("Status"));
+                showtime.setTranslationType(rs.getString("TranslationType"));
                 return showtime;
             }
         }

@@ -10,6 +10,7 @@ public class ShowtimeForm {
     private String startTime = "";
     private String basePrice = "";
     private String status = "Active";
+    private String translationType = "Phụ đề";
 
     public int getShowtimeId() {
         return showtimeId;
@@ -57,5 +58,14 @@ public class ShowtimeForm {
 
     public void setStatus(String status) {
         this.status = status == null ? "Active" : status.trim();
+    }
+
+    public String getTranslationType() {
+        return translationType;
+    }
+
+    public void setTranslationType(String translationType) {
+        this.translationType = (translationType != null && translationType.trim().equalsIgnoreCase("Lồng tiếng"))
+                ? "Lồng tiếng" : "Phụ đề";
     }
 }

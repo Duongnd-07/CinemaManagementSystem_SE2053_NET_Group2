@@ -27,7 +27,7 @@ public class CounterSaleDAO {
     // Suất còn mở bán trong khoảng [from, to): suất Active chưa bắt đầu, phim công khai, phòng đang hoạt động
     public List<Showtime> findSellableShowtimes(LocalDateTime from, LocalDateTime to) throws SQLException {
         String sql = "SELECT s.ShowtimeID, s.MovieID, s.RoomID, s.StartTime, s.EndTime, s.BasePrice, s.Status, "
-                + "m.Title, m.AgeRating, r.RoomName, r.Format "
+                + "s.TranslationType, m.Title, m.AgeRating, r.RoomName, r.Format "
                 + "FROM Showtime s JOIN Movie m ON m.MovieID = s.MovieID JOIN Room r ON r.RoomID = s.RoomID "
                 + "WHERE s.Status = ? AND s.StartTime > GETDATE() AND s.StartTime >= ? AND s.StartTime < ? "
                 + "AND m.Status IN (?, ?) AND r.Status = ? ORDER BY s.StartTime, m.Title";
@@ -50,6 +50,7 @@ public class CounterSaleDAO {
                     showtime.setEndTime(end == null ? null : end.toLocalDateTime());
                     showtime.setBasePrice(rs.getBigDecimal("BasePrice"));
                     showtime.setStatus(rs.getString("Status"));
+                    showtime.setTranslationType(rs.getString("TranslationType"));
                     Movie movie = new Movie();
                     movie.setMovieId(rs.getInt("MovieID"));
                     movie.setTitle(rs.getString("Title"));

@@ -20,8 +20,12 @@ import vn.edu.fpt.service.UserManagementService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
+import vn.edu.fpt.util.Page;
 
-// Trang duy nhất của Admin: Quản lý tài khoản & Phân quyền hệ thống
+/**
+ * Quản lý tài khoản & Phân quyền hệ thống dành cho Admin (UC-30).
+ * Cho phép xem danh sách, lọc, phân quyền, đổi trạng thái, cập nhật thông tin và cấp lại mật khẩu.
+ */
 @WebServlet("/admin/users")
 public class UserManagementServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(UserManagementServlet.class.getName());
@@ -52,22 +56,16 @@ public class UserManagementServlet extends HttpServlet {
 
         try {
             Map<String, Integer> stats = userManagementService.getStats();
-            int totalRecords = userManagementService.countUsers(keyword, role, status);
-            int totalPages = Math.max(1, (int) Math.ceil((double) totalRecords / PAGE_SIZE));
-            if (page > totalPages && totalPages > 0) {
-                page = totalPages;
-            }
+            Page<User> userPage = userManagementService.listUsers(keyword, role, status, page, PAGE_SIZE);
 
-            List<User> users = userManagementService.getUsers(keyword, role, status, page, PAGE_SIZE);
-
-            request.setAttribute("users", users);
+            request.setAttribute("users", userPage.getItems());
             request.setAttribute("stats", stats);
             request.setAttribute("keyword", keyword == null ? "" : keyword.trim());
             request.setAttribute("selectedRole", role == null ? "ALL" : role.trim());
             request.setAttribute("selectedStatus", status == null ? "ALL" : status.trim());
-            request.setAttribute("currentPage", page);
-            request.setAttribute("totalPages", totalPages);
-            request.setAttribute("totalRecords", totalRecords);
+            request.setAttribute("currentPage", userPage.getPage());
+            request.setAttribute("totalPages", userPage.getTotalPages());
+            request.setAttribute("totalRecords", userPage.getTotalItems());
             request.setAttribute("csrfToken", CsrfToken.get(session));
 
             request.getRequestDispatcher(VIEW).forward(request, response);
@@ -96,22 +94,6 @@ public class UserManagementServlet extends HttpServlet {
 
         try {
             switch (action) {
-                case "change-role" -> {
-                    int targetUserId = Integer.parseInt(request.getParameter("userId"));
-                    String newRole = request.getParameter("newRole");
-                    userManagementService.updateUserRole(currentAdminId, targetUserId, newRole);
-                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi vai trò tài khoản", "User",
-                            targetUserId, "Vai trò mới: " + newRole);
-                    flash(request, "flashSuccess", "Phân quyền vai trò tài khoản thành công!");
-                }
-                case "change-status" -> {
-                    int targetUserId = Integer.parseInt(request.getParameter("userId"));
-                    String newStatus = request.getParameter("newStatus");
-                    userManagementService.updateUserStatus(currentAdminId, targetUserId, newStatus);
-                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi trạng thái tài khoản", "User",
-                            targetUserId, "Trạng thái mới: " + newStatus);
-                    flash(request, "flashSuccess", "Cập nhật trạng thái tài khoản thành công!");
-                }
                 case "create-user" -> {
                     String fullName = request.getParameter("fullName");
                     String email = request.getParameter("email");
@@ -121,7 +103,32 @@ public class UserManagementServlet extends HttpServlet {
                     User created = userManagementService.createUser(fullName, email, phone, role, password);
                     ActivityLogger.info(request, LogEventType.ACCOUNT, "Tạo tài khoản", "User",
                             created == null ? null : created.getUserId(), email + " - vai trò " + role);
-                    flash(request, "flashSuccess", "Tạo tài khoản mới thành công!");
+                    flash(request, "flashSuccess", Messages.USER_CREATED);
+                }
+                case "update-profile" -> {
+                    int targetUserId = Integer.parseInt(request.getParameter("userId"));
+                    String fullName = request.getParameter("fullName");
+                    String phone = request.getParameter("phone");
+                    userManagementService.updateUserProfile(targetUserId, fullName, phone);
+                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Cập nhật thông tin tài khoản", "User",
+                            targetUserId, "Họ tên: " + fullName + ", SĐT: " + phone);
+                    flash(request, "flashSuccess", Messages.USER_PROFILE_UPDATED);
+                }
+                case "change-role" -> {
+                    int targetUserId = Integer.parseInt(request.getParameter("userId"));
+                    String newRole = request.getParameter("newRole");
+                    userManagementService.updateUserRole(currentAdminId, targetUserId, newRole);
+                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi vai trò tài khoản", "User",
+                            targetUserId, "Vai trò mới: " + newRole);
+                    flash(request, "flashSuccess", Messages.USER_ROLE_UPDATED);
+                }
+                case "change-status" -> {
+                    int targetUserId = Integer.parseInt(request.getParameter("userId"));
+                    String newStatus = request.getParameter("newStatus");
+                    userManagementService.updateUserStatus(currentAdminId, targetUserId, newStatus);
+                    ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi trạng thái tài khoản", "User",
+                            targetUserId, "Trạng thái mới: " + newStatus);
+                    flash(request, "flashSuccess", Messages.USER_STATUS_UPDATED);
                 }
                 case "reset-password" -> {
                     int targetUserId = Integer.parseInt(request.getParameter("userId"));
@@ -130,7 +137,7 @@ public class UserManagementServlet extends HttpServlet {
                     // BR-06: không ghi mật khẩu mới
                     ActivityLogger.info(request, LogEventType.ACCOUNT, "Admin đặt lại mật khẩu", "User",
                             targetUserId, null);
-                    flash(request, "flashSuccess", "Đặt lại mật khẩu cho tài khoản thành công!");
+                    flash(request, "flashSuccess", Messages.USER_PASSWORD_RESET);
                 }
                 default -> flash(request, "flashError", "Hành động không hợp lệ.");
             }

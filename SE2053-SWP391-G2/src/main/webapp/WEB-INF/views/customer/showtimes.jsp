@@ -12,11 +12,13 @@
 <c:set var="selDate" value="${schedule.selectedDate}"/>
 <c:set var="selFormat" value="${schedule.selectedFormat}"/>
 <c:set var="selRoom" value="${schedule.selectedRoomId}"/>
+<c:set var="selTrans" value="${schedule.selectedTranslationType}"/>
 <%-- URL gốc giữ phim; các link bộ lọc nối thêm tham số còn lại --%>
 <c:set var="baseUrl" value="${ctx}/showtimes?movieId=${movie.movieId}"/>
 <c:set var="formatParam" value="${empty selFormat ? '' : '&format='.concat(selFormat)}"/>
 <c:set var="roomParam" value="${selRoom > 0 ? '&room='.concat(selRoom) : ''}"/>
 <c:set var="dateParam" value="${empty selDate ? '' : '&date='.concat(selDate)}"/>
+<c:set var="transParam" value="${empty selTrans ? '' : '&translationType='.concat(selTrans)}"/>
 <c:set var="posterSrc" value="${empty movie.posterUrl ? '' : (fn:startsWith(movie.posterUrl, 'http') ? movie.posterUrl : ctx.concat('/').concat(movie.posterUrl))}"/>
 <!DOCTYPE html>
 <html lang="vi" class="dark">
@@ -58,13 +60,13 @@
 
         <!-- Chọn ngày: hôm nay + 7 ngày tới; "Tất cả" là chế độ mặc định -->
         <nav class="date-strip" aria-label="Chọn ngày chiếu">
-            <a href="<c:out value='${baseUrl}${formatParam}${roomParam}'/>" class="date-chip ${empty selDate ? 'active' : ''}">
+            <a href="<c:out value='${baseUrl}${formatParam}${roomParam}${transParam}'/>" class="date-chip ${empty selDate ? 'active' : ''}">
                 <span class="date-chip-top">Tất cả</span>
                 <span class="date-chip-main">8 ngày</span>
             </a>
             <c:forEach var="day" items="${schedule.days}">
                 <c:set var="dayCount" value="${schedule.countByDay[day]}"/>
-                <a href="<c:out value='${baseUrl}&date=${day}${formatParam}${roomParam}'/>"
+                <a href="<c:out value='${baseUrl}&date=${day}${formatParam}${roomParam}${transParam}'/>"
                    class="date-chip ${day == selDate ? 'active' : ''} ${dayCount == 0 ? 'empty' : ''}">
                     <span class="date-chip-top">${day == today ? 'Hôm nay' : (day == today.plusDays(1) ? 'Ngày mai' : weekdays[day.dayOfWeek.name()])}</span>
                     <span class="date-chip-main">${day.format(dayMonth)}</span>
@@ -73,28 +75,50 @@
             </c:forEach>
         </nav>
 
-        <!-- Lọc định dạng và phòng (chỉ liệt kê những gì có suất trong 8 ngày) -->
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Định dạng chiếu">
-                <a href="<c:out value='${baseUrl}${dateParam}${roomParam}'/>" class="movie-tab ${empty selFormat ? 'active' : ''}">Tất cả định dạng</a>
-                <c:forEach var="format" items="${schedule.formats}">
-                    <a href="<c:out value='${baseUrl}${dateParam}&format=${format}${roomParam}'/>" class="movie-tab ${format == selFormat ? 'active' : ''}"><c:out value="${format}"/></a>
-                </c:forEach>
-            </div>
-            <form method="get" action="${ctx}/showtimes" class="sm:ml-auto flex items-center gap-2">
-                <input type="hidden" name="movieId" value="${movie.movieId}"/>
-                <c:if test="${not empty selDate}"><input type="hidden" name="date" value="${selDate}"/></c:if>
-                <c:if test="${not empty selFormat}"><input type="hidden" name="format" value="<c:out value='${selFormat}'/>"/></c:if>
-                <label for="room" class="text-sm text-[#8e919f] whitespace-nowrap">Phòng</label>
-                <select id="room" name="room" onchange="this.form.submit()"
-                        class="h-10 px-3 rounded-xl bg-[#0f131d] border border-white/10 text-sm text-white focus:border-[#e50914] focus:outline-none [color-scheme:dark]">
-                    <option value="">Tất cả phòng</option>
-                    <c:forEach var="room" items="${schedule.rooms}">
-                        <option value="${room.roomId}" ${room.roomId == selRoom ? 'selected' : ''}><c:out value="${room.roomName}"/><c:if test="${not empty room.format}"> (<c:out value="${room.format}"/>)</c:if></option>
+        <!-- Lọc định dạng, bản chiếu và phòng -->
+        <div class="flex flex-col gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Định dạng chiếu">
+                    <a href="<c:out value='${baseUrl}${dateParam}${roomParam}${transParam}'/>" class="movie-tab ${empty selFormat ? 'active' : ''}">Tất cả định dạng</a>
+                    <c:forEach var="format" items="${schedule.formats}">
+                        <a href="<c:out value='${baseUrl}${dateParam}&format=${format}${roomParam}${transParam}'/>" class="movie-tab ${format == selFormat ? 'active' : ''}"><c:out value="${format}"/></a>
                     </c:forEach>
-                </select>
-                <noscript><button type="submit" class="movie-tab">Lọc</button></noscript>
-            </form>
+                </div>
+                <form method="get" action="${ctx}/showtimes" class="flex items-center gap-2">
+                    <input type="hidden" name="movieId" value="${movie.movieId}"/>
+                    <c:if test="${not empty selDate}"><input type="hidden" name="date" value="${selDate}"/></c:if>
+                    <c:if test="${not empty selFormat}"><input type="hidden" name="format" value="<c:out value='${selFormat}'/>"/></c:if>
+                    <c:if test="${not empty selTrans}"><input type="hidden" name="translationType" value="<c:out value='${selTrans}'/>"/></c:if>
+                    <label for="room" class="text-sm text-[#8e919f] whitespace-nowrap">Phòng</label>
+                    <select id="room" name="room" onchange="this.form.submit()"
+                            class="h-10 px-3 rounded-xl bg-[#0f131d] border border-white/10 text-sm text-white focus:border-[#e50914] focus:outline-none [color-scheme:dark]">
+                        <option value="">Tất cả phòng</option>
+                        <c:forEach var="room" items="${schedule.rooms}">
+                            <option value="${room.roomId}" ${room.roomId == selRoom ? 'selected' : ''}><c:out value="${room.roomName}"/><c:if test="${not empty room.format}"> (<c:out value="${room.format}"/>)</c:if></option>
+                        </c:forEach>
+                    </select>
+                    <noscript><button type="submit" class="movie-tab">Lọc</button></noscript>
+                </form>
+            </div>
+
+            <!-- Bộ lọc Bản chiếu: Tất cả / Phụ đề / Lồng tiếng -->
+            <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5" role="group" aria-label="Bản chiếu">
+                <span class="text-xs text-[#8e919f] font-semibold uppercase tracking-wider mr-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm text-[#e50914]">translate</span> Bản chiếu:
+                </span>
+                <a href="<c:out value='${baseUrl}${dateParam}${formatParam}${roomParam}'/>"
+                   class="px-3 py-1 rounded-lg text-xs font-semibold transition ${empty selTrans ? 'bg-white/15 text-white border border-white/30' : 'bg-[#171b26] text-[#8e919f] hover:text-white border border-white/10'}">
+                    Tất cả
+                </a>
+                <a href="<c:out value='${baseUrl}${dateParam}${formatParam}${roomParam}&translationType=Phụ đề'/>"
+                   class="px-3 py-1 rounded-lg text-xs font-semibold transition ${selTrans == 'Phụ đề' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-[#171b26] text-[#8e919f] hover:text-white border border-white/10'}">
+                    Phụ đề
+                </a>
+                <a href="<c:out value='${baseUrl}${dateParam}${formatParam}${roomParam}&translationType=Lồng tiếng'/>"
+                   class="px-3 py-1 rounded-lg text-xs font-semibold transition ${selTrans == 'Lồng tiếng' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-[#171b26] text-[#8e919f] hover:text-white border border-white/10'}">
+                    Lồng tiếng
+                </a>
+            </div>
         </div>
 
         <!-- Danh sách suất chiếu: Ngày -> Định dạng -> Phòng -->
@@ -128,8 +152,13 @@
                                                     <c:forEach var="showtime" items="${roomEntry.value}">
                                                         <%-- Chọn giờ chiếu -> chọn ghế của suất (UC-13) để bắt đầu đặt vé --%>
                                                         <a href="${ctx}/booking?showtimeId=${showtime.showtimeId}" class="time-slot"
-                                                           title="Chọn ghế suất ${showtime.startTime.format(timeFormat)} - <c:out value='${roomEntry.key}'/>">
-                                                            <span class="time-slot-start">${showtime.startTime.format(timeFormat)}</span>
+                                                           title="Chọn ghế suất ${showtime.startTime.format(timeFormat)} (${showtime.translationType}) - <c:out value='${roomEntry.key}'/>">
+                                                            <span class="time-slot-start flex items-center justify-between gap-1.5">
+                                                                <span>${showtime.startTime.format(timeFormat)}</span>
+                                                                <span class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded leading-none ${showtime.translationType == 'Lồng tiếng' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'}">
+                                                                    <c:out value="${empty showtime.translationType ? 'Phụ đề' : showtime.translationType}"/>
+                                                                </span>
+                                                            </span>
                                                             <span class="time-slot-sub">
                                                                 <c:if test="${not empty showtime.endTime}">~${showtime.endTime.format(timeFormat)} · </c:if><fmt:formatNumber value="${showtime.basePrice}" type="number" maxFractionDigits="0"/>đ
                                                             </span>

@@ -71,8 +71,26 @@ public final class Messages {
             "Suất chiếu đã có vé đặt hoặc ghế đang giữ chỗ, không thể đổi phim, phòng hoặc giờ chiếu.";
     public static final String SHOWTIME_HAS_BOOKINGS = SHOWTIME_IMMUTABLE_BOOKED;
     public static final String SHOWTIME_DELETE_HAS_BOOKINGS =
-            "Suất chiếu đã có vé hoặc dữ liệu liên quan, chỉ có thể hủy suất chiếu thay vì xóa.";
+            "Suất chiếu đã phát sinh dữ liệu liên quan, không thể xóa khỏi hệ thống.";
+    public static final String SHOWTIME_DELETE_HAS_REFERENCES =
+            "Suất chiếu đã phát sinh dữ liệu (vé, đơn đặt vé hoặc phiên giữ chỗ), không thể xóa. Bạn chỉ có thể hủy suất chiếu (nếu chưa bán vé).";
+    public static final String SHOWTIME_CANCEL_HAS_SOLD_TICKETS =
+            "Suất chiếu đã có vé bán cho khách hàng. Không thể hủy suất chiếu này để bảo vệ quyền lợi của khách hàng đã mua vé.";
     public static final String SHOWTIME_CANCEL_ALREADY = "Suất chiếu này đã bị hủy trước đó.";
+    public static final String SHOWTIME_FORMAT_MISMATCH =
+            "Phim \"{0}\" chỉ hỗ trợ định dạng [{1}], không tương thích với phòng [{2}] ({3}).";
+    public static final String SHOWTIME_BEFORE_RELEASE_DATE =
+            "Thời gian chiếu ({0}) không được trước ngày khởi chiếu của phim ({1}).";
+    public static final String SHOWTIME_BATCH_SAVED =
+            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại phòng {2}.";
+    public static final String SHOWTIME_BATCH_EMPTY =
+            "Không có suất chiếu hợp lệ nào để tạo. Vui lòng kiểm tra lại khoảng ngày và khung giờ.";
+    public static final String SHOWTIME_BATCH_DATE_INVALID =
+            "Ngày kết thúc phải từ ngày bắt đầu trở đi và không quá 30 ngày.";
+    public static final String SHOWTIME_BATCH_SLOTS_REQUIRED =
+            "Vui lòng chọn ít nhất một khung giờ chiếu trong ngày.";
+    public static final String SHOWTIME_BATCH_DAYS_REQUIRED =
+            "Vui lòng chọn ít nhất một thứ trong tuần để lên lịch.";
     public static final String SHOWTIME_STATUS_INVALID = "Trạng thái suất chiếu không hợp lệ.";
     // UC-25 Manage Rooms & Seat Layout
     public static final String ROOM_SAVED = "Đã lưu phòng chiếu và sơ đồ ghế.";
@@ -246,6 +264,24 @@ public final class Messages {
     public static final String EMAIL_CHANGE_NO_PENDING = "Yêu cầu đổi email không còn hiệu lực. Vui lòng thực hiện lại.";
     public static final String EMAIL_CHANGE_CANCELLED = "Đã hủy yêu cầu đổi email.";
     public static final String EMAIL_CHANGED = "Đổi email thành công!";
+
+    // UC-30 Manage Accounts (Admin)
+    public static final String USER_ROLE_SELF_LOCKED =
+            "Bạn không thể tự thay đổi vai trò quản trị của chính tài khoản đang đăng nhập.";
+    public static final String USER_STATUS_SELF_LOCKED =
+            "Bạn không thể tự khóa hoặc hủy kích hoạt tài khoản quản trị của chính mình.";
+    public static final String USER_LAST_ADMIN_ROLE_LOCKED =
+            "Không thể thay đổi vai trò của tài khoản này vì đây là Quản trị viên (Admin) hoạt động duy nhất trong hệ thống.";
+    public static final String USER_LAST_ADMIN_STATUS_LOCKED =
+            "Không thể khóa hoặc hủy kích hoạt tài khoản này vì đây là Quản trị viên (Admin) hoạt động duy nhất trong hệ thống.";
+    public static final String USER_NOT_FOUND = "Không tìm thấy tài khoản người dùng.";
+    public static final String USER_ROLE_INVALID = "Vai trò không hợp lệ. Chỉ chấp nhận Admin, Manager, Staff hoặc Customer.";
+    public static final String USER_STATUS_INVALID = "Trạng thái không hợp lệ. Chỉ chấp nhận Active, Suspended hoặc Deactivated.";
+    public static final String USER_CREATED = "Tạo tài khoản mới thành công!";
+    public static final String USER_PROFILE_UPDATED = "Cập nhật thông tin tài khoản thành công!";
+    public static final String USER_ROLE_UPDATED = "Phân quyền vai trò tài khoản thành công!";
+    public static final String USER_STATUS_UPDATED = "Cập nhật trạng thái tài khoản thành công!";
+    public static final String USER_PASSWORD_RESET = "Đặt lại mật khẩu cho tài khoản thành công!";
 
     // UC-13 Book Ticket Online (E1-E4 theo đúng câu chữ SRS)
     public static final String BOOKING_HOLD_EXPIRED = "Phiên đặt vé đã hết hạn. Vui lòng chọn lại ghế.";
