@@ -9,6 +9,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ShiftService;
 
 // UC-22: mỗi phút kết các ca bán tại quầy đã quá SHIFT_HOURS giờ và chốt số liệu (nhân viên quên kết ca)
@@ -41,6 +43,9 @@ public class ShiftAutoCloseListener implements ServletContextListener {
             int closed = shiftService.closeExpired();
             if (closed > 0) {
                 LOGGER.log(Level.INFO, "UC-22: đã tự kết {0} ca quá giờ", closed);
+                // UC-32: không có request nên người thao tác để trống (= hệ thống)
+                ActivityLogger.info(null, LogEventType.COUNTER, "Hệ thống tự kết ca quá giờ", "Shift", null,
+                        "Đã tự kết " + closed + " ca quá giờ");
             }
         } catch (SQLException | RuntimeException e) {
             // Bắt cả RuntimeException để một lần lỗi không làm dừng hẳn lịch chạy

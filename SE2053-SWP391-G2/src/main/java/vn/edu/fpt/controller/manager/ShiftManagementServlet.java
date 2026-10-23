@@ -16,7 +16,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.filter.AuthFilter;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ShiftReport;
 import vn.edu.fpt.service.ShiftService;
 import vn.edu.fpt.service.ValidationException;
@@ -59,10 +61,13 @@ public class ShiftManagementServlet extends HttpServlet {
             try {
                 if ("forceClose".equals(request.getParameter("action"))) {
                     shiftService.closeByManager(shiftId, currentUserId(request));
+                    ActivityLogger.info(request, LogEventType.COUNTER, "Quản lý kết ca hộ", "Shift", shiftId, null);
                     flash(request, FLASH_SUCCESS, SHIFT_CLOSED);
                 } else {
                     shiftService.recordCount(shiftId, currentUserId(request), true,
                             request.getParameter("countedCash"), request.getParameter("cashNote"));
+                    ActivityLogger.info(request, LogEventType.COUNTER, "Quản lý nhập tiền đếm cuối ca", "Shift",
+                            shiftId, "Tiền đếm được " + request.getParameter("countedCash"));
                     flash(request, FLASH_SUCCESS, COUNT_SAVED);
                 }
                 response.sendRedirect(request.getContextPath() + "/manager/shifts?id=" + shiftId);

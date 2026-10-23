@@ -14,9 +14,11 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.filter.AuthFilter;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.Shift;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ShiftReport;
 import vn.edu.fpt.service.ShiftService;
 import vn.edu.fpt.service.ValidationException;
@@ -68,6 +70,9 @@ public class StaffShiftServlet extends HttpServlet {
             if ("close".equals(request.getParameter("action"))) {
                 try {
                     int shiftId = shiftService.closeByStaff(staffId, countedCash, cashNote);
+                    ActivityLogger.info(request, LogEventType.COUNTER, "Đóng ca bán hàng", "Shift", shiftId,
+                            "Tiền đếm được " + countedCash + (cashNote == null || cashNote.isBlank() ? ""
+                                    : ", ghi chú: " + cashNote.trim()));
                     flash(request, FLASH_SUCCESS, SHIFT_CLOSED);
                     redirect(request, response, shiftId);
                 } catch (ValidationException e) {
@@ -78,6 +83,9 @@ public class StaffShiftServlet extends HttpServlet {
             int shiftId = parseInt(request.getParameter("shiftId"));
             try {
                 shiftService.recordCount(shiftId, staffId, false, countedCash, cashNote);
+                ActivityLogger.info(request, LogEventType.COUNTER, "Nhập tiền đếm cuối ca", "Shift", shiftId,
+                        "Tiền đếm được " + countedCash + (cashNote == null || cashNote.isBlank() ? ""
+                                : ", ghi chú: " + cashNote.trim()));
                 flash(request, FLASH_SUCCESS, COUNT_SAVED);
                 redirect(request, response, shiftId);
             } catch (ValidationException e) {
