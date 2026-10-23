@@ -36,6 +36,7 @@ public class ShiftManagementServlet extends HttpServlet {
     private static final String SHIFT_CLOSED = "Đã kết ca hộ nhân viên. Két chưa đếm, cần nhập số đếm khi bàn giao.";
     private static final String COUNT_SAVED = "Đã lưu số tiền đếm két.";
     private static final String SHIFT_NOT_FOUND = "Không tìm thấy ca làm việc.";
+    private static final String HOURS_SAVED = "Đã lưu thời lượng ca. Ca đang mở tính lại giờ tự kết theo thời lượng mới.";
 
     private final ShiftService shiftService = new ShiftService();
 
@@ -58,6 +59,16 @@ public class ShiftManagementServlet extends HttpServlet {
         }
         int shiftId = parseInt(request.getParameter("shiftId"));
         try {
+            if ("setHours".equals(request.getParameter("action"))) {
+                try {
+                    shiftService.updateShiftHours(request.getParameter("shiftHours"));
+                    flash(request, FLASH_SUCCESS, HOURS_SAVED);
+                } catch (ValidationException e) {
+                    flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());
+                }
+                response.sendRedirect(request.getContextPath() + "/manager/shifts");
+                return;
+            }
             try {
                 if ("forceClose".equals(request.getParameter("action"))) {
                     shiftService.closeByManager(shiftId, currentUserId(request));
@@ -95,6 +106,9 @@ public class ShiftManagementServlet extends HttpServlet {
             LocalDate date = parseDate(request.getParameter("date"));
             request.setAttribute("date", date);
             request.setAttribute("shifts", shiftService.listByDate(date));
+            request.setAttribute("shiftHours", shiftService.shiftHours());
+            request.setAttribute("minShiftHours", ShiftService.MIN_SHIFT_HOURS);
+            request.setAttribute("maxShiftHours", ShiftService.MAX_SHIFT_HOURS);
         }
         for (String key : List.of(FLASH_SUCCESS, FLASH_ERROR)) {
             Object value = session.getAttribute(key);

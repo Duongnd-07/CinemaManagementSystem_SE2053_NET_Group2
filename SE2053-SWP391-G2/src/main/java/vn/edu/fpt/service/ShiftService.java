@@ -31,6 +31,10 @@ public class ShiftService {
 
     private static final String CONFIG_SHIFT_HOURS = "SHIFT_HOURS";
     private static final int DEFAULT_SHIFT_HOURS = 4;
+    public static final int MIN_SHIFT_HOURS = 1;
+    public static final int MAX_SHIFT_HOURS = 12;
+    public static final String ERROR_SHIFT_HOURS = "shiftHours";
+    private static final String SHIFT_HOURS_INVALID = "Thời lượng ca phải là số nguyên từ {0} đến {1} giờ.";
     private static final int MAX_NOTE = 500;
     private static final Set<Integer> DUPLICATE_KEY_ERRORS = Set.of(2601, 2627);
 
@@ -50,6 +54,18 @@ public class ShiftService {
 
     public int shiftHours() throws SQLException {
         return Math.max(1, configDAO.getInt(CONFIG_SHIFT_HOURS, DEFAULT_SHIFT_HOURS));
+    }
+
+    // Chỉ Manager đổi (trang Báo cáo ca). Ca đang mở tính lại giờ tự kết theo giá trị mới;
+    // giảm thời lượng thì ca đã quá giờ mới bị kết ngay
+    public void updateShiftHours(String raw) throws SQLException, ValidationException {
+        String value = raw == null ? "" : raw.trim();
+        int hours = value.matches("\\d{1,2}") ? Integer.parseInt(value) : 0;
+        if (hours < MIN_SHIFT_HOURS || hours > MAX_SHIFT_HOURS) {
+            throw error(ERROR_SHIFT_HOURS, Messages.format(SHIFT_HOURS_INVALID, MIN_SHIFT_HOURS, MAX_SHIFT_HOURS));
+        }
+        shiftDAO.saveShiftHours(CONFIG_SHIFT_HOURS, hours);
+        closeExpired();
     }
 
     public LocalDateTime plannedEnd(Shift shift, int hours) {
