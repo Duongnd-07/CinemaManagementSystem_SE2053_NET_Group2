@@ -1,18 +1,21 @@
 package vn.edu.fpt.service;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 import vn.edu.fpt.dao.UserDAO;
+import vn.edu.fpt.model.Gender;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.util.Messages;
 import vn.edu.fpt.util.PasswordUtil;
 
 // UC-10: Nghiệp vụ xem và cập nhật hồ sơ cá nhân của khách hàng
 public class ProfileService {
-    // Giữ cùng giới hạn với UC-01 để dữ liệu đăng ký và hồ sơ nhất quán
-    private static final int MAX_FULLNAME = 50;
+    private static final LocalDate MIN_DATE_OF_BIRTH = LocalDate.of(1900, 1, 1);
+    private static final String MIN_DOB_LABEL = "01/01/1900";
     private static final int MIN_PASSWORD = 8;
     private static final int MAX_PASSWORD = 32;
     private static final int SQL_UNIQUE_VIOLATION = 2627;
@@ -33,21 +36,20 @@ public class ProfileService {
     }
 
     public User findById(int userId) throws SQLException {
-        return userDAO.findById(userId);
+        return userDAO.findProfileById(userId);
     }
 
     /**
-     * Cập nhật Họ tên và Số điện thoại. Trả về User mới nhất từ DB để controller làm mới session.
+     * Cập nhật Họ tên, Số điện thoại, Ngày sinh, Giới tính. Trả về User mới nhất từ DB để controller làm mới session.
      */
     public User updateProfile(int userId, ProfileForm form) throws SQLException, ValidationException {
         User user = requireUser(userId);
         Map<String, String> errors = new LinkedHashMap<>();
 
         String fullName = form.getFullName();
-        if (fullName.isEmpty()) {
-            errors.put("fullName", Messages.format(Messages.MSG02, "Họ và tên"));
-        } else if (fullName.length() > MAX_FULLNAME) {
-            errors.put("fullName", Messages.format(Messages.MSG08, MAX_FULLNAME));
+        String fullNameError = FullNameRule.validate(fullName);
+        if (fullNameError != null) {
+            errors.put("fullName", fullNameError);
         }
 
         String phone = form.getPhone();
@@ -60,12 +62,30 @@ public class ProfileService {
             errors.put("phone", Messages.REGISTER_PHONE_DUPLICATE);
         }
 
+        // Ngày sinh và giới tính không bắt buộc vì các tài khoản cũ chưa có dữ liệu này
+        LocalDate dateOfBirth = null;
+        if (!form.getDateOfBirth().isEmpty()) {
+            try {
+                dateOfBirth = LocalDate.parse(form.getDateOfBirth());
+                if (dateOfBirth.isBefore(MIN_DATE_OF_BIRTH) || dateOfBirth.isAfter(LocalDate.now())) {
+                    errors.put("dateOfBirth", Messages.format(Messages.PROFILE_DOB_OUT_OF_RANGE, MIN_DOB_LABEL));
+                }
+            } catch (DateTimeParseException e) {
+                errors.put("dateOfBirth", Messages.PROFILE_DOB_INVALID);
+            }
+        }
+
+        String gender = form.getGender().isEmpty() ? null : form.getGender();
+        if (gender != null && !Gender.isValid(gender)) {
+            errors.put("gender", Messages.PROFILE_GENDER_INVALID);
+        }
+
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
 
         try {
-            userDAO.updateProfile(user.getUserId(), fullName, phone);
+            userDAO.updateProfile(user.getUserId(), fullName, phone, dateOfBirth, gender);
         } catch (SQLException e) {
             // Hai người cùng đổi sang một SĐT ở cùng thời điểm: ràng buộc UNIQUE của DB chặn lại
             if (e.getErrorCode() == SQL_UNIQUE_VIOLATION || e.getErrorCode() == SQL_UNIQUE_INDEX_VIOLATION) {
@@ -129,7 +149,7 @@ public class ProfileService {
     }
 
     private User requireUser(int userId) throws SQLException, ValidationException {
-        User user = userDAO.findById(userId);
+        User user = userDAO.findProfileById(userId);
         if (user == null) {
             throw new ValidationException(Map.of("general", Messages.PROFILE_NOT_FOUND));
         }

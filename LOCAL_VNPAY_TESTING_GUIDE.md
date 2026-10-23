@@ -1,5 +1,15 @@
 # UC14 - Huong dan test VNPay Sandbox local
 
+## Cach nhanh: test local KHONG can tunnel
+
+`config.properties` dung chung da co san tai khoan VNPay Sandbox va `payment.vnpay.return-url=http://localhost:8080/SE2053-SWP391-G2/customer/booking/payment/return`.
+
+1. Build/deploy nhu binh thuong, vao web bang `http://localhost:8080/SE2053-SWP391-G2/`, dang nhap Customer, dat ve va bam thanh toan VNPay.
+2. Tren trang Sandbox chon Ngan hang NCB, the `9704198526191432198`, ten `NGUYEN VAN A`, ngay phat hanh `07/15`, OTP `123456`.
+3. VNPay chuyen trinh duyet ve Return URL tren localhost. Tham so tra ve co chu ky HMAC nhu IPN nen backend xac minh chu ky va chot don ngay tai day (khong can VNPay goi IPN vao may local).
+
+IPN van duoc ho tro khi deploy co domain HTTPS cong khai (hoac dung tunnel nhu cac muc ben duoi): IPN va Return URL deu chot don idempotent, giao dich chi duoc xu ly mot lan.
+
 Tai lieu nay huong dan thanh vien chay website local, mo Quick Tunnel va test thanh toan Sandbox. Moi thanh vien tu dien thong tin merchant Sandbox va hostname tunnel cua may minh.
 
 ## 1. Chuan bi project va database

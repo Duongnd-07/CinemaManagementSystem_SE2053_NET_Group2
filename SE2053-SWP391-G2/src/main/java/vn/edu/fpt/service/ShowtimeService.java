@@ -227,6 +227,12 @@ public class ShowtimeService {
                 errors.put("startTime", Messages.SHOWTIME_START_TIME_REQUIRED);
             }
         }
+        // UC-23: không xếp suất sau ngày kết thúc chiếu của phim (nếu đã đặt)
+        if (startTime != null && !errors.containsKey("startTime") && movie != null && movie.getEndDate() != null
+                && startTime.toLocalDate().isAfter(movie.getEndDate())) {
+            errors.put("startTime", Messages.format(Messages.SHOWTIME_AFTER_MOVIE_END,
+                    movie.getEndDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
+        }
 
         // 4. Kiểm tra Giá vé gốc (>= 10,000 VND và là bội số của 1,000)
         BigDecimal basePrice = null;

@@ -59,7 +59,7 @@ public class VnPayGateway implements PaymentGateway {
         parameters.put("vnp_OrderInfo", "Thanh toan don hang " + request.getBookingId());
         parameters.put("vnp_OrderType", "other");
         parameters.put("vnp_Locale", "vn");
-        parameters.put("vnp_ReturnUrl", requireHttpsUrl(request.getReturnUrl(), "return URL"));
+        parameters.put("vnp_ReturnUrl", requireReturnUrl(request.getReturnUrl()));
         parameters.put("vnp_IpAddr", request.getClientIpAddress());
         parameters.put("vnp_CreateDate", VN_TIME.format(now));
         parameters.put("vnp_ExpireDate", VN_TIME.format(expiresAt));
@@ -151,9 +151,31 @@ public class VnPayGateway implements PaymentGateway {
                 || request.getClientIpAddress().length() > 45) {
             throw new PaymentGatewayException("Invalid payment request.");
         }
-        requireHttpsUrl(request.getReturnUrl(), "return URL");
-        requireHttpsUrl(request.getCallbackUrl(), "callback URL");
+        requireReturnUrl(request.getReturnUrl());
+        // IPN URL đăng ký trên trang Merchant/SIT của VNPay, không gửi kèm URL thanh toán; chạy local không có IPN
+        // (đơn được chốt ở Return URL) nên chỉ kiểm tra khi có cấu hình
+        if (request.getCallbackUrl() != null && !request.getCallbackUrl().isBlank()) {
+            requireHttpsUrl(request.getCallbackUrl(), "callback URL");
+        }
         amountInMinorUnits(request.getAmount());
+    }
+
+    // Return URL chỉ là nơi VNPay chuyển TRÌNH DUYỆT của khách về, nên chạy local được với http://localhost
+    // (không cần tunnel); host khác bắt buộc HTTPS
+    private String requireReturnUrl(String value) throws PaymentGatewayException {
+        if (value != null && !value.isBlank()) {
+            try {
+                URI uri = URI.create(value);
+                String host = uri.getHost();
+                if ("http".equalsIgnoreCase(uri.getScheme()) && uri.getUserInfo() == null && uri.getFragment() == null
+                        && ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host))) {
+                    return uri.toASCIIString();
+                }
+            } catch (IllegalArgumentException e) {
+                throw new PaymentGatewayException("Invalid return URL.");
+            }
+        }
+        return requireHttpsUrl(value, "return URL");
     }
 
     private String amountInMinorUnits(BigDecimal amount) throws PaymentGatewayException {

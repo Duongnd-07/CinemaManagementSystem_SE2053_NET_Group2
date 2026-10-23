@@ -1,5 +1,7 @@
 package vn.edu.fpt.model;
 
+import java.time.LocalDate;
+
 public class User {
     private int userId;
     private String fullName;
@@ -9,8 +11,26 @@ public class User {
     private String role;
     private int pointBalance;
     private String status;
+    private LocalDate dateOfBirth;
+    private String gender;
 
     public User() {
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
     }
 
     public int getUserId() {

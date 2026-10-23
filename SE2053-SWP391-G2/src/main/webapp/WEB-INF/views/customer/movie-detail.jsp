@@ -88,6 +88,18 @@
                                 <dt class="detail-label"><span class="material-symbols-outlined text-base">movie_edit</span>Đạo diễn</dt>
                                 <dd class="text-white"><c:out value="${empty movie.director ? 'Đang cập nhật' : movie.director}"/></dd>
                             </div>
+                            <div class="flex gap-2">
+                                <dt class="detail-label"><span class="material-symbols-outlined text-base">public</span>Quốc gia</dt>
+                                <dd class="text-white"><c:out value="${empty movie.country ? 'Đang cập nhật' : movie.country}"/></dd>
+                            </div>
+                            <div class="flex gap-2">
+                                <dt class="detail-label"><span class="material-symbols-outlined text-base">translate</span>Ngôn ngữ</dt>
+                                <dd class="text-white"><c:out value="${empty movie.language ? 'Đang cập nhật' : movie.language}"/></dd>
+                            </div>
+                            <div class="flex gap-2 sm:col-span-2">
+                                <dt class="detail-label"><span class="material-symbols-outlined text-base">business</span>Nhà phát hành</dt>
+                                <dd class="text-white"><c:out value="${empty movie.distributor ? 'Đang cập nhật' : movie.distributor}"/></dd>
+                            </div>
                             <div class="flex gap-2 sm:col-span-2">
                                 <dt class="detail-label"><span class="material-symbols-outlined text-base">groups</span>Diễn viên</dt>
                                 <dd class="text-white"><c:out value="${empty movie.cast ? 'Đang cập nhật' : movie.cast}"/></dd>

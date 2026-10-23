@@ -200,6 +200,10 @@ public class MovieManagementServlet extends HttpServlet {
         form.setDuration(trim(request.getParameter("duration")));
         form.setAgeRating(trim(request.getParameter("ageRating")));
         form.setReleaseDate(trim(request.getParameter("releaseDate")));
+        form.setEndDate(trim(request.getParameter("endDate")));
+        form.setCountry(trim(request.getParameter("country")));
+        form.setLanguage(trim(request.getParameter("language")));
+        form.setDistributor(trim(request.getParameter("distributor")));
         form.setPosterUrl(trim(request.getParameter("posterUrl")));
         form.setTrailerUrl(trim(request.getParameter("trailerUrl")));
         form.setStatus(trim(request.getParameter("movieStatus")));

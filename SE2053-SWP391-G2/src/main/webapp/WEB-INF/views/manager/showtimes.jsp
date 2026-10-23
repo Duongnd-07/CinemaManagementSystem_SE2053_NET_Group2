@@ -132,7 +132,7 @@
                 <option value="">-- Tất cả phim --</option>
                 <c:forEach var="movie" items="${movies}">
                     <option value="${movie.movieId}" ${selectedMovieId == movie.movieId ? 'selected' : ''}>
-                        <c:out value="${movie.title}"/> (${movie.durationMinutes}p)
+                        <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
                     </option>
                 </c:forEach>
             </select>
@@ -387,7 +387,7 @@
                                         data-duration="${movie.durationMinutes}"
                                         data-title="<c:out value='${movie.title}'/>"
                                         ${form.movieId == movie.movieId ? 'selected' : ''}>
-                                    <c:out value="${movie.title}"/> (${movie.durationMinutes} phút)
+                                    <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes} phút)
                                 </option>
                             </c:forEach>
                         </select>
