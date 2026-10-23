@@ -17,6 +17,9 @@
             <a class="${navBase} ${activeMenu == 'dashboard' ? navActive : navIdle}" href="${ctx}/staff/dashboard">
                 <span class="material-symbols-outlined text-[20px]">home</span>Bàn làm việc
             </a>
+            <a class="${navBase} ${activeMenu == 'counter' ? navActive : navIdle}" href="${ctx}/staff/counter">
+                <span class="material-symbols-outlined text-[20px]">point_of_sale</span>Bán vé tại quầy
+            </a>
             <a class="${navBase} ${activeMenu == 'equipment-reports' ? navActive : navIdle}" href="${ctx}/staff/equipment-reports">
                 <span class="material-symbols-outlined text-[20px]">build</span>Sự cố thiết bị
             </a>

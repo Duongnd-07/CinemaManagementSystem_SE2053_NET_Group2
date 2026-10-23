@@ -76,6 +76,7 @@
         <!-- Chức năng nghiệp vụ Staff -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- 1. Bán vé tại quầy -->
+            <a href="${pageContext.request.contextPath}/staff/counter" class="block">
             <div class="bg-[#171b26] border border-white/10 hover:border-blue-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
                 <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
                     <span class="material-symbols-outlined text-2xl">confirmation_number</span>
@@ -86,6 +87,7 @@
                     Vào quầy POS <span class="material-symbols-outlined text-xs">arrow_forward</span>
                 </span>
             </div>
+            </a>
 
             <!-- 2. Soát vé vào phòng chiếu -->
             <div class="bg-[#171b26] border border-white/10 hover:border-emerald-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
