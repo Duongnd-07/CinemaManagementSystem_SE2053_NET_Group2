@@ -57,15 +57,11 @@ public class CounterSaleService {
     public static final String ERROR_PAYMENT = "payment";
     public static final String ERROR_AGE = "age";
 
-    // Mã quầy lưu trong Shift.CounterNo (VARCHAR, không dấu); nhãn hiển thị do JSP ghép "Quầy 1"...
-    public static final List<String> COUNTERS = List.of("Q1", "Q2", "Q3");
     public static final List<String> PAYMENT_METHODS =
             List.of(PaymentMethod.CASH, PaymentMethod.TRANSFER, PaymentMethod.CARD);
 
     private static final String SHIFT_REQUIRED = "Bạn cần mở ca trước khi bán vé.";
-    private static final String SHIFT_ALREADY_OPEN = "Bạn đang có một ca chưa kết thúc.";
-    private static final String SHIFT_NOT_OPEN = "Bạn không có ca nào đang mở.";
-    private static final String COUNTER_INVALID = "Vui lòng chọn quầy làm việc.";
+    private static final String SHIFT_EXPIRED = "Ca của bạn đã hết giờ, đơn chưa được bán. Vui lòng mở ca mới.";
     private static final String SEAT_REQUIRED = "Vui lòng chọn ít nhất một ghế.";
     private static final String SEAT_UNAVAILABLE = "Ghế {0} vừa được bán hoặc đang được giữ, vui lòng chọn ghế khác.";
     private static final String CUSTOMER_NOT_FOUND = "Không tìm thấy khách thành viên với số điện thoại/email này.";
@@ -90,42 +86,13 @@ public class CounterSaleService {
     private static final String ACTIVE = "Active";
 
     private final ShiftDAO shiftDAO = new ShiftDAO();
+    private final ShiftService shiftService = new ShiftService();
     private final CounterSaleDAO counterDAO = new CounterSaleDAO();
     private final BookingDAO bookingDAO = new BookingDAO();
     private final ConcessionDAO concessionDAO = new ConcessionDAO();
     private final SystemConfigDAO configDAO = new SystemConfigDAO();
     private final UserDAO userDAO = new UserDAO();
     private final BookingService bookingService = new BookingService();
-
-    // ===== Ca làm việc =====
-
-    public Shift findOpenShift(int staffId) throws SQLException {
-        return shiftDAO.findOpenByStaff(staffId);
-    }
-
-    public void openShift(int staffId, String counterNo) throws SQLException, ValidationException {
-        if (!COUNTERS.contains(counterNo)) {
-            throw error(ERROR_SHIFT, COUNTER_INVALID);
-        }
-        if (shiftDAO.findOpenByStaff(staffId) != null) {
-            throw error(ERROR_SHIFT, SHIFT_ALREADY_OPEN);
-        }
-        try {
-            shiftDAO.open(staffId, counterNo);
-        } catch (SQLException e) {
-            // Hai tab cùng bấm Mở ca: UX_Shift_OpenPerStaff chặn bản thứ hai
-            if (isDuplicateKey(e)) {
-                throw error(ERROR_SHIFT, SHIFT_ALREADY_OPEN);
-            }
-            throw e;
-        }
-    }
-
-    public void closeShift(int staffId) throws SQLException, ValidationException {
-        if (!shiftDAO.close(staffId)) {
-            throw error(ERROR_SHIFT, SHIFT_NOT_OPEN);
-        }
-    }
 
     // ===== Bước 1-3: chọn suất, ghế, bắp nước =====
 
@@ -169,6 +136,10 @@ public class CounterSaleService {
                 Shift shift = shiftDAO.findOpenByStaff(conn, staffId, true);
                 if (shift == null) {
                     throw error(ERROR_SHIFT, SHIFT_REQUIRED);
+                }
+                // Ca quá giờ mà tác vụ nền (chạy mỗi phút) chưa kịp kết: không cho đơn lọt vào sau giờ kết ca
+                if (shiftService.isExpired(shift, shiftService.shiftHours())) {
+                    throw error(ERROR_SHIFT, SHIFT_EXPIRED);
                 }
                 CounterQuote quote = price(conn, form, true);
                 checkPayment(form, quote, true);

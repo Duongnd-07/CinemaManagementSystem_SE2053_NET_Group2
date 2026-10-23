@@ -17,6 +17,13 @@ public class Shift {
     private BigDecimal transferTotal;
     private BigDecimal refundTotal;
     private LocalDateTime closedAt;
+    // UC-22: đối chiếu két tiền; countedCash null = chưa đếm, closedBy null = hệ thống tự kết khi hết giờ
+    private BigDecimal openingCash = BigDecimal.ZERO;
+    private BigDecimal countedCash;
+    private String cashNote;
+    private Integer closedBy;
+    private String staffName;
+    private String closedByName;
 
     public Shift() {
     }
@@ -123,5 +130,53 @@ public class Shift {
 
     public void setClosedAt(LocalDateTime closedAt) {
         this.closedAt = closedAt;
+    }
+
+    public BigDecimal getOpeningCash() {
+        return openingCash;
+    }
+
+    public void setOpeningCash(BigDecimal openingCash) {
+        this.openingCash = openingCash;
+    }
+
+    public BigDecimal getCountedCash() {
+        return countedCash;
+    }
+
+    public void setCountedCash(BigDecimal countedCash) {
+        this.countedCash = countedCash;
+    }
+
+    public String getCashNote() {
+        return cashNote;
+    }
+
+    public void setCashNote(String cashNote) {
+        this.cashNote = cashNote;
+    }
+
+    public Integer getClosedBy() {
+        return closedBy;
+    }
+
+    public void setClosedBy(Integer closedBy) {
+        this.closedBy = closedBy;
+    }
+
+    public String getStaffName() {
+        return staffName;
+    }
+
+    public void setStaffName(String staffName) {
+        this.staffName = staffName;
+    }
+
+    public String getClosedByName() {
+        return closedByName;
+    }
+
+    public void setClosedByName(String closedByName) {
+        this.closedByName = closedByName;
     }
 }
