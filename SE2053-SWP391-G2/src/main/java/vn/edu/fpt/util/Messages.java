@@ -14,7 +14,7 @@ public final class Messages {
     public static final String MOVIE_SAVED = "Phim lưu lại thành công!";
     public static final String MOVIE_ARCHIVED = "Phim đã được chuyển sang trạng thái Ẩn.";
     public static final String MOVIE_NOT_FOUND = "Không tìm thấy phim.";
-    public static final String MOVIE_TITLE_DUPLICATE = "Tên phim đã tồn tại trong hệ thống.";
+    public static final String MOVIE_TITLE_DUPLICATE = "Đã có phim cùng tên khởi chiếu năm {0}.";
     public static final String MOVIE_DURATION_INVALID = "Thời lượng phải là số nguyên từ 1 đến {0} phút.";
     public static final String MOVIE_DURATION_LOCKED =
             "Phim đã có suất chiếu chưa kết thúc, không thể thay đổi thời lượng.";
@@ -23,9 +23,15 @@ public final class Messages {
     public static final String MOVIE_DATE_INVALID = "Ngày khởi chiếu không hợp lệ.";
     public static final String MOVIE_DATE_OUT_OF_RANGE = "Ngày khởi chiếu phải từ {0} đến {1}.";
     public static final String MOVIE_COMING_SOON_DATE_PASSED =
-            "Phim Sắp chiếu phải có ngày khởi chiếu từ hôm nay trở đi.";
+            "Phim đã tới ngày khởi chiếu nên không thể ở trạng thái Sắp chiếu. Vui lòng chọn Đang chiếu.";
     public static final String MOVIE_NOT_RELEASED_YET =
             "Phim chưa tới ngày khởi chiếu, chỉ có thể ở trạng thái Sắp chiếu hoặc Đã ẩn.";
+    public static final String MOVIE_END_DATE_INVALID = "Ngày kết thúc chiếu không hợp lệ.";
+    public static final String MOVIE_END_DATE_BEFORE_RELEASE = "Ngày kết thúc chiếu phải từ ngày khởi chiếu trở đi.";
+    public static final String MOVIE_END_DATE_PASSED =
+            "Phim đã qua ngày kết thúc chiếu, chỉ có thể ở trạng thái Đã kết thúc hoặc Đã ẩn.";
+    public static final String MOVIE_END_DATE_HAS_SHOWTIMES =
+            "Phim còn suất chiếu sau ngày kết thúc chiếu mới. Vui lòng hủy các suất đó trước.";
     public static final String MOVIE_FORMAT_INVALID = "Định dạng chiếu không hợp lệ.";
     public static final String MOVIE_GENRE_INVALID = "Thể loại không hợp lệ.";
     public static final String MOVIE_POSTER_URL_INVALID =
@@ -55,6 +61,8 @@ public final class Messages {
     public static final String SHOWTIME_ROOM_MAINTENANCE = "Phòng chiếu đang bảo trì sự cố thiết bị, không thể tạo suất chiếu mới.";
     public static final String SHOWTIME_START_TIME_REQUIRED = "Vui lòng chọn thời gian bắt đầu chiếu.";
     public static final String SHOWTIME_START_TIME_PAST = "Thời gian bắt đầu suất chiếu phải ở tương lai.";
+    public static final String SHOWTIME_AFTER_MOVIE_END =
+            "Phim kết thúc chiếu ngày {0}, không thể xếp suất chiếu sau ngày này.";
     public static final String SHOWTIME_PAST_START = SHOWTIME_START_TIME_PAST;
     public static final String SHOWTIME_PRICE_INVALID = "Giá vé cơ bản phải từ 10.000đ trở lên và là bội số của 1.000đ.";
     public static final String SHOWTIME_COLLISION =
@@ -243,6 +251,19 @@ public final class Messages {
     public static final String PROFILE_NOT_FOUND = "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.";
     public static final String PROFILE_SESSION_REVOKED =
             "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
+    public static final String FULLNAME_INVALID = "Họ và tên chỉ được chứa chữ cái và khoảng trắng.";
+    public static final String PROFILE_DOB_INVALID = "Ngày sinh không hợp lệ.";
+    public static final String PROFILE_DOB_OUT_OF_RANGE = "Ngày sinh phải từ {0} đến hôm nay.";
+    public static final String PROFILE_GENDER_INVALID = "Giới tính không hợp lệ.";
+    public static final String EMAIL_CHANGE_SAME = "Email mới phải khác email hiện tại.";
+    public static final String EMAIL_CHANGE_OTP_SENT = "Mã xác thực đã được gửi tới {0}. Vui lòng kiểm tra hộp thư.";
+    public static final String EMAIL_CHANGE_OTP_RESENT = "Mã xác thực mới đã được gửi tới {0}.";
+    public static final String EMAIL_CHANGE_RESEND_WAIT = "Vui lòng đợi {0} giây trước khi gửi lại mã.";
+    public static final String EMAIL_CHANGE_TOO_MANY_ATTEMPTS =
+            "Bạn đã nhập sai mã quá {0} lần. Vui lòng gửi yêu cầu đổi email lại.";
+    public static final String EMAIL_CHANGE_NO_PENDING = "Yêu cầu đổi email không còn hiệu lực. Vui lòng thực hiện lại.";
+    public static final String EMAIL_CHANGE_CANCELLED = "Đã hủy yêu cầu đổi email.";
+    public static final String EMAIL_CHANGED = "Đổi email thành công!";
 
     // UC-30 Manage Accounts (Admin)
     public static final String USER_ROLE_SELF_LOCKED =
@@ -293,6 +314,13 @@ public final class Messages {
             "Không thể khởi tạo thanh toán VNPay. Vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ.";
     public static final String BOOKING_VNPAY_RETURN_PENDING =
             "VNPay đã tiếp nhận yêu cầu. Đơn chỉ được xác nhận sau khi hệ thống nhận kết quả thanh toán hợp lệ.";
+    public static final String BOOKING_VNPAY_FAILED =
+            "Thanh toán VNPay không thành công hoặc đã bị hủy. Bạn có thể thanh toán lại khi đơn còn thời gian giữ ghế.";
+    public static final String BOOKING_VNPAY_REVIEW =
+            "VNPay báo đã thanh toán nhưng đơn không thể xác nhận (hết giờ giữ ghế hoặc đã đóng bán online). "
+            + "Vui lòng liên hệ nhân viên để được hỗ trợ hoàn tiền.";
+    public static final String BOOKING_VNPAY_INVALID_RETURN =
+            "Không xác minh được kết quả thanh toán VNPay. Vui lòng kiểm tra lại trạng thái đơn hoặc liên hệ nhân viên.";
     public static final String BOOKING_FREE_CONFIRMED = "Đặt vé thành công! Vé điện tử đã được phát hành.";
     public static final String BOOKING_NOT_FREE = "Đơn này cần được thanh toán qua VNPay.";
     public static final String BOOKING_ONLINE_SALE_CLOSED =

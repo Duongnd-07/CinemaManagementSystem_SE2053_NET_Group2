@@ -37,6 +37,9 @@ public class MovieService {
     private static final int MAX_TITLE = 200;
     private static final int MAX_DIRECTOR = 100;
     private static final int MAX_CAST = 500;
+    private static final int MAX_COUNTRY = 100;
+    private static final int MAX_LANGUAGE = 100;
+    private static final int MAX_DISTRIBUTOR = 200;
     private static final int MAX_URL = 500;
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1900, 1, 1);
     private static final int MAX_RELEASE_YEARS_AHEAD = 5;
@@ -177,6 +180,10 @@ public class MovieService {
         form.setDuration(String.valueOf(movie.getDurationMinutes()));
         form.setAgeRating(nullToEmpty(movie.getAgeRating()));
         form.setReleaseDate(movie.getReleaseDate() == null ? "" : movie.getReleaseDate().toString());
+        form.setEndDate(movie.getEndDate() == null ? "" : movie.getEndDate().toString());
+        form.setCountry(nullToEmpty(movie.getCountry()));
+        form.setLanguage(nullToEmpty(movie.getLanguage()));
+        form.setDistributor(nullToEmpty(movie.getDistributor()));
         form.setPosterUrl(nullToEmpty(movie.getPosterUrl()));
         form.setTrailerUrl(nullToEmpty(movie.getTrailerUrl()));
         form.setStatus(nullToEmpty(movie.getStatus()));
@@ -239,18 +246,30 @@ public class MovieService {
         movieDAO.updateStatus(movieId, MovieStatus.HIDDEN);
     }
 
+    // JOB-03: phim Sắp chiếu tới ngày khởi chiếu -> Đang chiếu. Trả về tên các phim đã chuyển
+    public List<String> promoteReleasedMovies() throws SQLException {
+        return movieDAO.promoteReleased(LocalDate.now());
+    }
+
+    // JOB-03: phim Đang chiếu đã qua ngày kết thúc chiếu -> Đã kết thúc. Trả về tên các phim đã chuyển
+    public List<String> endExpiredMovies() throws SQLException {
+        return movieDAO.endExpired(LocalDate.now());
+    }
+
     private Map<String, String> validate(MovieForm form, Movie current) throws SQLException {
         Map<String, String> errors = new LinkedHashMap<>();
         int movieId = current == null ? 0 : current.getMovieId();
 
+        // Cần năm khởi chiếu trước để kiểm tra trùng tên
+        LocalDate releaseDate = validateReleaseDate(form, errors);
         String title = form.getTitle().trim();
         if (title.isEmpty()) {
             errors.put("title", Messages.format(Messages.MSG02, "Tên phim"));
         } else if (title.length() > MAX_TITLE) {
             errors.put("title", Messages.format(Messages.MSG08, MAX_TITLE));
-        } else if (movieDAO.existsByTitle(title, movieId)) {
-            // BR-MOV-01
-            errors.put("title", Messages.MOVIE_TITLE_DUPLICATE);
+        } else if (releaseDate != null && movieDAO.existsByTitleAndYear(title, releaseDate.getYear(), movieId)) {
+            // BR-MOV-01: không trùng theo cặp tên + năm khởi chiếu, phim làm lại khác năm vẫn thêm được
+            errors.put("title", duplicateTitleMessage(releaseDate));
         }
 
         if (form.getSynopsis().trim().length() > MAX_SYNOPSIS) {
@@ -262,6 +281,15 @@ public class MovieService {
         if (form.getCast().trim().length() > MAX_CAST) {
             errors.put("cast", Messages.format(Messages.MSG08, MAX_CAST));
         }
+        if (form.getCountry().trim().length() > MAX_COUNTRY) {
+            errors.put("country", Messages.format(Messages.MSG08, MAX_COUNTRY));
+        }
+        if (form.getLanguage().trim().length() > MAX_LANGUAGE) {
+            errors.put("language", Messages.format(Messages.MSG08, MAX_LANGUAGE));
+        }
+        if (form.getDistributor().trim().length() > MAX_DISTRIBUTOR) {
+            errors.put("distributor", Messages.format(Messages.MSG08, MAX_DISTRIBUTOR));
+        }
 
         validateDuration(form, current, errors);
 
@@ -272,8 +300,8 @@ public class MovieService {
             errors.put("ageRating", Messages.MOVIE_AGE_RATING_INVALID);
         }
 
-        LocalDate releaseDate = validateReleaseDate(form, errors);
-        validateStatus(form, current, releaseDate, errors);
+        LocalDate endDate = validateEndDate(form, current, releaseDate, errors);
+        validateStatus(form, current, releaseDate, endDate, errors);
         validatePoster(form, current, errors);
 
         String trailer = form.getTrailerUrl().trim();
@@ -330,8 +358,31 @@ public class MovieService {
         return releaseDate;
     }
 
-    private void validateStatus(MovieForm form, Movie current, LocalDate releaseDate, Map<String, String> errors)
+    // Ngày kết thúc chiếu không bắt buộc; trả về ngày hợp lệ, hoặc null nếu để trống/có lỗi
+    private LocalDate validateEndDate(MovieForm form, Movie current, LocalDate releaseDate, Map<String, String> errors)
             throws SQLException {
+        if (form.getEndDate().trim().isEmpty()) {
+            return null;
+        }
+        LocalDate endDate = parseDate(form.getEndDate());
+        if (endDate == null) {
+            errors.put("endDate", Messages.MOVIE_END_DATE_INVALID);
+            return null;
+        }
+        if (releaseDate != null && endDate.isBefore(releaseDate)) {
+            errors.put("endDate", Messages.MOVIE_END_DATE_BEFORE_RELEASE);
+            return null;
+        }
+        // Rút ngắn ngày kết thúc không được bỏ lại suất chiếu nằm ngoài khoảng chiếu (UC-24 cũng chặn tạo mới)
+        if (current != null && movieDAO.hasUnfinishedShowtimesAfter(current.getMovieId(), endDate)) {
+            errors.put("endDate", Messages.MOVIE_END_DATE_HAS_SHOWTIMES);
+            return null;
+        }
+        return endDate;
+    }
+
+    private void validateStatus(MovieForm form, Movie current, LocalDate releaseDate, LocalDate endDate,
+                                Map<String, String> errors) throws SQLException {
         String status = form.getStatus();
         if (status.isEmpty()) {
             errors.put("status", Messages.format(Messages.MSG02, "Trạng thái"));
@@ -341,10 +392,11 @@ public class MovieService {
             errors.put("status", Messages.MOVIE_STATUS_INVALID);
             return;
         }
-        // Trạng thái chiếu phải khớp ngày khởi chiếu; Hidden không phụ thuộc ngày
+        // Trạng thái chiếu phải khớp khoảng ngày chiếu, đúng quy tắc JOB-03 tự chuyển; Hidden không phụ thuộc ngày.
+        // Ended được chọn tay trước ngày kết thúc (ngừng chiếu sớm).
+        LocalDate today = LocalDate.now();
         if (releaseDate != null) {
-            LocalDate today = LocalDate.now();
-            if (MovieStatus.COMING_SOON.equals(status) && releaseDate.isBefore(today)) {
+            if (MovieStatus.COMING_SOON.equals(status) && !releaseDate.isAfter(today)) {
                 errors.put("status", Messages.MOVIE_COMING_SOON_DATE_PASSED);
                 return;
             }
@@ -353,6 +405,10 @@ public class MovieService {
                 errors.put("status", Messages.MOVIE_NOT_RELEASED_YET);
                 return;
             }
+        }
+        if (MovieStatus.NOW_SHOWING.equals(status) && endDate != null && endDate.isBefore(today)) {
+            errors.put("status", Messages.MOVIE_END_DATE_PASSED);
+            return;
         }
         // BR-MOV-04: suất chưa hủy vẫn chiếm lịch phòng và tính vào dashboard, nên phải hủy suất trước khi ẩn/kết thúc
         boolean closing = MovieStatus.HIDDEN.equals(status) || MovieStatus.ENDED.equals(status);
@@ -408,9 +464,9 @@ public class MovieService {
                 return movieId;
             } catch (SQLException e) {
                 conn.rollback();
-                // Hai người lưu cùng tên đồng thời: ràng buộc UNIQUE(Title) chặn ở DB
+                // Hai người lưu cùng tên + năm đồng thời: chỉ mục UNIQUE(Title, ReleaseYear) chặn ở DB
                 if (e.getErrorCode() == SQL_UNIQUE_VIOLATION || e.getErrorCode() == SQL_UNIQUE_INDEX_VIOLATION) {
-                    throw new ValidationException(Map.of("title", Messages.MOVIE_TITLE_DUPLICATE));
+                    throw new ValidationException(Map.of("title", duplicateTitleMessage(movie.getReleaseDate())));
                 }
                 throw e;
             }
@@ -427,6 +483,10 @@ public class MovieService {
         movie.setDurationMinutes(parseDuration(form.getDuration()));
         movie.setAgeRating(form.getAgeRating());
         movie.setReleaseDate(parseDate(form.getReleaseDate()));
+        movie.setEndDate(parseDate(form.getEndDate()));
+        movie.setCountry(blankToNull(form.getCountry()));
+        movie.setLanguage(blankToNull(form.getLanguage()));
+        movie.setDistributor(blankToNull(form.getDistributor()));
         movie.setPosterUrl(form.getUploadedPoster().isEmpty()
                 ? blankToNull(form.getPosterUrl()) : form.getUploadedPoster());
         movie.setTrailerUrl(blankToNull(form.getTrailerUrl()));
@@ -435,6 +495,11 @@ public class MovieService {
         movie.setFormats(formats.isEmpty() ? null : formats);
         movie.setStatus(form.getStatus());
         return movie;
+    }
+
+    // String.valueOf để MessageFormat không chèn dấu phân cách nghìn ("2,019")
+    private String duplicateTitleMessage(LocalDate releaseDate) {
+        return Messages.format(Messages.MOVIE_TITLE_DUPLICATE, String.valueOf(releaseDate.getYear()));
     }
 
     private String orderBy(String sort) {

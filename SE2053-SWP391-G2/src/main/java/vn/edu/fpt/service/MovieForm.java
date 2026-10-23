@@ -13,6 +13,10 @@ public class MovieForm {
     private String duration = "";
     private String ageRating = "";
     private String releaseDate = "";
+    private String endDate = "";
+    private String country = "";
+    private String language = "";
+    private String distributor = "";
     private String posterUrl = "";
     private String trailerUrl = "";
     // Đường dẫn file poster vừa upload (do server sinh); khác rỗng thì thay cho posterUrl người dùng nhập
@@ -83,6 +87,38 @@ public class MovieForm {
 
     public void setReleaseDate(String releaseDate) {
         this.releaseDate = releaseDate;
+    }
+
+    public String getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(String endDate) {
+        this.endDate = endDate;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public String getDistributor() {
+        return distributor;
+    }
+
+    public void setDistributor(String distributor) {
+        this.distributor = distributor;
     }
 
     public String getPosterUrl() {

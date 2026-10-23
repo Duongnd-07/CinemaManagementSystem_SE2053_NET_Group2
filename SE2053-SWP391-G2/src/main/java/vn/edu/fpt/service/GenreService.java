@@ -17,7 +17,8 @@ public class GenreService {
     private final GenreDAO genreDAO = new GenreDAO();
 
     public Page<Genre> list(String keyword, int page) throws SQLException {
-        String kw = keyword == null ? "" : keyword.trim();
+        String trimmed = keyword == null ? "" : keyword.trim();
+        String kw = trimmed.length() > MAX_NAME ? trimmed.substring(0, MAX_NAME) : trimmed;
         return Page.of(page, PAGE_SIZE, genreDAO.count(kw),
                 (offset, limit) -> genreDAO.search(kw, offset, limit));
     }

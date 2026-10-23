@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="activeNav" value="profile" scope="request"/>
 <c:set var="inputBase" value="w-full pl-11 pr-4 py-2.5 bg-[#0f131d] border rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] transition"/>
@@ -30,17 +31,33 @@
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-8">
         <!-- Banner tóm tắt tài khoản -->
-        <div class="relative overflow-hidden rounded-xl bg-[#171b26] p-6 md:p-8 mb-6 flex items-center gap-5 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.6)]">
+        <div class="relative overflow-hidden rounded-xl bg-[#171b26] p-6 md:p-8 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.6)]">
             <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-[#e50914]/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 w-20 h-20 rounded-full bg-[#e50914]/20 ring-2 ring-[#e50914]/50 flex items-center justify-center shrink-0">
-                <span class="material-symbols-outlined text-[#e50914] text-4xl">person</span>
+            <div class="relative z-10 flex items-center gap-5 min-w-0">
+                <div class="w-20 h-20 rounded-full bg-[#e50914]/20 ring-2 ring-[#e50914]/50 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[#e50914] text-4xl">person</span>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-2xl md:text-3xl font-bold text-white break-words"><c:out value="${profile.fullName}"/></h1>
+                    <p class="text-sm text-[#e9bcb6] break-all">
+                        <c:out value="${profile.email}"/> &bull; <c:out value="${profile.phone}"/>
+                    </p>
+                </div>
             </div>
-            <div class="relative z-10 min-w-0">
-                <h1 class="text-2xl md:text-3xl font-bold text-white break-words"><c:out value="${profile.fullName}"/></h1>
-                <p class="text-sm text-[#e9bcb6] break-all">
-                    <c:out value="${profile.email}"/> &bull; <c:out value="${profile.phone}"/>
-                </p>
-            </div>
+            <a href="${ctx}/customer/loyalty"
+               class="relative z-10 flex items-center justify-between md:justify-start gap-4 bg-[#1c1f2a] hover:bg-[#262a35] px-5 py-4 rounded-xl border border-white/5 transition">
+                <div>
+                    <span class="text-xs font-bold text-[#e9bcb6] block mb-1">Điểm thưởng tích lũy</span>
+                    <span class="text-2xl font-bold text-[#ffb95f] flex items-center gap-1">
+                        <span class="material-symbols-outlined">monetization_on</span>
+                        <fmt:formatNumber value="${profile.pointBalance}" pattern="#,##0"/>
+                        <span class="text-sm font-normal text-[#e9bcb6]">điểm</span>
+                    </span>
+                </div>
+                <span class="text-xs font-semibold text-[#ffb95f] flex items-center gap-1">
+                    Xem lịch sử điểm <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </span>
+            </a>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -123,10 +140,10 @@
                                 <input type="email" id="email" value="<c:out value='${profile.email}'/>" readonly
                                        class="w-full pl-11 pr-4 py-2.5 bg-[#0f131d]/60 border border-white/5 rounded-xl text-gray-400 text-sm cursor-not-allowed focus:outline-none"/>
                             </div>
-                            <p class="text-xs text-[#8e919f] mt-1 flex items-center gap-1">
-                                <span class="material-symbols-outlined text-sm">lock</span>
-                                Email là định danh tài khoản nên không thể thay đổi.
-                            </p>
+                            <a href="#change-email" class="text-xs text-[#ffb95f] hover:underline mt-1 inline-flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">edit</span>
+                                Đổi email (cần xác thực OTP)
+                            </a>
                         </div>
 
                         <div>
@@ -147,6 +164,42 @@
                             </c:if>
                         </div>
 
+                        <div>
+                            <label for="dateOfBirth" class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Ngày sinh</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">cake</span>
+                                <input type="date" id="dateOfBirth" name="dateOfBirth" value="<c:out value='${form.dateOfBirth}'/>"
+                                       min="1900-01-01" max="${today}" autocomplete="bday"
+                                       class="${inputBase} [color-scheme:dark] ${not empty errors.dateOfBirth ? 'border-red-500' : 'border-white/10'}"/>
+                            </div>
+                            <c:if test="${not empty errors.dateOfBirth}">
+                                <p class="text-xs text-red-400 mt-1 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">info</span>
+                                    <c:out value="${errors.dateOfBirth}"/>
+                                </p>
+                            </c:if>
+                        </div>
+
+                        <div>
+                            <label for="gender" class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Giới tính</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">wc</span>
+                                <select id="gender" name="gender"
+                                        class="${inputBase} ${not empty errors.gender ? 'border-red-500' : 'border-white/10'}">
+                                    <option value="">-- Chưa chọn --</option>
+                                    <option value="Male" ${form.gender == 'Male' ? 'selected' : ''}>Nam</option>
+                                    <option value="Female" ${form.gender == 'Female' ? 'selected' : ''}>Nữ</option>
+                                    <option value="Other" ${form.gender == 'Other' ? 'selected' : ''}>Khác</option>
+                                </select>
+                            </div>
+                            <c:if test="${not empty errors.gender}">
+                                <p class="text-xs text-red-400 mt-1 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">info</span>
+                                    <c:out value="${errors.gender}"/>
+                                </p>
+                            </c:if>
+                        </div>
+
                         <div class="md:col-span-2 flex justify-end">
                             <button type="submit"
                                     class="px-5 py-2.5 bg-[#e50914] hover:bg-[#b80710] text-white font-bold rounded-xl text-sm flex items-center gap-2 transition shadow-[0_0_20px_-2px_rgba(229,9,20,0.45)]">
@@ -155,6 +208,114 @@
                             </button>
                         </div>
                     </form>
+                </section>
+
+                <!-- Đổi email: email mới chỉ được lưu sau khi xác thực OTP gửi tới chính email đó -->
+                <section id="change-email" class="bg-[#171b26] border border-white/5 rounded-xl p-6 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.6)]">
+                    <h3 class="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ffb95f]">alternate_email</span>
+                        Đổi email đăng nhập
+                    </h3>
+                    <c:choose>
+                        <c:when test="${not empty pendingEmail}">
+                            <p class="text-xs text-[#8e919f] mb-5">
+                                Mã xác thực 6 số đã được gửi tới <strong class="text-white"><c:out value="${pendingEmail}"/></strong>.
+                                Email chỉ được đổi sau khi bạn nhập đúng mã.
+                            </p>
+                            <form action="${ctx}/customer/profile#change-email" method="POST" class="flex flex-col md:flex-row md:items-start gap-4" novalidate>
+                                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                <input type="hidden" name="action" value="email-verify"/>
+                                <div class="flex-1">
+                                    <label for="otp" class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                                        Mã xác thực <span class="text-[#e50914]">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">pin</span>
+                                        <input type="text" id="otp" name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+                                               placeholder="Nhập mã 6 số"
+                                               class="${inputBase} tracking-[0.3em] ${not empty emailErrors.otp ? 'border-red-500' : 'border-white/10'}"/>
+                                    </div>
+                                    <c:if test="${not empty emailErrors.otp}">
+                                        <p class="text-xs text-red-400 mt-1 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-sm">info</span>
+                                            <c:out value="${emailErrors.otp}"/>
+                                        </p>
+                                    </c:if>
+                                </div>
+                                <button type="submit"
+                                        class="md:mt-6 px-5 py-2.5 bg-[#e50914] hover:bg-[#b80710] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition">
+                                    <span class="material-symbols-outlined text-lg">verified</span>
+                                    Xác nhận
+                                </button>
+                            </form>
+                            <div class="flex flex-wrap gap-3 mt-4">
+                                <form action="${ctx}/customer/profile#change-email" method="POST">
+                                    <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                    <input type="hidden" name="action" value="email-resend"/>
+                                    <button type="submit" class="text-xs font-semibold text-[#ffb95f] hover:underline flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-sm">refresh</span>Gửi lại mã
+                                    </button>
+                                </form>
+                                <form action="${ctx}/customer/profile#change-email" method="POST">
+                                    <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                    <input type="hidden" name="action" value="email-cancel"/>
+                                    <button type="submit" class="text-xs font-semibold text-gray-400 hover:text-white flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-sm">close</span>Hủy yêu cầu
+                                    </button>
+                                </form>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <p class="text-xs text-[#8e919f] mb-5">
+                                Nhập email mới và mật khẩu hiện tại. Hệ thống sẽ gửi mã xác thực tới email mới; email đăng nhập chỉ đổi khi bạn nhập đúng mã.
+                            </p>
+                            <form action="${ctx}/customer/profile#change-email" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-5" novalidate>
+                                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                <input type="hidden" name="action" value="email-request"/>
+                                <div>
+                                    <label for="newEmail" class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                                        Email mới <span class="text-[#e50914]">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">mail</span>
+                                        <input type="email" id="newEmail" name="newEmail" value="<c:out value='${newEmail}'/>"
+                                               placeholder="Nhập địa chỉ email mới" maxlength="100" autocomplete="email"
+                                               class="${inputBase} ${not empty emailErrors.newEmail ? 'border-red-500' : 'border-white/10'}"/>
+                                    </div>
+                                    <c:if test="${not empty emailErrors.newEmail}">
+                                        <p class="text-xs text-red-400 mt-1 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-sm">info</span>
+                                            <c:out value="${emailErrors.newEmail}"/>
+                                        </p>
+                                    </c:if>
+                                </div>
+                                <div>
+                                    <label for="emailPassword" class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                                        Mật khẩu hiện tại <span class="text-[#e50914]">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">lock</span>
+                                        <input type="password" id="emailPassword" name="emailPassword" autocomplete="current-password"
+                                               placeholder="Nhập mật khẩu hiện tại"
+                                               class="${inputBase} ${not empty emailErrors.emailPassword ? 'border-red-500' : 'border-white/10'}"/>
+                                    </div>
+                                    <c:if test="${not empty emailErrors.emailPassword}">
+                                        <p class="text-xs text-red-400 mt-1 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-sm">info</span>
+                                            <c:out value="${emailErrors.emailPassword}"/>
+                                        </p>
+                                    </c:if>
+                                </div>
+                                <div class="md:col-span-2 flex justify-end">
+                                    <button type="submit"
+                                            class="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl text-sm flex items-center gap-2 transition">
+                                        <span class="material-symbols-outlined text-lg">send</span>
+                                        Gửi mã xác thực
+                                    </button>
+                                </div>
+                            </form>
+                        </c:otherwise>
+                    </c:choose>
                 </section>
 
                 <!-- AF1: Đổi mật khẩu -->
