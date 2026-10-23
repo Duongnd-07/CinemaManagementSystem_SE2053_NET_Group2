@@ -63,8 +63,26 @@ public final class Messages {
             "Suất chiếu đã có vé đặt hoặc ghế đang giữ chỗ, không thể đổi phim, phòng hoặc giờ chiếu.";
     public static final String SHOWTIME_HAS_BOOKINGS = SHOWTIME_IMMUTABLE_BOOKED;
     public static final String SHOWTIME_DELETE_HAS_BOOKINGS =
-            "Suất chiếu đã có vé hoặc dữ liệu liên quan, chỉ có thể hủy suất chiếu thay vì xóa.";
+            "Suất chiếu đã phát sinh dữ liệu liên quan, không thể xóa khỏi hệ thống.";
+    public static final String SHOWTIME_DELETE_HAS_REFERENCES =
+            "Suất chiếu đã phát sinh dữ liệu (vé, đơn đặt vé hoặc phiên giữ chỗ), không thể xóa. Bạn chỉ có thể hủy suất chiếu (nếu chưa bán vé).";
+    public static final String SHOWTIME_CANCEL_HAS_SOLD_TICKETS =
+            "Suất chiếu đã có vé bán cho khách hàng. Không thể hủy suất chiếu này để bảo vệ quyền lợi của khách hàng đã mua vé.";
     public static final String SHOWTIME_CANCEL_ALREADY = "Suất chiếu này đã bị hủy trước đó.";
+    public static final String SHOWTIME_FORMAT_MISMATCH =
+            "Phim \"{0}\" chỉ hỗ trợ định dạng [{1}], không tương thích với phòng [{2}] ({3}).";
+    public static final String SHOWTIME_BEFORE_RELEASE_DATE =
+            "Thời gian chiếu ({0}) không được trước ngày khởi chiếu của phim ({1}).";
+    public static final String SHOWTIME_BATCH_SAVED =
+            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại phòng {2}.";
+    public static final String SHOWTIME_BATCH_EMPTY =
+            "Không có suất chiếu hợp lệ nào để tạo. Vui lòng kiểm tra lại khoảng ngày và khung giờ.";
+    public static final String SHOWTIME_BATCH_DATE_INVALID =
+            "Ngày kết thúc phải từ ngày bắt đầu trở đi và không quá 30 ngày.";
+    public static final String SHOWTIME_BATCH_SLOTS_REQUIRED =
+            "Vui lòng chọn ít nhất một khung giờ chiếu trong ngày.";
+    public static final String SHOWTIME_BATCH_DAYS_REQUIRED =
+            "Vui lòng chọn ít nhất một thứ trong tuần để lên lịch.";
     public static final String SHOWTIME_STATUS_INVALID = "Trạng thái suất chiếu không hợp lệ.";
     // UC-25 Manage Rooms & Seat Layout
     public static final String ROOM_SAVED = "Đã lưu phòng chiếu và sơ đồ ghế.";

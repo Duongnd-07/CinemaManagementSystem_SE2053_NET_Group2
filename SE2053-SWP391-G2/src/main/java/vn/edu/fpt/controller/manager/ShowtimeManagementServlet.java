@@ -21,6 +21,7 @@ import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.Showtime;
 import vn.edu.fpt.model.ShowtimeStatus;
+import vn.edu.fpt.service.BatchShowtimeForm;
 import vn.edu.fpt.service.ShowtimeForm;
 import vn.edu.fpt.service.ShowtimeService;
 import vn.edu.fpt.service.ValidationException;
@@ -77,6 +78,10 @@ public class ShowtimeManagementServlet extends HttpServlet {
 
         try {
             String action = trim(request.getParameter("action"));
+            if ("batch_save".equals(action)) {
+                handleBatchSave(request, response);
+                return;
+            }
             if ("cancel".equals(action)) {
                 handleCancel(request, response);
                 return;
@@ -89,6 +94,58 @@ public class ShowtimeManagementServlet extends HttpServlet {
         } catch (SQLException e) {
             handleSystemError(response, e);
         }
+    }
+
+    private void handleBatchSave(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        BatchShowtimeForm form = new BatchShowtimeForm();
+        form.setMovieId(trim(request.getParameter("batchMovieId")));
+        form.setRoomId(trim(request.getParameter("batchRoomId")));
+        form.setStartDate(trim(request.getParameter("startDate")));
+        form.setEndDate(trim(request.getParameter("endDate")));
+        form.setBasePrice(trim(request.getParameter("batchBasePrice")));
+        form.setSkipCollisions("1".equals(request.getParameter("skipCollisions")));
+
+        String[] days = request.getParameterValues("daysOfWeek");
+        if (days != null) {
+            List<Integer> dList = new ArrayList<>();
+            for (String d : days) {
+                try {
+                    dList.add(Integer.parseInt(d.trim()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            form.setDaysOfWeek(dList);
+        }
+
+        String[] slots = request.getParameterValues("timeSlots");
+        if (slots != null) {
+            List<String> sList = new ArrayList<>();
+            for (String s : slots) {
+                if (s != null && !s.trim().isEmpty()) {
+                    sList.add(s.trim());
+                }
+            }
+            form.setTimeSlots(sList);
+        }
+
+        try {
+            int count = showtimeService.saveBatch(form);
+            Movie movie = showtimeService.findPublicMovies().stream()
+                    .filter(m -> String.valueOf(m.getMovieId()).equals(form.getMovieId()))
+                    .findFirst().orElse(null);
+            Room room = showtimeService.findAllRooms().stream()
+                    .filter(r -> String.valueOf(r.getRoomId()).equals(form.getRoomId()))
+                    .findFirst().orElse(null);
+            String movieTitle = movie != null ? movie.getTitle() : "phim";
+            String roomName = room != null ? room.getRoomName() : "phòng";
+
+            request.getSession().setAttribute(FLASH_SUCCESS,
+                    Messages.format(Messages.SHOWTIME_BATCH_SAVED, count, movieTitle, roomName));
+        } catch (ValidationException e) {
+            request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());
+        }
+        response.sendRedirect(request.getContextPath() + "/manager/showtimes" + listQuery(request));
     }
 
     private void handleSave(HttpServletRequest request, HttpServletResponse response)
@@ -133,6 +190,12 @@ public class ShowtimeManagementServlet extends HttpServlet {
             request.getSession().setAttribute(FLASH_SUCCESS, Messages.SHOWTIME_DELETED);
         } catch (ValidationException e) {
             request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 547) { // Chống lỗi Foreign Key 500 (Góp ý 3)
+                request.getSession().setAttribute(FLASH_ERROR, Messages.SHOWTIME_DELETE_HAS_REFERENCES);
+            } else {
+                throw e;
+            }
         }
         response.sendRedirect(request.getContextPath() + "/manager/showtimes" + listQuery(request));
     }
@@ -206,7 +269,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
         form.setRoomId(trim(request.getParameter("roomId")));
         form.setStartTime(trim(request.getParameter("startTime")));
         form.setBasePrice(trim(request.getParameter("basePrice")));
-        form.setStatus(trim(request.getParameter("status")));
+        // Bỏ ô chọn status theo Góp ý 4
         return form;
     }
 
