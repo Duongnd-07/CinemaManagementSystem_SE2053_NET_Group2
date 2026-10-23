@@ -19,7 +19,7 @@ import vn.edu.fpt.util.PasswordUtil;
 // UC-01: Nghiệp vụ đăng ký tài khoản thành viên qua xác thực Email (OTP)
 public class RegisterService {
     // SRS UC-01: Full Name max length 50 characters
-    private static final int MAX_FULLNAME = 50;
+    private static final int MAX_FULLNAME = 60;
     private static final int MAX_EMAIL = 100;
     private static final int MIN_PASSWORD = 8;
     private static final int MAX_PASSWORD = 32;

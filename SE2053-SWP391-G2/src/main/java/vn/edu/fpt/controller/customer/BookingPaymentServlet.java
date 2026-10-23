@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.BookingService;
 import vn.edu.fpt.service.BookingSummary;
 import vn.edu.fpt.service.ValidationException;
@@ -70,6 +72,8 @@ public class BookingPaymentServlet extends HttpServlet {
                 return;
             } else if (ACTION_CONFIRM_FREE.equals(action)) {
                 bookingService.confirmFreeBooking(user, bookingId);
+                ActivityLogger.info(request, LogEventType.BOOKING, "Xác nhận đơn 0đ", "Booking", bookingId,
+                        "Đơn được giảm toàn bộ, phát hành vé không qua VNPay");
                 session.setAttribute(BookingFlow.FLASH_SUCCESS, Messages.BOOKING_FREE_CONFIRMED);
             } else if (ACTION_CANCEL.equals(action)) {
                 bookingService.cancelBooking(user, bookingId);

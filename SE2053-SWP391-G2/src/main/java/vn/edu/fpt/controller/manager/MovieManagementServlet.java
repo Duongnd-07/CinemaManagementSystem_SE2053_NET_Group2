@@ -21,8 +21,10 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.model.AgeRating;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.MovieStatus;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.MovieForm;
 import vn.edu.fpt.service.MovieService;
 import vn.edu.fpt.service.ValidationException;
@@ -107,8 +109,11 @@ public class MovieManagementServlet extends HttpServlet {
             }
         }
 
+        boolean created = form.getMovieId() <= 0;
         try {
-            movieService.save(form);
+            int movieId = movieService.save(form);
+            ActivityLogger.info(request, LogEventType.CATALOG, created ? "Thêm phim" : "Cập nhật phim", "Movie",
+                    movieId, form.getTitle());
         } catch (ValidationException e) {
             discardUploadedPoster(form);
             render(request, response, form, e.getErrors());
@@ -140,7 +145,9 @@ public class MovieManagementServlet extends HttpServlet {
     private void archive(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, IOException {
         try {
-            movieService.archive(parseInt(request.getParameter("movieId")));
+            int movieId = parseInt(request.getParameter("movieId"));
+            movieService.archive(movieId);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Lưu trữ phim", "Movie", movieId, null);
             flash(request, FLASH_SUCCESS, Messages.MOVIE_ARCHIVED);
         } catch (ValidationException e) {
             flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());

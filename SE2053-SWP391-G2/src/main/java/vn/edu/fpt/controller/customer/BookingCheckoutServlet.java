@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.BookingCheckout;
 import vn.edu.fpt.service.BookingService;
 import vn.edu.fpt.service.CheckoutForm;
@@ -96,8 +98,15 @@ public class BookingCheckoutServlet extends HttpServlet {
                 int bookingId;
                 // Bấm xác nhận hai lần liên tiếp: lần sau thấy đơn đã tạo thì chỉ chuyển sang trang thanh toán
                 synchronized (checkout) {
+                    // UC-32: chỉ ghi log lần tạo đơn, không ghi khi bấm xác nhận lại
+                    boolean created = checkout.getBookingId() == null;
                     bookingId = checkout.getBookingId() != null ? checkout.getBookingId()
                             : bookingService.confirm(BookingFlow.currentUser(session), checkout, form);
+                    if (created) {
+                        ActivityLogger.info(request, LogEventType.BOOKING, "Tạo đơn đặt vé online", "Booking",
+                                bookingId, "Suất chiếu #" + checkout.getShowtimeId() + ", "
+                                        + checkout.getSeatIds().size() + " ghế");
+                    }
                 }
                 response.sendRedirect(BookingFlow.paymentUrl(request, bookingId));
                 return;

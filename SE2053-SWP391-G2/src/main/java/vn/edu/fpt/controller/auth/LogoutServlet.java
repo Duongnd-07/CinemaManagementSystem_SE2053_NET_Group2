@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import vn.edu.fpt.filter.AuthFilter;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.util.Messages;
 
 // UC-02: Logout - Đăng xuất an toàn khỏi hệ thống (hủy Session & Cookie)
@@ -41,6 +43,10 @@ public class LogoutServlet extends HttpServlet {
         // 2. Hủy session hiện tại và xóa sạch thông tin người dùng
         HttpSession session = request.getSession(false);
         if (session != null) {
+            // UC-32: ghi trước khi hủy session để còn biết ai đăng xuất
+            if (session.getAttribute(AuthFilter.SESSION_USER) != null) {
+                ActivityLogger.info(request, LogEventType.AUTH, "Đăng xuất", null, null, null);
+            }
             session.removeAttribute(AuthFilter.SESSION_USER);
             session.invalidate();
         }

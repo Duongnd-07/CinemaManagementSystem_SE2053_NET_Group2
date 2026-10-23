@@ -18,6 +18,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.model.Concession;
 import vn.edu.fpt.model.ConcessionStatus;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ConcessionForm;
 import vn.edu.fpt.service.ConcessionPage;
 import vn.edu.fpt.service.ConcessionService;
@@ -82,6 +84,8 @@ public class ConcessionManagementServlet extends HttpServlet {
         boolean created;
         try {
             created = concessionService.save(form);
+            ActivityLogger.info(request, LogEventType.CATALOG, created ? "Thêm món bắp nước" : "Cập nhật món bắp nước",
+                    "Concession", created ? null : form.getConcessionId(), form.getName());
         } catch (ValidationException e) {
             render(request, response, form, e.getErrors());
             return;
@@ -92,7 +96,9 @@ public class ConcessionManagementServlet extends HttpServlet {
 
     private void hide(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException {
         try {
-            concessionService.hide(parseInt(request.getParameter("concessionId")));
+            int concessionId = parseInt(request.getParameter("concessionId"));
+            concessionService.hide(concessionId);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Ẩn món bắp nước", "Concession", concessionId, null);
             flash(request, FLASH_SUCCESS, Messages.CONCESSION_HIDDEN);
         } catch (ValidationException e) {
             flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());

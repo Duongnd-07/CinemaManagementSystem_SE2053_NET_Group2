@@ -1,5 +1,6 @@
 package vn.edu.fpt.util;
 
+import jakarta.activation.DataHandler;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
@@ -7,15 +8,23 @@ import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import jakarta.mail.util.ByteArrayDataSource;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.BookingConfirmation;
 import vn.edu.fpt.model.ReminderTicket;
 import vn.edu.fpt.model.ShowtimeReminder;
 
@@ -150,6 +159,150 @@ public final class EmailService {
                 </body></html>
                 """.formatted(escapeHtml(reminder.getRecipientName()), escapeHtml(reminder.getMovieTitle()),
                 escapeHtml(showtime), tickets);
+    }
+
+    /**
+     * UC-13/UC-14: gửi email xác nhận vé sau khi đơn online được thanh toán (chạy bất đồng bộ).
+     */
+    public static void sendBookingConfirmationAsync(BookingConfirmation confirmation) {
+        EXECUTOR.submit(() -> sendBookingConfirmationSync(confirmation));
+    }
+
+    // Mã QR của từng vé nhúng thành ảnh inline (cid:) vì Gmail/Outlook chặn ảnh data: trong email
+    public static boolean sendBookingConfirmationSync(BookingConfirmation confirmation) {
+        String senderEmail = AppConfig.get("mail.sender.email", "");
+        String senderPassword = AppConfig.get("mail.sender.password", "").replace(" ", "");
+        if (senderEmail.isEmpty() || senderPassword.isEmpty()) {
+            StringBuilder codes = new StringBuilder();
+            for (ReminderTicket ticket : confirmation.getTickets()) {
+                codes.append(ticket.getSeatLabel()).append('=').append(ticket.getTicketCode()).append(' ');
+            }
+            LOGGER.info("""
+                    ================================================================================
+                    [DEV MODE - UC-13 EMAIL XÁC NHẬN VÉ]
+                    Gửi tới: %s (%s)
+                    Đơn #%d - %s
+                    Vé: %s
+                    ================================================================================
+                    """.formatted(confirmation.getRecipientEmail(), confirmation.getRecipientName(),
+                    confirmation.getBookingId(), confirmation.getMovieTitle(), codes.toString().trim()));
+            return true;
+        }
+
+        Properties props = new Properties();
+        props.put("mail.smtp.host", AppConfig.get("mail.smtp.host", "smtp.gmail.com"));
+        props.put("mail.smtp.port", AppConfig.get("mail.smtp.port", "587"));
+        props.put("mail.smtp.auth", String.valueOf(AppConfig.getBoolean("mail.smtp.auth", true)));
+        props.put("mail.smtp.starttls.enable", String.valueOf(AppConfig.getBoolean("mail.smtp.starttls.enable", true)));
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        Session session = Session.getInstance(props, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(senderEmail, senderPassword);
+            }
+        });
+
+        try {
+            MimeMultipart content = new MimeMultipart("related");
+            MimeBodyPart html = new MimeBodyPart();
+            html.setContent(bookingConfirmationHtml(confirmation), "text/html; charset=UTF-8");
+            content.addBodyPart(html);
+            List<ReminderTicket> tickets = confirmation.getTickets();
+            for (int i = 0; i < tickets.size(); i++) {
+                if (tickets.get(i).getQrCode() == null) {
+                    continue;
+                }
+                MimeBodyPart qr = new MimeBodyPart();
+                qr.setDataHandler(new DataHandler(new ByteArrayDataSource(
+                        QrCodeImage.png(tickets.get(i).getQrCode(), 220), "image/png")));
+                qr.setContentID("<" + qrContentId(i) + ">");
+                qr.setDisposition(MimeBodyPart.INLINE);
+                qr.setFileName("QR-" + tickets.get(i).getTicketCode() + ".png");
+                content.addBodyPart(qr);
+            }
+
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(senderEmail, "CineLuxe Cinema", StandardCharsets.UTF_8.name()));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(confirmation.getRecipientEmail()));
+            message.setSubject("[CineLuxe] Xác nhận đặt vé - Đơn #" + confirmation.getBookingId());
+            message.setContent(content);
+            Transport.send(message);
+            LOGGER.info("Đã gửi email xác nhận vé đơn #" + confirmation.getBookingId());
+            return true;
+        } catch (MessagingException | IOException e) {
+            LOGGER.log(Level.WARNING, "Không gửi được email xác nhận vé đơn #" + confirmation.getBookingId(), e);
+            return false;
+        }
+    }
+
+    private static String qrContentId(int index) {
+        return "ticket-qr-" + index + "@cineluxe";
+    }
+
+    private static String bookingConfirmationHtml(BookingConfirmation confirmation) {
+        StringBuilder tickets = new StringBuilder();
+        List<ReminderTicket> lines = confirmation.getTickets();
+        for (int i = 0; i < lines.size(); i++) {
+            ReminderTicket ticket = lines.get(i);
+            String qr = ticket.getQrCode() == null ? ""
+                    : "<img src=\"cid:" + qrContentId(i) + "\" width=\"160\" height=\"160\" alt=\"QR vé "
+                    + escapeHtml(ticket.getSeatLabel()) + "\" style=\"display:block;margin:8px auto;background:#fff;"
+                    + "border-radius:8px;\"/><div style=\"font-size:11px;color:#8e919f;word-break:break-all;\">"
+                    + escapeHtml(ticket.getQrCode()) + "</div>";
+            tickets.append("<div class=\"ticket\"><div class=\"seat\">Ghế ").append(escapeHtml(ticket.getSeatLabel()))
+                    .append("</div><div>Mã vé <strong>").append(escapeHtml(ticket.getTicketCode()))
+                    .append("</strong></div>").append(qr).append("</div>");
+        }
+        String concessions = confirmation.getConcessions().isEmpty() ? ""
+                : "<tr><td class=\"label\">Bắp nước</td><td>"
+                + escapeHtml(String.join(", ", confirmation.getConcessions())) + "</td></tr>";
+        String showtime = confirmation.getShowtimeStart() == null ? ""
+                : confirmation.getShowtimeStart().format(DateTimeFormatter.ofPattern("HH:mm 'ngày' dd/MM/yyyy"));
+        String room = escapeHtml(confirmation.getRoomName())
+                + (confirmation.getRoomFormat() == null ? "" : " · " + escapeHtml(confirmation.getRoomFormat()));
+        String amount = confirmation.getFinalAmount() == null ? "0"
+                : NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi-VN")).format(confirmation.getFinalAmount());
+        return """
+                <!DOCTYPE html>
+                <html lang="vi">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f131d; color: #dfe2f1; margin: 0; padding: 20px; }
+                        .container { max-width: 560px; margin: 0 auto; background-color: #171b26; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); padding: 32px; }
+                        .logo-text { font-size: 28px; font-weight: 800; color: #e50914; letter-spacing: 2px; text-align: center; margin-bottom: 16px; }
+                        .title { font-size: 20px; font-weight: 700; color: #ffffff; text-align: center; margin-bottom: 8px; }
+                        .code { text-align: center; font-size: 15px; color: #ffb95f; margin-bottom: 20px; }
+                        table { width: 100%%; border-collapse: collapse; font-size: 14px; margin-bottom: 20px; }
+                        td { padding: 6px 0; vertical-align: top; color: #ffffff; }
+                        td.label { color: #8e919f; width: 110px; }
+                        .ticket { background-color: #0f131d; border: 1px dashed #e50914; border-radius: 10px; padding: 14px; margin-bottom: 12px; text-align: center; font-size: 14px; }
+                        .seat { font-size: 18px; font-weight: 800; color: #ffb95f; margin-bottom: 4px; }
+                        .note { font-size: 13px; color: #e9bcb6; text-align: center; line-height: 1.6; }
+                        .footer { font-size: 12px; color: #8e919f; text-align: center; margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="logo-text">CINELUXE</div>
+                        <div class="title">Đặt vé thành công</div>
+                        <div class="code">Mã đơn đặt vé: <strong>#%d</strong></div>
+                        <p>Xin chào <strong>%s</strong>, cảm ơn bạn đã đặt vé tại CineLuxe.</p>
+                        <table>
+                            <tr><td class="label">Phim</td><td><strong>%s</strong></td></tr>
+                            <tr><td class="label">Suất chiếu</td><td>%s</td></tr>
+                            <tr><td class="label">Phòng</td><td>%s</td></tr>
+                            %s
+                            <tr><td class="label">Đã thanh toán</td><td>%sđ</td></tr>
+                        </table>
+                        %s
+                        <p class="note">Vui lòng đưa mã QR hoặc mã vé cho nhân viên soát vé khi vào phòng chiếu.<br>Bạn cũng có thể xem lại vé trong mục Lịch sử đặt vé.</p>
+                        <div class="footer">&copy; CineLuxe Cinema - Trải nghiệm điện ảnh đỉnh cao.</div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(confirmation.getBookingId(), escapeHtml(confirmation.getRecipientName()),
+                escapeHtml(confirmation.getMovieTitle()), escapeHtml(showtime), room, concessions, amount, tickets);
     }
 
     private static String escapeHtml(String value) {

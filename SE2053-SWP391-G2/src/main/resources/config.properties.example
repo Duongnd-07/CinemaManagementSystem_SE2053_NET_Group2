@@ -1,5 +1,5 @@
-# Local development only. Enable real authentication before any shared deployment.
-auth.enabled=false
+# Local development uses real authentication so role-based access can be tested.
+auth.enabled=true
 auth.dev.staffId=1
 auth.dev.managerId=1
 db.driver=com.microsoft.sqlserver.jdbc.SQLServerDriver

@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.service.payment.PaymentGatewayException;
 import vn.edu.fpt.service.payment.PaymentService;
@@ -46,9 +48,12 @@ public class VnPayWebhookServlet extends HttpServlet {
         }
         try {
             boolean accepted = paymentService.processVnPayCallback(parameters);
+            logCallback(request, parameters, accepted);
             writeResponse(response, accepted ? "00" : "01", accepted ? "Success" : "Transaction not found");
         } catch (PaymentGatewayException e) {
             LOGGER.log(Level.WARNING, "VNPay callback rejected", e);
+            ActivityLogger.warning(request, LogEventType.BOOKING, "Callback VNPay không hợp lệ", "Payment",
+                    parameters.get("vnp_TxnRef"), e.getMessage());
             writeResponse(response, "97", "Checksum or callback validation failed");
         } catch (ValidationException e) {
             LOGGER.log(Level.WARNING, "VNPay callback could not settle the booking", e);
@@ -56,6 +61,25 @@ public class VnPayWebhookServlet extends HttpServlet {
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Database error while processing VNPay callback", e);
             writeResponse(response, "99", "System error");
+        }
+    }
+
+    // UC-32: chỉ ghi mã giao dịch, số tiền và mã kết quả; không ghi chữ ký hay thông tin thẻ (BR-06)
+    private void logCallback(HttpServletRequest request, Map<String, String> parameters, boolean accepted) {
+        String txnRef = parameters.get("vnp_TxnRef");
+        String responseCode = parameters.get("vnp_ResponseCode");
+        String description = "Số tiền " + parameters.get("vnp_Amount") + " (x100 VND), mã kết quả " + responseCode
+                + ", mã GD VNPay " + parameters.get("vnp_TransactionNo");
+        if (!accepted) {
+            ActivityLogger.warning(request, LogEventType.BOOKING, "Callback VNPay không tìm thấy giao dịch", "Payment",
+                    txnRef, description);
+        } else if ("00".equals(responseCode) && "00".equals(parameters.get("vnp_TransactionStatus"))) {
+            // Cùng điều kiện thành công với VnPayGateway; VNPay có thể gửi lại IPN nên chỉ ghi một lần mỗi giao dịch
+            ActivityLogger.infoOnce(request, LogEventType.BOOKING, "Thanh toán VNPay thành công", "Payment", txnRef,
+                    description);
+        } else {
+            ActivityLogger.warning(request, LogEventType.BOOKING, "Thanh toán VNPay thất bại", "Payment", txnRef,
+                    description);
         }
     }
 

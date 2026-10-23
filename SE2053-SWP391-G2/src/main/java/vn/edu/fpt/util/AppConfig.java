@@ -44,14 +44,19 @@ public final class AppConfig {
         }
     }
 
+    // Nạp template rồi đến config.properties dùng chung của nhóm (đóng trong WAR); file ngoài/biến môi trường ghi đè sau
     private static void loadClasspathDefaults() {
-        try (InputStream input = AppConfig.class.getClassLoader()
-                .getResourceAsStream("config.properties.example")) {
+        loadClasspathResource("config.properties.example");
+        loadClasspathResource("config.properties");
+    }
+
+    private static void loadClasspathResource(String name) {
+        try (InputStream input = AppConfig.class.getClassLoader().getResourceAsStream(name)) {
             if (input != null) {
                 PROPS.load(input);
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Không đọc được cấu hình mặc định.", e);
+            LOGGER.log(Level.WARNING, "Không đọc được " + name + ", dùng giá trị mặc định.", e);
         }
     }
 

@@ -148,8 +148,9 @@ public class PasswordResetService {
 
     /**
      * Hoàn tất đặt lại mật khẩu mới: kiểm tra token, băm mật khẩu bằng PBKDF2 và cập nhật DB.
+     * Trả về tài khoản vừa đổi mật khẩu để ghi nhật ký hệ thống (UC-32).
      */
-    public void resetPassword(ResetPasswordForm form) throws SQLException, ValidationException {
+    public User resetPassword(ResetPasswordForm form) throws SQLException, ValidationException {
         PasswordResetToken token = validateToken(form.getToken());
 
         User user = userDAO.findById(token.getUserId());
@@ -170,5 +171,6 @@ public class PasswordResetService {
 
         // Đánh dấu token đã được sử dụng
         passwordResetDAO.markUsed(token.getTokenId());
+        return user;
     }
 }

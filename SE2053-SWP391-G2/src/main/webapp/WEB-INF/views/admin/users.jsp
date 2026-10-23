@@ -33,6 +33,16 @@
         </div>
 
         <div class="flex items-center gap-4">
+            <a href="${pageContext.request.contextPath}/admin/configurations"
+               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl transition">
+                <span class="material-symbols-outlined text-base">tune</span>
+                <span>Cấu hình hệ thống</span>
+            </a>
+            <a href="${pageContext.request.contextPath}/admin/logs"
+               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl transition">
+                <span class="material-symbols-outlined text-base">receipt_long</span>
+                <span>Nhật ký hệ thống</span>
+            </a>
             <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                 <span class="material-symbols-outlined text-[#ffb95f] text-lg">shield_person</span>
                 <span class="text-xs font-semibold text-white">

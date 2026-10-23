@@ -103,7 +103,8 @@
                          data-max-seats="${booking.maxSeats}"
                          data-own-seats="${ownSeatIds}"
                          data-preselected="${preselectedSeatIds}"
-                         data-taken-message="<c:out value='${seatTakenMessage}'/>">
+                         data-taken-message="<c:out value='${seatTakenMessage}'/>"
+                         data-orphan-message="<c:out value='${seatOrphanMessage}'/>">
                     <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-[#8e919f]">
                         <span class="flex items-center gap-2">
                             <span class="live-dot"></span>Trạng thái ghế cập nhật trực tiếp
@@ -129,6 +130,9 @@
                                                             class="seat seat--${fn:toLowerCase(seat.seatType)} is-${fn:toLowerCase(seat.status)}"
                                                             data-seat-id="${seat.seatId}"
                                                             data-label="<c:out value='${seat.label}'/>"
+                                                            data-row="<c:out value='${seat.rowName}'/>"
+                                                            data-col="${seat.colNumber}"
+                                                            data-width="${seat.seatType == 'Sweetbox' ? 2 : 1}"
                                                             data-price="${booking.seatPrices[seat.seatType]}"
                                                             title="<c:out value='${seat.label} · ${typeLabel}'/>"
                                                             aria-label="<c:out value='${seat.label} · ${typeLabel}'/>"

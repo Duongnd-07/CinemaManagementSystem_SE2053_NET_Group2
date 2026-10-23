@@ -4,11 +4,13 @@
 -- Quy ước giữ ghế dùng chung với UC-14 và JOB-01 (không đổi schema Seat_Hold):
 --   * Bước 5 (bấm Tiếp tục): mỗi ghế một dòng Seat_Hold, SessionID = 'CHECKOUT-<uuid>' của phiên đặt vé,
 --     ExpiryTime = GETDATE() + SEAT_HOLD_MINUTES (GB-01).
---   * Bước 9 (xác nhận đơn): tạo Booking Pending + Ticket (Upcoming, chưa có QR) + Booking_Concession;
---     các dòng Seat_Hold của phiên được đổi SessionID thành 'BOOKING-<BookingID>', GIỮ NGUYÊN ExpiryTime.
+--   * Bước 9 (xác nhận đơn): tạo Booking Pending + Ticket (Upcoming, chưa có QR) + Booking_Concession
+--     và trừ kho bắp nước ngay (giữ hàng cho đơn); các dòng Seat_Hold của phiên được đổi SessionID thành
+--     'BOOKING-<BookingID>', GIỮ NGUYÊN ExpiryTime.
 --   * Đơn Pending (Online) còn hiệu lực khi còn ít nhất một Seat_Hold 'BOOKING-<BookingID>' chưa hết hạn.
---     Thanh toán thành công (UC-14) -> Booking Paid, sinh QR cho Ticket, xóa các Seat_Hold đó.
---     Hết hạn hoặc khách hủy -> Booking/Ticket Cancelled, xóa Seat_Hold (JOB-01 quét mỗi phút).
+--     Thanh toán thành công (UC-14) -> Booking Paid, sinh QR cho Ticket, xóa các Seat_Hold đó, gửi email xác nhận.
+--     Hết hạn hoặc khách hủy -> Booking/Ticket Cancelled, xóa Seat_Hold, trả lại kho bắp nước (JOB-01 quét mỗi phút).
+--   * Từ ONLINE_SALE_CUTOFF_MINUTES phút trước giờ chiếu: không giữ ghế, không thanh toán online (chỉ bán tại quầy).
 
 IF OBJECT_ID('SystemConfig', 'U') IS NULL
     CREATE TABLE SystemConfig (
@@ -25,6 +27,7 @@ FROM (VALUES
     ('SEAT_HOLD_MINUTES', N'10', N'GB-01: số phút giữ ghế PENDING khi khách đặt vé online'),
     ('POINT_EXCHANGE_RATE', N'1000', N'BR-LOYALTY-01: giá trị (VND) của 1 điểm khi trừ vào tiền vé'),
     ('BOOKING_MAX_SEATS', N'8', N'UC-13: số ghế tối đa trong một đơn đặt vé online'),
+    ('ONLINE_SALE_CUTOFF_MINUTES', N'15', N'UC-13: số phút trước giờ chiếu thì đóng bán online (giữ ghế, thanh toán)'),
     ('SEAT_SURCHARGE_VIP', N'30000', N'UC-19: phụ thu (VND) cho ghế VIP, cộng vào giá suất chiếu')
 ) v (ConfigKey, ConfigValue, Description)
 WHERE NOT EXISTS (SELECT 1 FROM SystemConfig s WHERE s.ConfigKey = v.ConfigKey);

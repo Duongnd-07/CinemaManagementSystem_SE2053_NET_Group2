@@ -17,8 +17,10 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.filter.AuthFilter;
+import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.LoginForm;
 import vn.edu.fpt.service.LoginService;
 import vn.edu.fpt.service.ValidationException;
@@ -92,6 +94,7 @@ public class LoginServlet extends HttpServlet {
             // Bước 3: Lưu đối tượng User vào Session
             HttpSession session = request.getSession();
             session.setAttribute(AuthFilter.SESSION_USER, user);
+            ActivityLogger.info(request, LogEventType.AUTH, "Đăng nhập thành công", "User", user.getUserId(), null);
 
             // Bước 4: Xử lý Cookie Ghi nhớ đăng nhập
             handleRememberCookie(request, response, form, user);
@@ -103,6 +106,11 @@ public class LoginServlet extends HttpServlet {
 
         } catch (ValidationException e) {
             // Đăng nhập thất bại: hiển thị lại form kèm lỗi
+            if (e.getErrors().containsKey("auth")) {
+                // UC-32: chỉ ghi lần thử sai tài khoản/mật khẩu hoặc tài khoản bị khóa, không ghi lỗi bỏ trống ô
+                ActivityLogger.warningForEmail(request, form.getIdentifier(), LogEventType.AUTH,
+                        "Đăng nhập thất bại", e.getErrors().get("auth"));
+            }
             HttpSession session = request.getSession();
             form.setPassword(""); // Xóa mật khẩu vì lý do an toàn
             request.setAttribute("form", form);

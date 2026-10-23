@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.MovieService;
 import vn.edu.fpt.service.RoomLayoutForm;
 import vn.edu.fpt.service.RoomLayoutService;
@@ -81,8 +83,13 @@ public class RoomManagementServlet extends HttpServlet {
                 saveInfo(request, response, form);
                 return;
             }
+            boolean created = form.getRoomId() <= 0;
             try {
-                roomService.save(form);
+                int roomId = roomService.save(form);
+                ActivityLogger.info(request, LogEventType.CATALOG,
+                        created ? "Thêm phòng chiếu" : "Cập nhật sơ đồ ghế phòng chiếu", "Room", roomId,
+                        "Phòng " + form.getName() + " (" + form.getFormat() + ", " + form.getRows() + " hàng x "
+                                + form.getCols() + " cột)");
             } catch (ValidationException e) {
                 if (Messages.ROOM_NOT_FOUND.equals(e.getErrors().get("general"))) {
                     redirectToList(request, response, FLASH_ERROR, Messages.ROOM_NOT_FOUND);
@@ -102,6 +109,9 @@ public class RoomManagementServlet extends HttpServlet {
             throws SQLException, ServletException, IOException {
         try {
             roomService.saveInfo(form);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Cập nhật thông tin phòng chiếu", "Room",
+                    form.getRoomId(), "Phòng " + form.getName() + ", định dạng " + form.getFormat()
+                            + ", trạng thái " + form.getStatus());
         } catch (ValidationException e) {
             if (Messages.ROOM_NOT_FOUND.equals(e.getErrors().get("general"))) {
                 redirectToList(request, response, FLASH_ERROR, Messages.ROOM_NOT_FOUND);

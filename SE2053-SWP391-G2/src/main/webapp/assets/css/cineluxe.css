@@ -101,3 +101,22 @@
 .cl-card--dimmed .cl-thumb .material-symbols-outlined {
     opacity: 0.45;
 }
+
+/* UC-19: sơ đồ ghế ở quầy dùng seat-map.css (UC-09), thêm màu ghế đang chọn giống trang đặt vé online */
+.counter-seat-map {
+    --seat-selected: #34d399;
+    background: transparent;
+}
+
+.counter-seat-map .seat.is-selected,
+.counter-seat-map .seat.is-selected:hover {
+    border-color: var(--seat-selected);
+    background: var(--seat-selected);
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+    color: #06281c;
+}
+
+.counter-seat-map .seat:focus-within {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}

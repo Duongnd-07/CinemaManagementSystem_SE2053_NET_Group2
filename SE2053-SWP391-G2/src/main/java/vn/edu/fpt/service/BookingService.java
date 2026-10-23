@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -24,12 +25,14 @@ import vn.edu.fpt.dao.SystemConfigDAO;
 import vn.edu.fpt.model.Booking;
 import vn.edu.fpt.model.BookingChannel;
 import vn.edu.fpt.model.BookingConcession;
+import vn.edu.fpt.model.BookingConfirmation;
 import vn.edu.fpt.model.BookingStatus;
 import vn.edu.fpt.model.Concession;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.model.PaymentAttempt;
 import vn.edu.fpt.model.PaymentMethod;
+import vn.edu.fpt.model.ReminderTicket;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.RoomStatus;
@@ -47,6 +50,7 @@ import vn.edu.fpt.service.payment.PaymentRequest;
 import vn.edu.fpt.service.payment.PaymentSession;
 import vn.edu.fpt.service.payment.VerifiedPayment;
 import vn.edu.fpt.util.DBContext;
+import vn.edu.fpt.util.EmailService;
 import vn.edu.fpt.util.Messages;
 
 // UC-13: Book Ticket Online.
@@ -77,6 +81,9 @@ public class BookingService {
     private static final String CONFIG_POINT_EARN_PERCENT = "POINT_EARN_PERCENT";
     private static final String CONFIG_MAX_SEATS = "BOOKING_MAX_SEATS";
     private static final String CONFIG_VIP_SURCHARGE = "SEAT_SURCHARGE_VIP";
+    // Rạp đóng bán online trước giờ chiếu; ShowtimeService (UC-08) dùng chung để ẩn suất đã đóng bán
+    public static final String CONFIG_SALE_CUTOFF = "ONLINE_SALE_CUTOFF_MINUTES";
+    public static final int DEFAULT_SALE_CUTOFF_MINUTES = 15;
     // SQL Server: vi phạm UNIQUE index / constraint
     private static final Set<Integer> DUPLICATE_KEY_ERRORS = Set.of(2601, 2627);
     private static final String TICKET_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -93,6 +100,7 @@ public class BookingService {
     public BookingSeatView loadSeatSelection(int showtimeId) throws SQLException, ValidationException {
         SeatMapView seatMap = seatMapService.load(showtimeId);
         try (Connection conn = DBContext.getConnection()) {
+            requireOnlineSaleOpen(conn, seatMap.getShowtime(), LocalDateTime.now());
             return new BookingSeatView(seatMap, seatPrices(conn, seatMap.getShowtime().getBasePrice()),
                     maxSeats(conn), isAgeRestricted(seatMap.getMovie()));
         }
@@ -122,7 +130,8 @@ public class BookingService {
                     throw error(ERROR_GENERAL,
                             Messages.format(Messages.BOOKING_AGE_REQUIRED, info.movie.getAgeRating()));
                 }
-                if (!bookingDAO.findRoomSeats(conn, info.room.getRoomId()).keySet().containsAll(seatIds)) {
+                Map<Integer, Seat> roomSeats = bookingDAO.findRoomSeats(conn, info.room.getRoomId());
+                if (!roomSeats.keySet().containsAll(seatIds)) {
                     throw error(ERROR_GENERAL, Messages.BOOKING_SEAT_INVALID);
                 }
                 if (previous != null && previous.getBookingId() == null) {
@@ -130,9 +139,18 @@ public class BookingService {
                 }
                 cancelExpiredBookings(conn, showtimeId);
                 bookingDAO.deleteExpiredHolds(conn, showtimeId);
+                // Trạng thái cả phòng: vừa để kiểm tra ghế đã chọn, vừa để áp luật ghế lẻ
+                Set<Integer> unavailable = bookingDAO.findUnavailableSeatIds(conn, showtimeId,
+                        new ArrayList<>(roomSeats.keySet()));
                 // E2: ghế vừa bị người khác giữ/mua hoặc bị khóa bảo trì sau khi khách mở sơ đồ
-                if (!bookingDAO.findUnavailableSeatIds(conn, showtimeId, seatIds).isEmpty()) {
+                if (seatIds.stream().anyMatch(unavailable::contains)) {
                     throw error(ERROR_GENERAL, Messages.BOOKING_SEAT_TAKEN);
+                }
+                Set<Integer> free = new HashSet<>(roomSeats.keySet());
+                free.removeAll(unavailable);
+                String orphan = SeatGapRule.findOrphanSeat(roomSeats.values(), free, new HashSet<>(seatIds));
+                if (orphan != null) {
+                    throw error(ERROR_GENERAL, Messages.format(Messages.BOOKING_SEAT_ORPHAN, orphan));
                 }
                 bookingDAO.insertHolds(conn, holdSessionId, customer.getUserId(), showtimeId, seatIds,
                         holdMinutes(conn));
@@ -232,6 +250,12 @@ public class BookingService {
 
                 List<BookingConcession> items = new ArrayList<>();
                 for (Map.Entry<Integer, Integer> entry : checkout.getConcessions().entrySet()) {
+                    // GB-10: giữ kho ngay khi tạo đơn Pending (hủy/hết hạn thì cancelPendingBooking trả lại kho).
+                    // Hai khách cùng mua món cuối: người đến sau bị chặn ở đây, không bị trừ tiền VNPay rồi mới báo hết.
+                    if (!bookingDAO.decreaseStock(conn, entry.getKey(), entry.getValue())) {
+                        throw error(ERROR_CONCESSION, Messages.format(Messages.BOOKING_CONCESSION_UNAVAILABLE,
+                                applied.forSale.get(entry.getKey()).getName()));
+                    }
                     BookingConcession item = new BookingConcession();
                     item.setBookingId(id);
                     item.setConcessionId(entry.getKey());
@@ -283,8 +307,7 @@ public class BookingService {
             List<BookingSeatLine> seats = new ArrayList<>();
             for (Ticket ticket : bookingDAO.findTickets(conn, bookingId)) {
                 Seat seat = roomSeats.get(ticket.getSeatId());
-                seats.add(new BookingSeatLine(ticket.getSeatId(),
-                        seat == null ? "#" + ticket.getSeatId() : seat.getRowName() + seat.getColNumber(),
+                seats.add(new BookingSeatLine(ticket.getSeatId(), seatLabel(seat, ticket.getSeatId()),
                         seat == null ? SeatType.STANDARD : seat.getSeatType(), ticket.getPrice(),
                         ticket.getTicketCode(), ticket.getQrCode()));
             }
@@ -327,6 +350,15 @@ public class BookingService {
                 long remainingSeconds = bookingDAO.findRemainingHoldSeconds(conn, bookingHoldSession(bookingId));
                 if (remainingSeconds <= 0) {
                     throw error(ERROR_ENDED, Messages.BOOKING_HOLD_EXPIRED);
+                }
+                // Giữ ghế lúc còn sớm nhưng tới khi bấm thanh toán đã qua giờ đóng bán online thì không cho trả tiền
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime saleClosesAt = requireSaleOpenForPayment(conn, booking, now);
+                // Trang VNPay cũng hết hạn đúng lúc đóng bán, không để khách trả tiền khi suất đã chiếu
+                remainingSeconds = Math.min(remainingSeconds, Duration.between(now, saleClosesAt).getSeconds());
+                if (remainingSeconds <= 0) {
+                    throw error(ERROR_ENDED, Messages.format(Messages.BOOKING_ONLINE_SALE_CLOSED,
+                            saleCutoffMinutes(conn)));
                 }
                 if (booking.getFinalAmount() == null || booking.getFinalAmount().signum() <= 0) {
                     throw error(ERROR_GENERAL, Messages.BOOKING_VNPAY_AMOUNT_INVALID);
@@ -384,8 +416,10 @@ public class BookingService {
         if (initialAttempt == null) {
             return false;
         }
+        // Chỉ gửi email xác nhận khi chính lần callback này chốt đơn (VNPay có thể gửi lại IPN nhiều lần)
+        boolean[] settled = {false};
         try {
-            return inTransaction(conn -> {
+            boolean accepted = inTransaction(conn -> {
                 Booking booking = bookingDAO.findBookingOfCustomer(conn, initialAttempt.getBookingId(),
                         initialAttempt.getCustomerId(), true);
                 PaymentAttempt attempt = paymentDAO.findByReference(conn, payment.getTransactionReference(), true);
@@ -429,13 +463,19 @@ public class BookingService {
                             "successful callback did not match the pending booking amount or status");
                 }
 
-                completeBookingPayment(conn, booking, attempt.getCustomerId(), PaymentMethod.VNPAY);
+                completeBookingPayment(conn, booking, attempt.getCustomerId(), PaymentMethod.VNPAY,
+                        payment.getPaidAt());
                 if (!paymentDAO.markPaid(conn, payment.getTransactionReference(), payment.getProviderTransactionId(),
                         payment.getPaidAmount(), payment.getResponseCode(), payment.getPaidAt())) {
                     throw new SQLException("Could not record verified VNPay transaction.");
                 }
+                settled[0] = true;
                 return true;
             });
+            if (settled[0]) {
+                sendConfirmationEmail(initialAttempt.getBookingId(), initialAttempt.getCustomerId());
+            }
+            return accepted;
         } catch (ValidationException e) {
             if (!payment.isSuccessful()) {
                 throw e;
@@ -447,7 +487,7 @@ public class BookingService {
     }
 
     // Đơn 0đ (voucher/điểm trừ hết tiền): VNPay không nhận số tiền 0 nên chốt đơn ngay, cùng các bước như khi
-    // VNPay báo thành công (trừ kho, khóa voucher cá nhân, trừ điểm, sinh QR)
+    // VNPay báo thành công (khóa voucher cá nhân, trừ điểm, sinh QR, gửi email xác nhận)
     public void confirmFreeBooking(User customer, int bookingId) throws SQLException, ValidationException {
         requireCustomer(customer);
         inTransaction(conn -> {
@@ -459,9 +499,10 @@ public class BookingService {
             if (booking.getFinalAmount() == null || booking.getFinalAmount().signum() != 0) {
                 throw error(ERROR_GENERAL, Messages.BOOKING_NOT_FREE);
             }
-            completeBookingPayment(conn, booking, customer.getUserId(), null);
+            completeBookingPayment(conn, booking, customer.getUserId(), null, LocalDateTime.now());
             return null;
         });
+        sendConfirmationEmail(bookingId, customer.getUserId());
     }
 
     // AF2 khi đơn đã tạo nhưng chưa thanh toán: đơn và vé chuyển Cancelled, ghế về AVAILABLE ngay
@@ -518,21 +559,17 @@ public class BookingService {
         return recorded;
     }
 
-    // paymentMethod = null khi đơn 0đ: không có giao dịch tiền nên không ghi phương thức thanh toán
-    private void completeBookingPayment(Connection conn, Booking booking, int customerId, String paymentMethod)
-            throws SQLException, ValidationException {
+    // paymentMethod = null khi đơn 0đ: không có giao dịch tiền nên không ghi phương thức thanh toán.
+    // paidAt: thời điểm khách trả tiền (VNPay: vnp_PayDate; đơn 0đ: lúc bấm xác nhận) để so với giờ đóng bán online.
+    // Bắp nước đã trừ kho từ lúc tạo đơn Pending (confirm) nên không trừ lại ở đây.
+    private void completeBookingPayment(Connection conn, Booking booking, int customerId, String paymentMethod,
+                                        LocalDateTime paidAt) throws SQLException, ValidationException {
         int bookingId = booking.getBookingId();
+        requireSaleOpenForPayment(conn, booking, paidAt);
         List<Ticket> tickets = bookingDAO.findTickets(conn, bookingId);
         Set<Integer> held = bookingDAO.findLiveHeldSeatIds(conn, bookingHoldSession(bookingId), true);
         if (!held.equals(ticketSeatIds(tickets))) {
             throw error(ERROR_ENDED, Messages.BOOKING_HOLD_EXPIRED);
-        }
-        Map<Integer, String> names = bookingDAO.findConcessionNames(conn, bookingId);
-        for (BookingConcession item : bookingDAO.findBookingConcessions(conn, bookingId)) {
-            if (!bookingDAO.decreaseStock(conn, item.getConcessionId(), item.getQuantity())) {
-                throw error(ERROR_GENERAL, Messages.format(Messages.BOOKING_CONCESSION_UNAVAILABLE,
-                        names.getOrDefault(item.getConcessionId(), "đã chọn")));
-            }
         }
         if (booking.getVoucherId() != null) {
             Voucher voucher = bookingDAO.findVoucherByCode(conn,
@@ -627,7 +664,7 @@ public class BookingService {
     }
 
     // Cùng điều kiện mở bán với SeatMapService.load (UC-09): suất Active, phim công khai (GB-11),
-    // chưa bắt đầu, phòng không bị khóa bảo trì (E2 của UC-09)
+    // chưa tới giờ đóng bán online, phòng không bị khóa bảo trì (E2 của UC-09)
     private ShowtimeInfo loadBookableShowtime(Connection conn, int showtimeId)
             throws SQLException, ValidationException {
         Showtime showtime = showtimeId > 0 ? bookingDAO.findShowtimeWithRoom(conn, showtimeId) : null;
@@ -638,13 +675,93 @@ public class BookingService {
         if (movie == null || !MovieStatus.PUBLIC.contains(movie.getStatus())) {
             throw error(ERROR_GENERAL, Messages.SEAT_MAP_SHOWTIME_NOT_FOUND);
         }
-        if (!showtime.getStartTime().isAfter(LocalDateTime.now())) {
-            throw error(ERROR_GENERAL, Messages.SEAT_MAP_SHOWTIME_STARTED);
-        }
+        requireOnlineSaleOpen(conn, showtime, LocalDateTime.now());
         if (RoomStatus.MAINTENANCE.equals(showtime.getRoom().getStatus())) {
             throw error(ERROR_GENERAL, Messages.SEAT_MAP_ROOM_MAINTENANCE);
         }
         return new ShowtimeInfo(showtime, movie, showtime.getRoom());
+    }
+
+    // Rạp đóng bán online trước giờ chiếu ONLINE_SALE_CUTOFF_MINUTES phút, sau mốc đó chỉ bán tại quầy (UC-19).
+    // Trả về thời điểm đóng bán.
+    private LocalDateTime requireOnlineSaleOpen(Connection conn, Showtime showtime, LocalDateTime at)
+            throws SQLException, ValidationException {
+        if (!showtime.getStartTime().isAfter(at)) {
+            throw error(ERROR_GENERAL, Messages.SEAT_MAP_SHOWTIME_STARTED);
+        }
+        int cutoffMinutes = saleCutoffMinutes(conn);
+        LocalDateTime closesAt = showtime.getStartTime().minusMinutes(cutoffMinutes);
+        if (!at.isBefore(closesAt)) {
+            throw error(ERROR_GENERAL, Messages.format(Messages.BOOKING_ONLINE_SALE_CLOSED, cutoffMinutes));
+        }
+        return closesAt;
+    }
+
+    // Bước thanh toán (UC-14): suất vẫn Active và khách trả tiền trước giờ đóng bán online
+    private LocalDateTime requireSaleOpenForPayment(Connection conn, Booking booking, LocalDateTime paidAt)
+            throws SQLException, ValidationException {
+        Showtime showtime = bookingDAO.findShowtimeWithRoom(conn, booking.getShowtimeId());
+        if (showtime == null || !ShowtimeStatus.ACTIVE.equals(showtime.getStatus())) {
+            throw error(ERROR_ENDED, Messages.SEAT_MAP_SHOWTIME_NOT_FOUND);
+        }
+        try {
+            return requireOnlineSaleOpen(conn, showtime, paidAt);
+        } catch (ValidationException e) {
+            throw new ValidationException(Map.of(ERROR_ENDED, e.getErrors().get(ERROR_GENERAL)));
+        }
+    }
+
+    // Email xác nhận vé (mã đơn, mã vé + QR, phòng, ghế) gửi nền sau khi transaction chốt đơn đã commit.
+    // Lỗi đọc dữ liệu hay gửi mail chỉ ghi log, không ảnh hưởng đơn đã thanh toán (vé vẫn xem được ở lịch sử đặt vé).
+    private void sendConfirmationEmail(int bookingId, int customerId) {
+        try (Connection conn = DBContext.getConnection()) {
+            BookingConfirmation confirmation = loadConfirmation(conn, bookingId, customerId);
+            if (confirmation != null) {
+                EmailService.sendBookingConfirmationAsync(confirmation);
+            }
+        } catch (SQLException | RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Không gửi được email xác nhận vé cho đơn " + bookingId, e);
+        }
+    }
+
+    private BookingConfirmation loadConfirmation(Connection conn, int bookingId, int customerId)
+            throws SQLException {
+        Booking booking = bookingDAO.findBookingOfCustomer(conn, bookingId, customerId, false);
+        User customer = bookingDAO.findCustomerContact(conn, customerId);
+        if (booking == null || !BookingStatus.PAID.equals(booking.getStatus())
+                || customer == null || customer.getEmail() == null || customer.getEmail().isBlank()) {
+            return null;
+        }
+        Showtime showtime = bookingDAO.findShowtimeWithRoom(conn, booking.getShowtimeId());
+        Movie movie = bookingDAO.findMovie(conn, showtime.getMovieId());
+        Map<Integer, Seat> roomSeats = bookingDAO.findRoomSeats(conn, showtime.getRoomId());
+
+        BookingConfirmation confirmation = new BookingConfirmation();
+        confirmation.setBookingId(bookingId);
+        confirmation.setRecipientEmail(customer.getEmail());
+        confirmation.setRecipientName(customer.getFullName());
+        confirmation.setMovieTitle(movie == null ? "" : movie.getTitle());
+        confirmation.setShowtimeStart(showtime.getStartTime());
+        confirmation.setRoomName(showtime.getRoom().getRoomName());
+        confirmation.setRoomFormat(showtime.getRoom().getFormat());
+        confirmation.setFinalAmount(booking.getFinalAmount());
+        for (Ticket ticket : bookingDAO.findTickets(conn, bookingId)) {
+            ReminderTicket line = new ReminderTicket();
+            line.setSeatLabel(seatLabel(roomSeats.get(ticket.getSeatId()), ticket.getSeatId()));
+            line.setTicketCode(ticket.getTicketCode());
+            line.setQrCode(ticket.getQrCode());
+            confirmation.getTickets().add(line);
+        }
+        Map<Integer, String> names = bookingDAO.findConcessionNames(conn, bookingId);
+        for (BookingConcession item : bookingDAO.findBookingConcessions(conn, bookingId)) {
+            confirmation.getConcessions().add(names.getOrDefault(item.getConcessionId(),
+                    "#" + item.getConcessionId()) + " x" + item.getQuantity());
+        }
+        return confirmation;
+    }
+
+    private String seatLabel(Seat seat, int seatId) {
+        return seat == null ? "#" + seatId : seat.getRowName() + seat.getColNumber();
     }
 
     // Suất chiếu còn mở bán, ghế của phiên còn được giữ, ghế không bị khóa bảo trì giữa chừng.
@@ -685,8 +802,25 @@ public class BookingService {
                                       Map<Integer, Concession> forSale, Map<Integer, Integer> picked,
                                       BookingQuote quote, Map<String, String> errors) throws SQLException {
         return new CheckoutView(context.showtime, context.movie, context.room, context.seats,
-                concessionLines(forSale, picked), quote, availablePoints(conn, customer.getUserId()),
-                pointRate(conn), context.remainingSeconds, errors);
+                concessionLines(forSale, picked), quote, walletVouchers(conn, customer, quote),
+                availablePoints(conn, customer.getUserId()), pointRate(conn), context.remainingSeconds, errors);
+    }
+
+    // Bước 7: voucher còn hiệu lực trong ví của khách để chọn nhanh thay vì phải nhớ mã.
+    // Cùng điều kiện với isVoucherUsable: đủ đơn tối thiểu (GB-05), voucher cá nhân chưa nằm trong đơn khác.
+    private List<CheckoutVoucherOption> walletVouchers(Connection conn, User customer, BookingQuote quote)
+            throws SQLException {
+        BigDecimal gross = quote.getGrossTotal();
+        List<CheckoutVoucherOption> options = new ArrayList<>();
+        for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, customer.getUserId())) {
+            boolean applied = voucher.getVoucherCode().equals(quote.getVoucherCode());
+            boolean belowMinOrder = gross.compareTo(voucher.getMinOrderAmount()) < 0;
+            boolean inOtherOrder = !applied && bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
+            options.add(new CheckoutVoucherOption(voucher.getVoucherCode(), voucher.getDiscountType(),
+                    voucher.getDiscountValue(), voucher.getMinOrderAmount(), voucher.getExpiryDate(), belowMinOrder,
+                    inOtherOrder, applied));
+        }
+        return options;
     }
 
     private Applied apply(Connection conn, User customer, BookingCheckout checkout, CheckoutContext context,
@@ -871,6 +1005,10 @@ public class BookingService {
 
     private int maxSeats(Connection conn) throws SQLException {
         return Math.max(1, configDAO.getInt(conn, CONFIG_MAX_SEATS, DEFAULT_MAX_SEATS));
+    }
+
+    private int saleCutoffMinutes(Connection conn) throws SQLException {
+        return Math.max(0, configDAO.getInt(conn, CONFIG_SALE_CUTOFF, DEFAULT_SALE_CUTOFF_MINUTES));
     }
 
     private String bookingHoldSession(int bookingId) {
