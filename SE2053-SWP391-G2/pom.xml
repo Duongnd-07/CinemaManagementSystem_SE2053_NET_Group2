@@ -68,6 +68,13 @@
             <artifactId>angus-mail</artifactId>
             <version>2.0.3</version>
         </dependency>
+
+        <!-- ZXing: tạo ảnh mã QR vé trong email xác nhận đặt vé (UC-13) -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
     </dependencies>
 
     <build>

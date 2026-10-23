@@ -259,6 +259,10 @@ public final class Messages {
             "VNPay đã tiếp nhận yêu cầu. Đơn chỉ được xác nhận sau khi hệ thống nhận kết quả thanh toán hợp lệ.";
     public static final String BOOKING_FREE_CONFIRMED = "Đặt vé thành công! Vé điện tử đã được phát hành.";
     public static final String BOOKING_NOT_FREE = "Đơn này cần được thanh toán qua VNPay.";
+    public static final String BOOKING_ONLINE_SALE_CLOSED =
+            "Suất chiếu đã đóng bán vé online ({0} phút trước giờ chiếu). Vui lòng mua vé tại quầy hoặc chọn suất khác.";
+    public static final String BOOKING_SEAT_ORPHAN =
+            "Không được để trống một ghế lẻ ({0}) ở giữa hoặc cạnh ghế bạn chọn. Vui lòng chọn lại ghế.";
 
     // UC-33: Manage System Configurations
     public static final String CONFIG_SAVED = "Lưu cấu hình thành công ({0} tham số được cập nhật).";

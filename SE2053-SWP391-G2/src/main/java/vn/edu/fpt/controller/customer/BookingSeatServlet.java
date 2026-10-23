@@ -63,6 +63,7 @@ public class BookingSeatServlet extends HttpServlet {
         request.setAttribute("canBook", user == null || Role.CUSTOMER.equals(user.getRole()));
         request.setAttribute("customerOnlyMessage", Messages.BOOKING_CUSTOMER_ONLY);
         request.setAttribute("seatTakenMessage", Messages.BOOKING_SEAT_TAKEN);
+        request.setAttribute("seatOrphanMessage", Messages.BOOKING_SEAT_ORPHAN);
         request.setAttribute("fullyBookedMessage", Messages.SEAT_MAP_FULLY_BOOKED);
         request.setAttribute("csrfToken", CsrfToken.get(session));
         request.getRequestDispatcher(VIEW).forward(request, response);

@@ -16,6 +16,7 @@ import java.util.TreeMap;
 import vn.edu.fpt.dao.MovieDAO;
 import vn.edu.fpt.dao.RoomDAO;
 import vn.edu.fpt.dao.ShowtimeDAO;
+import vn.edu.fpt.dao.SystemConfigDAO;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.model.Room;
@@ -37,6 +38,7 @@ public class ShowtimeService {
     private final ShowtimeDAO showtimeDAO = new ShowtimeDAO();
     private final MovieDAO movieDAO = new MovieDAO();
     private final RoomDAO roomDAO = new RoomDAO();
+    private final SystemConfigDAO configDAO = new SystemConfigDAO();
 
     // UC-06: nút Đặt vé chỉ hiện khi phim còn suất chiếu sắp tới; dùng cùng khung với trang lịch chiếu
     // để không dẫn khách tới trang lịch chiếu trống
@@ -91,11 +93,14 @@ public class ShowtimeService {
         return schedule;
     }
 
-    // Suất đang mở bán, bắt đầu từ bây giờ tới hết ngày thứ 7 kể từ hôm nay, của phim đang công khai
+    // Suất đang mở bán online (chưa tới giờ đóng bán ONLINE_SALE_CUTOFF_MINUTES trước giờ chiếu - UC-13),
+    // tới hết ngày thứ 7 kể từ hôm nay, của phim đang công khai
     private List<Showtime> findInWindow(int movieId) throws SQLException {
         LocalDateTime now = LocalDateTime.now();
+        int cutoffMinutes = Math.max(0, configDAO.getInt(BookingService.CONFIG_SALE_CUTOFF,
+                BookingService.DEFAULT_SALE_CUTOFF_MINUTES));
         LocalDateTime end = now.toLocalDate().plusDays(SCHEDULE_DAYS_AHEAD + 1L).atStartOfDay();
-        return showtimeDAO.findActiveByMovie(movieId, now, end, MovieStatus.PUBLIC);
+        return showtimeDAO.findActiveByMovie(movieId, now.plusMinutes(cutoffMinutes), end, MovieStatus.PUBLIC);
     }
 
     // Định dạng theo thứ tự 2D, 3D, IMAX rồi tới định dạng khác (nếu có)

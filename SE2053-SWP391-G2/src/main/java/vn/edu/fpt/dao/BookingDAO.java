@@ -28,6 +28,7 @@ import vn.edu.fpt.model.Seat;
 import vn.edu.fpt.model.Showtime;
 import vn.edu.fpt.model.Ticket;
 import vn.edu.fpt.model.TicketStatus;
+import vn.edu.fpt.model.User;
 import vn.edu.fpt.model.Voucher;
 
 // UC-13 Book Ticket Online (và JOB-01): mọi thao tác ghi đều nhận Connection do BookingService mở transaction.
@@ -271,7 +272,8 @@ public class BookingDAO {
         return ids;
     }
 
-    // GB-12: không xóa đơn, chỉ chuyển Cancelled; vé của đơn cũng Cancelled để ghế trở lại AVAILABLE
+    // GB-12: không xóa đơn, chỉ chuyển Cancelled; vé của đơn cũng Cancelled để ghế trở lại AVAILABLE.
+    // Bắp nước đã giữ kho lúc tạo đơn Pending nên trả lại kho (chỉ khi đơn thực sự chuyển từ Pending sang Cancelled).
     public int cancelPendingBooking(Connection conn, int bookingId) throws SQLException {
         String ticketSql = "UPDATE Ticket SET Status = ? WHERE BookingID = ? AND Status = ?";
         try (PreparedStatement ps = conn.prepareStatement(ticketSql)) {
@@ -281,12 +283,17 @@ public class BookingDAO {
             ps.executeUpdate();
         }
         String bookingSql = "UPDATE Booking SET Status = ? WHERE BookingID = ? AND Status = ?";
+        int cancelled;
         try (PreparedStatement ps = conn.prepareStatement(bookingSql)) {
             ps.setString(1, BookingStatus.CANCELLED);
             ps.setInt(2, bookingId);
             ps.setString(3, BookingStatus.PENDING);
-            return ps.executeUpdate();
+            cancelled = ps.executeUpdate();
         }
+        if (cancelled == 1) {
+            restoreStock(conn, bookingId);
+        }
+        return cancelled;
     }
 
     // ===== Điểm tích lũy =====
@@ -489,7 +496,7 @@ public class BookingDAO {
         return concessions;
     }
 
-    // GB-10: trừ kho khi thanh toán thành công; về 0 thì chuyển Out of Stock
+    // GB-10: trừ kho (đơn online: lúc tạo đơn Pending; tại quầy: lúc xác nhận); về 0 thì chuyển Out of Stock
     public boolean decreaseStock(Connection conn, int concessionId, int quantity) throws SQLException {
         String sql = "UPDATE Concession SET StockQuantity = StockQuantity - ?, "
                 + "Status = CASE WHEN StockQuantity - ? = 0 THEN ? ELSE Status END "
@@ -501,6 +508,40 @@ public class BookingDAO {
             ps.setInt(4, concessionId);
             ps.setInt(5, quantity);
             return ps.executeUpdate() == 1;
+        }
+    }
+
+    // Trả lại kho bắp nước của đơn bị hủy; món đang Out of Stock có hàng trở lại thì Active (món Hidden giữ nguyên)
+    private void restoreStock(Connection conn, int bookingId) throws SQLException {
+        String sql = "UPDATE c SET c.StockQuantity = c.StockQuantity + bc.Quantity, "
+                + "c.Status = CASE WHEN c.Status = ? THEN ? ELSE c.Status END "
+                + "FROM Concession c JOIN Booking_Concession bc ON bc.ConcessionID = c.ConcessionID "
+                + "WHERE bc.BookingID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, ConcessionStatus.OUT_OF_STOCK);
+            ps.setString(2, ConcessionStatus.ACTIVE);
+            ps.setInt(3, bookingId);
+            ps.executeUpdate();
+        }
+    }
+
+    // ===== Email xác nhận vé =====
+
+    // Chỉ điền UserID, Email, FullName của khách
+    public User findCustomerContact(Connection conn, int userId) throws SQLException {
+        String sql = "SELECT UserID, Email, FullName FROM [User] WHERE UserID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                User user = new User();
+                user.setUserId(rs.getInt("UserID"));
+                user.setEmail(rs.getString("Email"));
+                user.setFullName(rs.getString("FullName"));
+                return user;
+            }
         }
     }
 

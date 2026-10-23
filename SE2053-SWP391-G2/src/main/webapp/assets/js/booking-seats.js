@@ -86,6 +86,82 @@
         seats[id].setAttribute('aria-pressed', 'false');
     }
 
+    // ===== Luật ghế lẻ: cùng thuật toán với SeatGapRule.java (server kiểm tra lại khi giữ ghế) =====
+    // Ghế còn trống trước khi chọn (nút không bị disabled) chia thành đoạn theo từng dãy ghế liền nhau; ghế đang chọn
+    // chia đoạn thành các khoảng trống. Khoảng trống đúng 1 ghế đơn là ghế lẻ, trừ khi đoạn chỉ thừa đúng 1 ghế.
+    function col(el) {
+        return parseInt(el.dataset.col, 10);
+    }
+
+    function width(el) {
+        return parseInt(el.dataset.width, 10) || 1;
+    }
+
+    function isOrphanGap(gap) {
+        return gap.length === 1 && width(gap[0]) === 1;
+    }
+
+    function orphanInRun(run, picked) {
+        var count = run.filter(function (el) {
+            return picked[el.dataset.seatId];
+        }).length;
+        if (count === 0 || run.length - count === 1) {
+            return null;
+        }
+        var gap = [];
+        for (var i = 0; i < run.length; i++) {
+            if (picked[run[i].dataset.seatId]) {
+                if (isOrphanGap(gap)) {
+                    return gap[0].dataset.label;
+                }
+                gap = [];
+            } else {
+                gap.push(run[i]);
+            }
+        }
+        return isOrphanGap(gap) ? gap[0].dataset.label : null;
+    }
+
+    function findOrphanSeat() {
+        var picked = {};
+        selected.forEach(function (id) {
+            picked[id] = true;
+        });
+        var rows = {};
+        Object.keys(seats).forEach(function (id) {
+            var name = seats[id].dataset.row;
+            (rows[name] = rows[name] || []).push(seats[id]);
+        });
+        var names = Object.keys(rows);
+        for (var r = 0; r < names.length; r++) {
+            var row = rows[names[r]].sort(function (a, b) {
+                return col(a) - col(b);
+            });
+            var run = [];
+            var previous = null;
+            for (var i = 0; i < row.length; i++) {
+                var free = !row[i].disabled;
+                var adjacent = previous !== null && col(previous) + width(previous) === col(row[i]);
+                if (!free || !adjacent) {
+                    var orphan = orphanInRun(run, picked);
+                    if (orphan) {
+                        return orphan;
+                    }
+                    run = [];
+                }
+                if (free) {
+                    run.push(row[i]);
+                }
+                previous = row[i];
+            }
+            var last = orphanInRun(run, picked);
+            if (last) {
+                return last;
+            }
+        }
+        return null;
+    }
+
     Object.keys(ownSeats).forEach(function (id) {
         if (seats[id]) {
             setStatus(seats[id], 'AVAILABLE');
@@ -204,6 +280,12 @@
         form.addEventListener('submit', function (event) {
             if (selected.length === 0) {
                 event.preventDefault();
+                return;
+            }
+            var orphan = findOrphanSeat();
+            if (orphan) {
+                event.preventDefault();
+                showAlert(root.dataset.orphanMessage.replace('{0}', orphan));
                 return;
             }
             if (continueBtn.dataset.guest === 'true') {
