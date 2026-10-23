@@ -44,17 +44,20 @@
                 <span class="cl-pill cl-pill--success">Ca đang mở</span>
                 <span class="text-body-sm">Quầy ${fn:substring(shift.counterNo, 1, 2)} · từ
                     ${fn:substring(shift.startedAt, 11, 16)} ${fn:substring(shift.startedAt, 8, 10)}/${fn:substring(shift.startedAt, 5, 7)}</span>
-                <form method="post" action="${ctx}/staff/counter"
-                      onsubmit="return confirm('Kết ca làm việc? Sau khi kết ca bạn không bán được vé cho tới khi mở ca mới.');">
-                    <input type="hidden" name="csrfToken" value="${csrfToken}"/>
-                    <input type="hidden" name="action" value="closeShift"/>
-                    <button class="flex items-center gap-1 text-error hover:underline font-label-lg" type="submit">
-                        <span class="material-symbols-outlined text-[18px]">logout</span>Kết ca
-                    </button>
-                </form>
+                <%-- UC-22: kết ca kèm đếm két ở trang Ca làm việc --%>
+                <a class="flex items-center gap-1 text-error hover:underline font-label-lg" href="${ctx}/staff/shifts">
+                    <span class="material-symbols-outlined text-[18px]">logout</span>Kết ca
+                </a>
             </div>
         </c:if>
     </div>
+
+    <c:if test="${shiftEndingSoon}">
+        <div class="mb-space-lg flex items-center gap-space-sm px-space-md py-space-sm rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-200">
+            <span class="material-symbols-outlined">alarm</span>
+            Ca của bạn sẽ tự kết thúc lúc <b>${fn:substring(shiftEndsAt, 11, 16)}</b>. Hoàn tất đơn đang bán và chuẩn bị đếm két.
+        </div>
+    </c:if>
 
     <c:choose>
         <%-- ===== Chưa mở ca ===== --%>
@@ -73,6 +76,12 @@
                             <option value="${counter}">Quầy ${fn:substring(counter, 1, 2)}</option>
                         </c:forEach>
                     </select>
+                </div>
+                <div>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="openingCash">Tiền lẻ có sẵn trong két (đ)</label>
+                    <input class="${inputClass} h-11" type="text" inputmode="numeric" id="openingCash" name="openingCash"
+                           required placeholder="VD: 500000 (nhập 0 nếu két trống)"/>
+                    <p class="text-body-sm text-on-surface-variant mt-1">Dùng để đối chiếu két tiền khi kết ca (UC-22).</p>
                 </div>
                 <button type="submit"
                         class="w-full flex items-center justify-center gap-space-sm bg-primary-container text-on-primary-container py-3 rounded-full font-label-lg">

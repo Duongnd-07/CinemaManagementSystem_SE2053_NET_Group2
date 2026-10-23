@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,13 +26,14 @@ import vn.edu.fpt.service.CounterQuote;
 import vn.edu.fpt.service.CounterReceipt;
 import vn.edu.fpt.service.CounterSaleForm;
 import vn.edu.fpt.service.CounterSaleService;
+import vn.edu.fpt.service.ShiftService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
 
 // UC-19: Sell Ticket & Concession at Counter
 // GET: chưa mở ca -> form mở ca; ?showtimeId -> màn hình bán; ?receipt -> hóa đơn; còn lại -> danh sách suất chiếu
-// POST action: openShift, closeShift, quote (tính tiền), confirm (xác nhận đã thu tiền)
+// POST action: openShift, quote (tính tiền), confirm (xác nhận đã thu tiền)
 @WebServlet("/staff/counter")
 public class CounterSaleServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(CounterSaleServlet.class.getName());
@@ -42,12 +44,12 @@ public class CounterSaleServlet extends HttpServlet {
     private static final String FLASH_CHANGE = "counterChangeDue";
     private static final String STAFF_ONLY = "Chỉ nhân viên quầy mới được bán vé.";
     private static final String SHIFT_OPENED = "Đã mở ca, bạn có thể bắt đầu bán vé.";
-    private static final String SHIFT_CLOSED = "Đã kết ca.";
     private static final String SALE_DONE = "Bán vé thành công.";
     private static final String RECEIPT_NOT_FOUND = "Không tìm thấy đơn bán tại quầy.";
     private static final String QTY_PREFIX = "qty_";
 
     private final CounterSaleService saleService = new CounterSaleService();
+    private final ShiftService shiftService = new ShiftService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -61,7 +63,7 @@ public class CounterSaleServlet extends HttpServlet {
                 showReceipt(request, response, receiptId);
                 return;
             }
-            Shift shift = saleService.findOpenShift(currentUserId(request));
+            Shift shift = shiftService.findOpenShift(currentUserId(request));
             int showtimeId = parseInt(request.getParameter("showtimeId"));
             if (shift != null && showtimeId > 0) {
                 CounterSaleForm form = new CounterSaleForm();
@@ -90,12 +92,8 @@ public class CounterSaleServlet extends HttpServlet {
         try {
             switch (action) {
                 case "openShift" -> {
-                    runAndFlash(request, () -> saleService.openShift(staffId, trim(request.getParameter("counterNo"))),
-                            SHIFT_OPENED);
-                    redirect(request, response, "");
-                }
-                case "closeShift" -> {
-                    runAndFlash(request, () -> saleService.closeShift(staffId), SHIFT_CLOSED);
+                    runAndFlash(request, () -> shiftService.open(staffId, trim(request.getParameter("counterNo")),
+                            request.getParameter("openingCash")), SHIFT_OPENED);
                     redirect(request, response, "");
                 }
                 case "quote", "confirm" -> sell(request, response, staffId, "confirm".equals(action));
@@ -108,7 +106,7 @@ public class CounterSaleServlet extends HttpServlet {
 
     private void sell(HttpServletRequest request, HttpServletResponse response, int staffId, boolean confirm)
             throws SQLException, ServletException, IOException {
-        Shift shift = saleService.findOpenShift(staffId);
+        Shift shift = shiftService.findOpenShift(staffId);
         CounterSaleForm form = readForm(request);
         if (shift == null) {
             flash(request, FLASH_ERROR, "Bạn cần mở ca trước khi bán vé.");
@@ -157,8 +155,8 @@ public class CounterSaleServlet extends HttpServlet {
             throws SQLException, ServletException, IOException {
         LocalDate date = parseDate(request.getParameter("date"));
         moveFlash(request);
-        request.setAttribute("shift", shift);
-        request.setAttribute("counters", CounterSaleService.COUNTERS);
+        shiftAttributes(request, shift);
+        request.setAttribute("counters", ShiftService.COUNTERS);
         request.setAttribute("date", date);
         request.setAttribute("today", LocalDate.now());
         if (shift != null) {
@@ -178,7 +176,7 @@ public class CounterSaleServlet extends HttpServlet {
             return;
         }
         moveFlash(request);
-        request.setAttribute("shift", shift);
+        shiftAttributes(request, shift);
         request.setAttribute("form", form);
         request.setAttribute("quote", quote);
         request.setAttribute("errors", errors);
@@ -186,6 +184,17 @@ public class CounterSaleServlet extends HttpServlet {
         request.setAttribute("paymentMethods", CounterSaleService.PAYMENT_METHODS);
         request.setAttribute("selectedSeats", String.join(",", form.getSeatIds()));
         forward(request, response, VIEW);
+    }
+
+    // Ca đang mở, giờ ca tự kết và cờ sắp hết giờ (báo trước WARNING_MINUTES phút, UC-22)
+    private void shiftAttributes(HttpServletRequest request, Shift shift) throws SQLException {
+        request.setAttribute("shift", shift);
+        if (shift != null) {
+            LocalDateTime plannedEnd = shiftService.plannedEnd(shift, shiftService.shiftHours());
+            request.setAttribute("shiftEndsAt", plannedEnd);
+            request.setAttribute("shiftEndingSoon",
+                    !LocalDateTime.now().plusMinutes(ShiftService.WARNING_MINUTES).isBefore(plannedEnd));
+        }
     }
 
     private void showReceipt(HttpServletRequest request, HttpServletResponse response, int bookingId)
