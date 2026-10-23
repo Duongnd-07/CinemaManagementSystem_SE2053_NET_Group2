@@ -1,10 +1,13 @@
 package vn.edu.fpt.dao;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -175,7 +178,48 @@ public class UserDAO {
     }
 
     /**
-     * UC-10: Cập nhật Họ tên và Số điện thoại. Email không nằm trong câu lệnh vì là định danh bất biến (BR-PROF-01).
+     * UC-10: Đọc hồ sơ đầy đủ (kèm Ngày sinh, Giới tính). Tách khỏi findById để các luồng khác
+     * không phụ thuộc vào migration UC10_profile_birthdate_gender.sql.
+     */
+    public User findProfileById(int userId) throws SQLException {
+        String sql = """
+                SELECT UserID, FullName, Email, Phone, PasswordHash, Role, PointBalance, Status, DateOfBirth, Gender
+                FROM [User] WHERE UserID = ?
+                """;
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    User user = mapUser(rs);
+                    user.setDateOfBirth(rs.getObject("DateOfBirth", LocalDate.class));
+                    user.setGender(rs.getString("Gender"));
+                    return user;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * UC-10: Cập nhật thông tin cá nhân. Email đổi riêng qua updateEmail sau khi xác thực OTP.
+     */
+    public boolean updateProfile(int userId, String fullName, String phone, LocalDate dateOfBirth, String gender)
+            throws SQLException {
+        String sql = "UPDATE [User] SET FullName = ?, Phone = ?, DateOfBirth = ?, Gender = ? WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fullName);
+            ps.setString(2, phone);
+            ps.setObject(3, dateOfBirth == null ? null : Date.valueOf(dateOfBirth), Types.DATE);
+            ps.setString(4, gender);
+            ps.setInt(5, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Admin (UC-30): Cập nhật thông tin cơ bản (họ tên, số điện thoại) của tài khoản mà không làm mất DateOfBirth/Gender đã có.
      */
     public boolean updateProfile(int userId, String fullName, String phone) throws SQLException {
         String sql = "UPDATE [User] SET FullName = ?, Phone = ? WHERE UserID = ?";
@@ -184,6 +228,19 @@ public class UserDAO {
             ps.setString(1, fullName);
             ps.setString(2, phone);
             ps.setInt(3, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * UC-10: Cập nhật email đăng nhập sau khi email mới đã được xác thực bằng OTP.
+     */
+    public boolean updateEmail(int userId, String email) throws SQLException {
+        String sql = "UPDATE [User] SET Email = ? WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
         }
     }

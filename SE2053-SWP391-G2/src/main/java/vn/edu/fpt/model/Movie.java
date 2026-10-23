@@ -13,6 +13,11 @@ public class Movie {
     private int durationMinutes;
     private String ageRating;
     private LocalDate releaseDate;
+    // Ngày kết thúc chiếu; null = chưa xác định
+    private LocalDate endDate;
+    private String country;
+    private String language;
+    private String distributor;
     private String posterUrl;
     private String trailerUrl;
     private String formats;
@@ -84,6 +89,38 @@ public class Movie {
 
     public void setReleaseDate(LocalDate releaseDate) {
         this.releaseDate = releaseDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public String getDistributor() {
+        return distributor;
+    }
+
+    public void setDistributor(String distributor) {
+        this.distributor = distributor;
     }
 
     public String getPosterUrl() {

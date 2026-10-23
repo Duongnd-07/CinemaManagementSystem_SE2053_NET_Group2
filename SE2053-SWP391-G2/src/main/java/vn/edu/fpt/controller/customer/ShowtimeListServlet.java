@@ -38,7 +38,8 @@ public class ShowtimeListServlet extends HttpServlet {
             }
             request.setAttribute("movie", movie);
             request.setAttribute("schedule", showtimeService.getSchedule(movie.getMovieId(),
-                    request.getParameter("date"), request.getParameter("format"), request.getParameter("room")));
+                    request.getParameter("date"), request.getParameter("format"), request.getParameter("room"),
+                    request.getParameter("translationType")));
             request.setAttribute("emptyMessage", Messages.SHOWTIME_NONE_FOR_DATE);
             request.setAttribute("activeNav",
                     MovieStatus.COMING_SOON.equals(movie.getStatus()) ? "coming-soon" : "now-showing");

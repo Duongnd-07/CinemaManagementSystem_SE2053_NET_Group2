@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,7 +40,7 @@ public class VnPayWebhookServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-store");
 
-        Map<String, String> parameters = callbackParameters(request.getParameterMap());
+        Map<String, String> parameters = PaymentService.callbackParameters(request.getParameterMap());
         if (parameters == null) {
             writeResponse(response, "97", "Invalid callback parameters");
             return;
@@ -81,22 +80,6 @@ public class VnPayWebhookServlet extends HttpServlet {
             ActivityLogger.warning(request, LogEventType.BOOKING, "Thanh toán VNPay thất bại", "Payment", txnRef,
                     description);
         }
-    }
-
-    private Map<String, String> callbackParameters(Map<String, String[]> rawParameters) {
-        if (rawParameters == null || rawParameters.isEmpty() || rawParameters.size() > 50) {
-            return null;
-        }
-        Map<String, String> parameters = new LinkedHashMap<>();
-        for (Map.Entry<String, String[]> entry : rawParameters.entrySet()) {
-            String[] values = entry.getValue();
-            if (entry.getKey() == null || entry.getKey().length() > 100 || values == null || values.length != 1
-                    || values[0] == null || values[0].length() > 2048) {
-                return null;
-            }
-            parameters.put(entry.getKey(), values[0]);
-        }
-        return parameters;
     }
 
     private void writeResponse(HttpServletResponse response, String code, String message) throws IOException {

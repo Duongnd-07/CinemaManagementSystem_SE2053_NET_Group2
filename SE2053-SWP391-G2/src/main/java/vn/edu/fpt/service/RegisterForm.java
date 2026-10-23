@@ -22,7 +22,7 @@ public class RegisterForm implements Serializable {
     }
 
     public void setFullName(String fullName) {
-        this.fullName = fullName == null ? "" : fullName.trim();
+        this.fullName = FullNameRule.normalize(fullName);
     }
 
     public String getEmail() {

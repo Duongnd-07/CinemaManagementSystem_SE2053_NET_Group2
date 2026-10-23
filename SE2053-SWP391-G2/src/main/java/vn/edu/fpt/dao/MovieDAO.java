@@ -6,6 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,13 +16,15 @@ import java.util.List;
 import java.util.Map;
 import vn.edu.fpt.model.Genre;
 import vn.edu.fpt.model.Movie;
+import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.model.ShowtimeStatus;
 import vn.edu.fpt.util.DBContext;
 
 public class MovieDAO {
 
     private static final String SELECT_COLUMNS = "SELECT MovieID, Title, Synopsis, Director, [Cast], DurationMinutes, "
-            + "AgeRating, ReleaseDate, PosterUrl, TrailerUrl, Formats, Status FROM Movie ";
+            + "AgeRating, ReleaseDate, EndDate, Country, [Language], Distributor, PosterUrl, TrailerUrl, Formats, Status "
+            + "FROM Movie ";
     // CI: không phân biệt hoa thường, AI: không phân biệt dấu
     private static final String SEARCH_COLLATION = "Latin1_General_CI_AI";
 
@@ -150,12 +154,14 @@ public class MovieDAO {
         }
     }
 
-    // So sánh theo collation của cột (CI) để khớp đúng ràng buộc UNIQUE(Title)
-    public boolean existsByTitle(String title, int excludeMovieId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Movie WHERE Title = ? AND MovieID <> ?";
+    // So sánh theo collation của cột (CI) để khớp đúng ràng buộc UNIQUE(Title, ReleaseYear):
+    // cho phép phim làm lại trùng tên nhưng khác năm khởi chiếu
+    public boolean existsByTitleAndYear(String title, int releaseYear, int excludeMovieId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Movie WHERE Title = ? AND ReleaseYear = ? AND MovieID <> ?";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, title);
-            ps.setInt(2, excludeMovieId);
+            ps.setInt(2, releaseYear);
+            ps.setInt(3, excludeMovieId);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }
@@ -175,9 +181,60 @@ public class MovieDAO {
         }
     }
 
+    // Suất chưa hủy, chưa kết thúc và bắt đầu sau ngày endDate (chặn rút ngắn ngày kết thúc chiếu)
+    public boolean hasUnfinishedShowtimesAfter(int movieId, LocalDate endDate) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Showtime WHERE MovieID = ? AND EndTime > GETDATE() "
+                + "AND StartTime >= ? AND (Status IS NULL OR Status <> ?)";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, movieId);
+            ps.setTimestamp(2, Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
+            ps.setString(3, ShowtimeStatus.CANCELLED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    // JOB-03: phim Sắp chiếu đã tới ngày khởi chiếu -> Đang chiếu. Trả về tên các phim đã chuyển
+    public List<String> promoteReleased(LocalDate today) throws SQLException {
+        String sql = "UPDATE Movie SET Status = ? OUTPUT inserted.Title WHERE Status = ? AND ReleaseDate <= ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, MovieStatus.NOW_SHOWING);
+            ps.setString(2, MovieStatus.COMING_SOON);
+            ps.setDate(3, Date.valueOf(today));
+            return readTitles(ps);
+        }
+    }
+
+    // JOB-03: phim Đang chiếu đã qua ngày kết thúc -> Đã kết thúc. Suất còn đang chiếu (vd suất khuya qua 0h)
+    // thì chờ lần chạy sau, giống BR-MOV-04 khi đổi tay. Trả về tên các phim đã chuyển
+    public List<String> endExpired(LocalDate today) throws SQLException {
+        String sql = "UPDATE Movie SET Status = ? OUTPUT inserted.Title "
+                + "WHERE Status = ? AND EndDate < ? AND NOT EXISTS (SELECT 1 FROM Showtime s "
+                + "WHERE s.MovieID = Movie.MovieID AND s.EndTime > GETDATE() AND (s.Status IS NULL OR s.Status <> ?))";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, MovieStatus.ENDED);
+            ps.setString(2, MovieStatus.NOW_SHOWING);
+            ps.setDate(3, Date.valueOf(today));
+            ps.setString(4, ShowtimeStatus.CANCELLED);
+            return readTitles(ps);
+        }
+    }
+
+    private List<String> readTitles(PreparedStatement ps) throws SQLException {
+        List<String> titles = new ArrayList<>();
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                titles.add(rs.getString(1));
+            }
+        }
+        return titles;
+    }
+
     public int insert(Connection conn, Movie movie) throws SQLException {
         String sql = "INSERT INTO Movie (Title, Synopsis, Director, [Cast], DurationMinutes, AgeRating, ReleaseDate, "
-                + "PosterUrl, TrailerUrl, Formats, Status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "EndDate, Country, [Language], Distributor, PosterUrl, TrailerUrl, Formats, Status) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             bindMovie(ps, movie);
             ps.executeUpdate();
@@ -192,7 +249,8 @@ public class MovieDAO {
 
     public void update(Connection conn, Movie movie) throws SQLException {
         String sql = "UPDATE Movie SET Title = ?, Synopsis = ?, Director = ?, [Cast] = ?, DurationMinutes = ?, "
-                + "AgeRating = ?, ReleaseDate = ?, PosterUrl = ?, TrailerUrl = ?, Formats = ?, Status = ? "
+                + "AgeRating = ?, ReleaseDate = ?, EndDate = ?, Country = ?, [Language] = ?, Distributor = ?, "
+                + "PosterUrl = ?, TrailerUrl = ?, Formats = ?, Status = ? "
                 + "WHERE MovieID = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             int idx = bindMovie(ps, movie);
@@ -274,6 +332,10 @@ public class MovieDAO {
         ps.setInt(idx++, movie.getDurationMinutes());
         ps.setString(idx++, movie.getAgeRating());
         ps.setDate(idx++, movie.getReleaseDate() == null ? null : Date.valueOf(movie.getReleaseDate()));
+        ps.setDate(idx++, movie.getEndDate() == null ? null : Date.valueOf(movie.getEndDate()));
+        ps.setString(idx++, movie.getCountry());
+        ps.setString(idx++, movie.getLanguage());
+        ps.setString(idx++, movie.getDistributor());
         ps.setString(idx++, movie.getPosterUrl());
         ps.setString(idx++, movie.getTrailerUrl());
         ps.setString(idx++, movie.getFormats());
@@ -292,6 +354,11 @@ public class MovieDAO {
         movie.setAgeRating(rs.getString("AgeRating"));
         Date releaseDate = rs.getDate("ReleaseDate");
         movie.setReleaseDate(releaseDate == null ? null : releaseDate.toLocalDate());
+        Date endDate = rs.getDate("EndDate");
+        movie.setEndDate(endDate == null ? null : endDate.toLocalDate());
+        movie.setCountry(rs.getString("Country"));
+        movie.setLanguage(rs.getString("Language"));
+        movie.setDistributor(rs.getString("Distributor"));
         movie.setPosterUrl(rs.getString("PosterUrl"));
         movie.setTrailerUrl(rs.getString("TrailerUrl"));
         movie.setFormats(rs.getString("Formats"));

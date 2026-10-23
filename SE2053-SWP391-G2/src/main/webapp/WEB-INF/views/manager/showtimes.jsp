@@ -132,7 +132,7 @@
                 <option value="">-- Tất cả phim --</option>
                 <c:forEach var="movie" items="${movies}">
                     <option value="${movie.movieId}" ${selectedMovieId == movie.movieId ? 'selected' : ''}>
-                        <c:out value="${movie.title}"/> (${movie.durationMinutes}p)
+                        <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
                     </option>
                 </c:forEach>
             </select>
@@ -147,6 +147,15 @@
                         <c:out value="${room.roomName}"/> (${empty room.format ? '2D' : room.format})
                     </option>
                 </c:forEach>
+            </select>
+        </div>
+
+        <div class="flex-1 min-w-[150px]">
+            <label class="block text-label-sm text-on-surface-variant mb-1 font-medium">Bản chiếu</label>
+            <select name="translationType" class="w-full bg-surface-container-high text-on-surface px-4 py-2 rounded-lg border border-white/10 focus:border-primary outline-none text-body-md">
+                <option value="">-- Tất cả bản chiếu --</option>
+                <option value="Phụ đề" ${selectedTranslationType == 'Phụ đề' ? 'selected' : ''}>Phụ đề</option>
+                <option value="Lồng tiếng" ${selectedTranslationType == 'Lồng tiếng' ? 'selected' : ''}>Lồng tiếng</option>
             </select>
         </div>
 
@@ -227,6 +236,9 @@
                                     <div class="flex items-center gap-2 text-label-sm mt-0.5">
                                         <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary/15 text-primary border border-primary/30">
                                             <c:out value="${empty showtime.room.format ? '2D' : showtime.room.format}"/>
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-bold ${showtime.translationType == 'Lồng tiếng' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'}">
+                                            <c:out value="${empty showtime.translationType ? 'Phụ đề' : showtime.translationType}"/>
                                         </span>
                                         <span class="text-outline">${showtime.room.totalSeats} ghế</span>
                                     </div>
@@ -404,7 +416,7 @@
                                                 data-duration="${movie.durationMinutes}"
                                                 data-formats="<c:out value='${movie.formats}'/>"
                                                 ${form.movieId == movie.movieId ? 'selected' : ''}>
-                                            <c:out value="${movie.title}"/> (${movie.durationMinutes}p)
+                                            <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
                                         </option>
                                     </c:forEach>
                                 </select>
@@ -437,6 +449,26 @@
                                 <c:if test="${not empty editingShowtime and editingShowtime.bookedTickets > 0}">
                                     <input type="hidden" name="roomId" value="${form.roomId}"/>
                                 </c:if>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-label-md text-on-surface-variant mb-1.5 font-medium">Hình thức bản chiếu <span class="text-primary">*</span></label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
+                                    <input type="radio" name="translationType" value="Phụ đề" class="accent-primary" ${empty form.translationType or form.translationType == 'Phụ đề' ? 'checked' : ''}/>
+                                    <div>
+                                        <div class="text-body-sm font-bold text-on-surface">Phụ đề</div>
+                                        <div class="text-[11px] text-outline">Ngôn ngữ gốc + Phụ đề</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
+                                    <input type="radio" name="translationType" value="Lồng tiếng" class="accent-primary" ${form.translationType == 'Lồng tiếng' ? 'checked' : ''}/>
+                                    <div>
+                                        <div class="text-body-sm font-bold text-on-surface">Lồng tiếng</div>
+                                        <div class="text-[11px] text-outline">Lồng tiếng Việt</div>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 
@@ -521,7 +553,7 @@
                                                     data-duration="${movie.durationMinutes}"
                                                     data-formats="<c:out value='${movie.formats}'/>"
                                                     data-release="${movie.releaseDate != null ? movie.releaseDate : ''}">
-                                                <c:out value="${movie.title}"/> (${movie.durationMinutes}p)
+                                                <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
                                             </option>
                                         </c:forEach>
                                     </select>
@@ -549,6 +581,27 @@
                             <div id="batchFormatWarning" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-body-sm flex items-center gap-2">
                                 <span class="material-symbols-outlined text-[18px]">warning</span>
                                 <span id="batchFormatWarningText"></span>
+                            </div>
+
+                            <%-- Hình thức bản chiếu --%>
+                            <div>
+                                <label class="block text-label-md text-on-surface-variant mb-1.5 font-medium">Hình thức bản chiếu <span class="text-primary">*</span></label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
+                                        <input type="radio" name="batchTranslationType" value="Phụ đề" checked class="accent-primary"/>
+                                        <div>
+                                            <div class="text-body-sm font-bold text-on-surface">Phụ đề</div>
+                                            <div class="text-[11px] text-outline">Ngôn ngữ gốc + Phụ đề</div>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
+                                        <input type="radio" name="batchTranslationType" value="Lồng tiếng" class="accent-primary"/>
+                                        <div>
+                                            <div class="text-body-sm font-bold text-on-surface">Lồng tiếng</div>
+                                            <div class="text-[11px] text-outline">Lồng tiếng Việt</div>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
                             <%-- Khoảng ngày chiếu --%>
@@ -691,7 +744,7 @@
                                             <option value="${movie.movieId}"
                                                     data-duration="${movie.durationMinutes}"
                                                     data-formats="<c:out value='${movie.formats}'/>">
-                                                <c:out value="${movie.title}"/> (${movie.durationMinutes} phút)
+                                                <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes} phút)
                                             </option>
                                         </c:forEach>
                                     </select>
@@ -709,6 +762,26 @@
                                             </c:if>
                                         </c:forEach>
                                     </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-label-md text-on-surface-variant mb-1.5 font-medium">Hình thức bản chiếu <span class="text-primary">*</span></label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
+                                        <input type="radio" name="translationType" value="Phụ đề" checked class="accent-primary"/>
+                                        <div>
+                                            <div class="text-body-sm font-bold text-on-surface">Phụ đề</div>
+                                            <div class="text-[11px] text-outline">Ngôn ngữ gốc + Phụ đề</div>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
+                                        <input type="radio" name="translationType" value="Lồng tiếng" class="accent-primary"/>
+                                        <div>
+                                            <div class="text-body-sm font-bold text-on-surface">Lồng tiếng</div>
+                                            <div class="text-[11px] text-outline">Lồng tiếng Việt</div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
 

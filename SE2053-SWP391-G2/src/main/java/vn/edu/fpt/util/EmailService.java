@@ -458,4 +458,99 @@ public final class EmailService {
                 </html>
                 """.formatted(fullName, resetLink, expiryMinutes, resetLink);
     }
+
+    /**
+     * UC-10: Gửi mã OTP tới email mới để xác nhận đổi email đăng nhập (chạy bất đồng bộ).
+     */
+    public static void sendEmailChangeOtpAsync(String newEmail, String fullName, String otpCode, int expiryMinutes) {
+        EXECUTOR.submit(() -> {
+            String body = """
+                    <p class="desc">Xin chào <strong>%s</strong>,<br>Bạn vừa yêu cầu đổi email đăng nhập tài khoản CineLuxe
+                    sang địa chỉ này. Mã xác thực của bạn là:</p>
+                    <div class="otp-box"><div class="otp-code">%s</div></div>
+                    <p class="desc">Mã có hiệu lực trong <strong>%d phút</strong>. Không chia sẻ mã này cho bất kỳ ai.</p>
+                    <p class="warning">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
+                    """.formatted(escapeHtml(fullName), otpCode, expiryMinutes);
+            sendSimpleHtml(newEmail, "[CineLuxe] Mã xác thực đổi email", "Xác thực email mới", body,
+                    "UC-10 EMAIL CHANGE OTP: " + otpCode);
+        });
+    }
+
+    /**
+     * UC-10: Báo cho email cũ biết email đăng nhập vừa được đổi, để chủ tài khoản phát hiện nếu không phải họ đổi.
+     */
+    public static void sendEmailChangedNoticeAsync(String oldEmail, String fullName, String newEmail) {
+        EXECUTOR.submit(() -> {
+            String body = """
+                    <p class="desc">Xin chào <strong>%s</strong>,<br>Email đăng nhập tài khoản CineLuxe của bạn vừa được
+                    đổi sang <strong>%s</strong>. Từ nay vui lòng đăng nhập bằng email mới.</p>
+                    <p class="warning">Nếu bạn không thực hiện thay đổi này, hãy liên hệ rạp ngay để được hỗ trợ.</p>
+                    """.formatted(escapeHtml(fullName), escapeHtml(newEmail));
+            sendSimpleHtml(oldEmail, "[CineLuxe] Email đăng nhập đã được thay đổi", "Email đăng nhập đã thay đổi",
+                    body, "UC-10 EMAIL CHANGED NOTICE -> " + newEmail);
+        });
+    }
+
+    private static void sendSimpleHtml(String recipient, String subject, String title, String bodyHtml,
+                                       String devLogDetail) {
+        String senderEmail = AppConfig.get("mail.sender.email", "");
+        String senderPassword = AppConfig.get("mail.sender.password", "").replace(" ", "");
+        // Chế độ dev chưa cấu hình SMTP: ghi ra log để vẫn test được luồng
+        if (senderEmail.isEmpty() || senderPassword.isEmpty()) {
+            LOGGER.info("[DEV MODE] Gửi tới: " + recipient + " | " + devLogDetail);
+            return;
+        }
+
+        Properties props = new Properties();
+        props.put("mail.smtp.host", AppConfig.get("mail.smtp.host", "smtp.gmail.com"));
+        props.put("mail.smtp.port", AppConfig.get("mail.smtp.port", "587"));
+        props.put("mail.smtp.auth", String.valueOf(AppConfig.getBoolean("mail.smtp.auth", true)));
+        props.put("mail.smtp.starttls.enable", String.valueOf(AppConfig.getBoolean("mail.smtp.starttls.enable", true)));
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        Session session = Session.getInstance(props, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(senderEmail, senderPassword);
+            }
+        });
+
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f131d; color: #dfe2f1; margin: 0; padding: 20px; }
+                        .container { max-width: 520px; margin: 0 auto; background-color: #171b26; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); padding: 32px; }
+                        .logo { text-align: center; margin-bottom: 24px; font-size: 28px; font-weight: 800; color: #e50914; letter-spacing: 2px; }
+                        .title { font-size: 20px; font-weight: 700; margin-bottom: 12px; color: #ffffff; text-align: center; }
+                        .desc { font-size: 14px; line-height: 1.6; color: #e9bcb6; text-align: center; margin-bottom: 24px; }
+                        .otp-box { background-color: #0f131d; border: 2px dashed #e50914; border-radius: 10px; padding: 18px; text-align: center; margin: 24px 0; }
+                        .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #ffb95f; }
+                        .warning { color: #ffb4ab; font-size: 13px; text-align: center; margin-top: 16px; }
+                        .footer { font-size: 12px; color: #8e919f; text-align: center; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="logo">CINELUXE</div>
+                        <div class="title">%s</div>
+                        %s
+                        <div class="footer">&copy; CineLuxe Cinema - Trải nghiệm điện ảnh đỉnh cao.</div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(title, bodyHtml);
+
+        try {
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(senderEmail, "CineLuxe Cinema", StandardCharsets.UTF_8.name()));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
+            message.setSubject(subject);
+            message.setContent(html, "text/html; charset=UTF-8");
+            Transport.send(message);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            LOGGER.log(Level.SEVERE, "Lỗi khi gửi email tới: " + recipient, e);
+        }
+    }
 }

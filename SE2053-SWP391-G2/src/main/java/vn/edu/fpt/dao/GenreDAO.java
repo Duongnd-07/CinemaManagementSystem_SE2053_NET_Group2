@@ -135,9 +135,14 @@ public class GenreDAO {
     private int bindFilter(PreparedStatement ps, String keyword) throws SQLException {
         int idx = 1;
         if (keyword != null && !keyword.isEmpty()) {
-            ps.setString(idx++, "%" + keyword + "%");
+            ps.setString(idx++, "%" + escapeLike(keyword) + "%");
         }
         return idx;
+    }
+
+    // Ký tự đại diện của LIKE trong SQL Server được bọc [] để tìm đúng chuỗi người dùng nhập
+    private String escapeLike(String value) {
+        return value.replace("[", "[[]").replace("%", "[%]").replace("_", "[_]");
     }
 
     private Genre mapRow(ResultSet rs) throws SQLException {

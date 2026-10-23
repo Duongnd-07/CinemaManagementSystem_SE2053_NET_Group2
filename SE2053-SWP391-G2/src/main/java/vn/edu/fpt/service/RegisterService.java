@@ -18,8 +18,6 @@ import vn.edu.fpt.util.PasswordUtil;
 
 // UC-01: Nghiệp vụ đăng ký tài khoản thành viên qua xác thực Email (OTP)
 public class RegisterService {
-    // SRS UC-01: Full Name max length 50 characters
-    private static final int MAX_FULLNAME = 60;
     private static final int MAX_EMAIL = 100;
     private static final int MIN_PASSWORD = 8;
     private static final int MAX_PASSWORD = 32;
@@ -52,12 +50,10 @@ public class RegisterService {
     public Map<String, String> validate(RegisterForm form) throws SQLException {
         Map<String, String> errors = new LinkedHashMap<>();
 
-        // 1. Họ và tên
-        String fullName = form.getFullName();
-        if (fullName.isEmpty()) {
-            errors.put("fullName", Messages.format(Messages.MSG02, "Họ và tên"));
-        } else if (fullName.length() > MAX_FULLNAME) {
-            errors.put("fullName", Messages.format(Messages.MSG08, MAX_FULLNAME));
+        // 1. Họ và tên (quy tắc dùng chung với UC-10 Manage Profile)
+        String fullNameError = FullNameRule.validate(form.getFullName());
+        if (fullNameError != null) {
+            errors.put("fullName", fullNameError);
         }
 
         // 2. Email

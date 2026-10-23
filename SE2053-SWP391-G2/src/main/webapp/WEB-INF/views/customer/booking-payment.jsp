@@ -106,9 +106,12 @@
                 <h2 class="text-xl font-extrabold text-white"><c:out value="${movie.title}"/></h2>
                 <span class="booking-age ${movie.ageRating == 'P' ? 'booking-age--p' : ''}"><c:out value="${movie.ageRating}"/></span>
             </div>
-            <p class="text-sm text-[#c7cad6]">
-                ${showtime.startTime.format(timeFormat)} · ${showtime.startTime.format(dateFormat)} ·
-                <c:out value="${room.roomName}"/> (<c:out value="${room.format}"/>)
+            <p class="text-sm text-[#c7cad6] flex flex-wrap items-center gap-1.5">
+                <span>${showtime.startTime.format(timeFormat)} · ${showtime.startTime.format(dateFormat)} ·</span>
+                <span class="inline-block text-[11px] font-bold px-1.5 py-0.5 rounded leading-none ${showtime.translationType == 'Lồng tiếng' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'}">
+                    <c:out value="${empty showtime.translationType ? 'Phụ đề' : showtime.translationType}"/>
+                </span>
+                <span>· <c:out value="${room.roomName}"/> (<c:out value="${room.format}"/>)</span>
             </p>
 
             <c:choose>
