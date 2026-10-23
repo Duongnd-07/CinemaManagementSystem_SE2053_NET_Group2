@@ -219,6 +219,20 @@ public class UserDAO {
     }
 
     /**
+     * Admin (UC-30): Cập nhật thông tin cơ bản (họ tên, số điện thoại) của tài khoản mà không làm mất DateOfBirth/Gender đã có.
+     */
+    public boolean updateProfile(int userId, String fullName, String phone) throws SQLException {
+        String sql = "UPDATE [User] SET FullName = ?, Phone = ? WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fullName);
+            ps.setString(2, phone);
+            ps.setInt(3, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * UC-10: Cập nhật email đăng nhập sau khi email mới đã được xác thực bằng OTP.
      */
     public boolean updateEmail(int userId, String email) throws SQLException {
