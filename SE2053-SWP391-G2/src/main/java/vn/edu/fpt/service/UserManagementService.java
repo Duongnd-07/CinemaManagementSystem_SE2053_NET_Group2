@@ -136,8 +136,10 @@ public class UserManagementService {
             throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
         }
 
-        // Quy tắc bảo vệ Admin cuối cùng
-        if (Role.ADMIN.equalsIgnoreCase(targetUser.getRole()) && !Role.ADMIN.equalsIgnoreCase(newRole)) {
+        // Quy tắc bảo vệ Admin cuối cùng: chỉ chặn nếu chính tài khoản bị hạ quyền đang là Admin Hoạt động và là Admin duy nhất
+        if (Role.ADMIN.equalsIgnoreCase(targetUser.getRole())
+                && "Active".equalsIgnoreCase(targetUser.getStatus())
+                && !Role.ADMIN.equalsIgnoreCase(newRole)) {
             if (userDAO.countActiveAdmins() <= 1) {
                 throw new ValidationException(Map.of("role", Messages.USER_LAST_ADMIN_ROLE_LOCKED));
             }
@@ -166,8 +168,10 @@ public class UserManagementService {
             throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
         }
 
-        // Quy tắc bảo vệ Admin cuối cùng
-        if (Role.ADMIN.equalsIgnoreCase(targetUser.getRole()) && !"Active".equalsIgnoreCase(newStatus)) {
+        // Quy tắc bảo vệ Admin cuối cùng: chỉ chặn nếu chính tài khoản bị khóa đang là Admin Hoạt động và là Admin duy nhất
+        if (Role.ADMIN.equalsIgnoreCase(targetUser.getRole())
+                && "Active".equalsIgnoreCase(targetUser.getStatus())
+                && !"Active".equalsIgnoreCase(newStatus)) {
             if (userDAO.countActiveAdmins() <= 1) {
                 throw new ValidationException(Map.of("status", Messages.USER_LAST_ADMIN_STATUS_LOCKED));
             }
