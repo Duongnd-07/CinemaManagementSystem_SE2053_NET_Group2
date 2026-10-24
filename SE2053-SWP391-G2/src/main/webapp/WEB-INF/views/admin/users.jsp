@@ -231,6 +231,7 @@
                         <c:choose>
                             <c:when test="${not empty users}">
                                 <c:forEach var="u" items="${users}">
+                                    <c:if test="${u.role != 'Admin'}">
                                     <c:set var="isSelf" value="${sessionScope.user.userId == u.userId}"/>
                                     <tr class="hover:bg-white/[0.02] transition">
                                         <!-- ID -->
@@ -362,6 +363,7 @@
                                             </div>
                                         </td>
                                     </tr>
+                                    </c:if>
                                 </c:forEach>
                             </c:when>
                             <c:otherwise>
