@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
+import vn.edu.fpt.dao.BookingDAO;
 import vn.edu.fpt.dao.CustomerBookingDAO;
 import vn.edu.fpt.dao.CustomerNotificationDAO;
 import vn.edu.fpt.dao.VoucherDAO;
@@ -21,6 +22,7 @@ public class TicketCancellationService {
     private static final String ACTIVE = "Active";
     private static final String AMOUNT = "Amount";
     private final CustomerBookingDAO bookingDAO = new CustomerBookingDAO();
+    private final BookingDAO loyaltyDAO = new BookingDAO();
     private final VoucherDAO voucherDAO = new VoucherDAO();
     private final CustomerNotificationDAO notificationDAO = new CustomerNotificationDAO();
 
@@ -42,9 +44,17 @@ public class TicketCancellationService {
                 BigDecimal voucherAmount = ticket.getPrice().multiply(new BigDecimal("0.80"))
                         .setScale(2, RoundingMode.HALF_UP);
                 Voucher voucher = createRefundVoucher(customerId, voucherAmount, voucherDays);
+                int pointsToRevoke = pointsToRevoke(conn, ticket);
 
                 if (bookingDAO.markTicketCancelled(conn, ticketId, voucherAmount) != 1) {
                     throw new ValidationException(Map.of("general", Messages.TICKET_CANCELLATION_NOT_ALLOWED));
+                }
+                if (pointsToRevoke > 0) {
+                    if (!loyaltyDAO.revokeEarnedPoints(conn, customerId, pointsToRevoke)) {
+                        throw new SQLException("Customer loyalty balance is outside the supported range.");
+                    }
+                    loyaltyDAO.insertLoyaltyTransaction(conn, customerId, ticket.getBookingId(), "Adjustment",
+                            -pointsToRevoke, "Thu hồi điểm do hủy vé UC16 #" + ticketId);
                 }
                 voucherDAO.insertRefundVoucher(conn, voucher);
                 notificationDAO.insert(conn, customerId, "Voucher hoàn tiền vé",
@@ -61,6 +71,30 @@ public class TicketCancellationService {
                 throw e;
             }
         }
+    }
+
+    private int pointsToRevoke(Connection conn, CancellableTicket ticket) throws SQLException {
+        int earnedPoints = ticket.getBookingPointsEarned();
+        if (earnedPoints <= 0) {
+            return 0;
+        }
+
+        long alreadyRevoked = loyaltyDAO.sumTicketCancellationPointReversals(conn, ticket.getBookingId());
+        int remainingEarnedPoints = (int) Math.max(0L, earnedPoints - alreadyRevoked);
+        if (remainingEarnedPoints == 0) {
+            return 0;
+        }
+        if (ticket.getUpcomingTicketCount() <= 1) {
+            return remainingEarnedPoints;
+        }
+
+        BigDecimal totalTicketPrice = ticket.getBookingTicketTotal();
+        if (totalTicketPrice == null || totalTicketPrice.signum() <= 0) {
+            throw new SQLException("Booking ticket total must be positive to reverse earned loyalty points.");
+        }
+        int proportionalPoints = BigDecimal.valueOf(earnedPoints).multiply(ticket.getPrice())
+                .divide(totalTicketPrice, 0, RoundingMode.DOWN).intValueExact();
+        return Math.min(proportionalPoints, remainingEarnedPoints);
     }
 
     private void validate(CancellableTicket ticket) throws ValidationException {
