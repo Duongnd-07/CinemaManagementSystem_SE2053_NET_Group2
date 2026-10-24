@@ -105,8 +105,8 @@
             </div>
         </c:if>
 
-        <!-- Stats Overview Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <!-- Stats Overview Cards (4 vai trò được quản lý) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             <!-- 1. Total -->
             <div class="bg-[#171b26] border border-white/10 rounded-2xl p-4 flex items-center gap-3.5">
                 <div class="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
@@ -118,18 +118,7 @@
                 </div>
             </div>
 
-            <!-- 2. Admin -->
-            <div class="bg-[#171b26] border border-red-500/20 rounded-2xl p-4 flex items-center gap-3.5">
-                <div class="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
-                    <span class="material-symbols-outlined text-2xl">shield_person</span>
-                </div>
-                <div>
-                    <div class="text-[11px] font-semibold uppercase tracking-wider text-red-400">Admin</div>
-                    <div class="text-xl font-extrabold text-white">${stats.Admin != null ? stats.Admin : 0}</div>
-                </div>
-            </div>
-
-            <!-- 3. Manager -->
+            <!-- 2. Manager -->
             <div class="bg-[#171b26] border border-amber-500/20 rounded-2xl p-4 flex items-center gap-3.5">
                 <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                     <span class="material-symbols-outlined text-2xl">manage_accounts</span>
@@ -140,7 +129,7 @@
                 </div>
             </div>
 
-            <!-- 4. Staff -->
+            <!-- 3. Staff -->
             <div class="bg-[#171b26] border border-blue-500/20 rounded-2xl p-4 flex items-center gap-3.5">
                 <div class="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
                     <span class="material-symbols-outlined text-2xl">badge</span>
@@ -151,8 +140,8 @@
                 </div>
             </div>
 
-            <!-- 5. Customer -->
-            <div class="bg-[#171b26] border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3.5 col-span-2 sm:col-span-1">
+            <!-- 4. Customer -->
+            <div class="bg-[#171b26] border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3.5">
                 <div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                     <span class="material-symbols-outlined text-2xl">person</span>
                 </div>
@@ -174,8 +163,8 @@
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                         <input type="text" name="keyword" value="<c:out value='${keyword}'/>"
-                               placeholder="Tìm theo Họ tên, Email, Số điện thoại..."
-                               class="w-full pl-10 pr-4 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-xs sm:text-sm focus:outline-none focus:border-[#e50914] transition"/>
+                                placeholder="Tìm theo Họ tên, Email, Số điện thoại..."
+                                class="w-full pl-10 pr-4 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white placeholder-gray-500 text-xs sm:text-sm focus:outline-none focus:border-[#e50914] transition"/>
                     </div>
                 </div>
 
@@ -187,7 +176,6 @@
                     <select name="role"
                             class="w-full px-3 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-[#e50914] transition">
                         <option value="ALL" ${selectedRole == 'ALL' ? 'selected' : ''}>-- Tất cả vai trò --</option>
-                        <option value="Admin" ${selectedRole == 'Admin' ? 'selected' : ''}>Quản trị viên (Admin)</option>
                         <option value="Manager" ${selectedRole == 'Manager' ? 'selected' : ''}>Quản lý (Manager)</option>
                         <option value="Staff" ${selectedRole == 'Staff' ? 'selected' : ''}>Nhân viên (Staff)</option>
                         <option value="Customer" ${selectedRole == 'Customer' ? 'selected' : ''}>Khách hàng (Customer)</option>
@@ -475,10 +463,9 @@
                         </label>
                         <select name="role" required
                                 class="w-full px-3 py-2 bg-[#0f131d] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#e50914]">
+                            <option value="Customer">Khách hàng (Customer)</option>
                             <option value="Staff">Nhân viên (Staff)</option>
                             <option value="Manager">Quản lý (Manager)</option>
-                            <option value="Admin">Quản trị viên (Admin)</option>
-                            <option value="Customer">Khách hàng (Customer)</option>
                         </select>
                     </div>
                     <div>

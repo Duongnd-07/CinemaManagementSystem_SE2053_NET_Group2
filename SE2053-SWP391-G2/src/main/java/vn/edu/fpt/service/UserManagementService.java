@@ -218,8 +218,8 @@ public class UserManagementService {
         }
 
         // 4. Vai trò
-        if (role == null || !Role.isValid(role)) {
-            errors.put("role", Messages.USER_ROLE_INVALID);
+        if (role == null || !Role.isValid(role) || Role.ADMIN.equalsIgnoreCase(role)) {
+            errors.put("role", "Vai trò không hợp lệ. Chỉ có thể tạo tài khoản Manager, Staff hoặc Customer.");
         }
 
         // 5. Mật khẩu

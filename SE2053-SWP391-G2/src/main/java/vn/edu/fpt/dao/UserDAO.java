@@ -252,7 +252,7 @@ public class UserDAO {
         StringBuilder sql = new StringBuilder("""
                 SELECT UserID, FullName, Email, Phone, PasswordHash, Role, PointBalance, Status
                 FROM [User]
-                WHERE 1=1
+                WHERE Role <> 'Admin'
                 """);
         List<Object> params = new ArrayList<>();
         if (keyword != null && !keyword.trim().isEmpty()) {
@@ -293,7 +293,7 @@ public class UserDAO {
      * Admin: Đếm tổng số lượng tài khoản theo điều kiện lọc.
      */
     public int countUsers(String keyword, String role, String status) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM [User] WHERE 1=1");
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM [User] WHERE Role <> 'Admin'");
         List<Object> params = new ArrayList<>();
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (LOWER(FullName) LIKE LOWER(?) OR LOWER(Email) LIKE LOWER(?) OR Phone LIKE ?)");
@@ -370,7 +370,9 @@ public class UserDAO {
                 String r = rs.getString("Role");
                 int c = rs.getInt("Cnt");
                 stats.put(r, c);
-                total += c;
+                if (!Role.ADMIN.equalsIgnoreCase(r)) {
+                    total += c;
+                }
             }
         }
         stats.put("Total", total);
