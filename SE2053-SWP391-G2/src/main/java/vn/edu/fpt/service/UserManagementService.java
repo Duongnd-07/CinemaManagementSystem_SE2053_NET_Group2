@@ -125,6 +125,9 @@ public class UserManagementService {
         if (!Role.isValid(newRole)) {
             throw new ValidationException(Map.of("role", Messages.USER_ROLE_INVALID));
         }
+        if (Role.ADMIN.equalsIgnoreCase(newRole)) {
+            throw new ValidationException(Map.of("role", Messages.USER_ROLE_ADMIN_NOT_ASSIGNABLE));
+        }
         if (currentAdminId == targetUserId) {
             throw new ValidationException(Map.of("role", Messages.USER_ROLE_SELF_LOCKED));
         }

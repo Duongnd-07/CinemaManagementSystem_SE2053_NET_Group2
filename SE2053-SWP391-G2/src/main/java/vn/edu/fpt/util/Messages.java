@@ -275,6 +275,8 @@ public final class Messages {
             "Không thể khóa hoặc hủy kích hoạt tài khoản này vì đây là Quản trị viên (Admin) hoạt động duy nhất trong hệ thống.";
     public static final String USER_NOT_FOUND = "Không tìm thấy tài khoản người dùng.";
     public static final String USER_ROLE_INVALID = "Vai trò không hợp lệ. Chỉ chấp nhận Admin, Manager, Staff hoặc Customer.";
+    public static final String USER_ROLE_ADMIN_NOT_ASSIGNABLE =
+            "Không được phép phân quyền tài khoản thành Quản trị viên (Admin). Chỉ có thể phân quyền thành Customer, Staff hoặc Manager.";
     public static final String USER_STATUS_INVALID = "Trạng thái không hợp lệ. Chỉ chấp nhận Active, Suspended hoặc Deactivated.";
     public static final String USER_CREATED = "Tạo tài khoản mới thành công!";
     public static final String USER_PROFILE_UPDATED = "Cập nhật thông tin tài khoản thành công!";

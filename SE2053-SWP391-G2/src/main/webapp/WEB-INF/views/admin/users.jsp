@@ -600,15 +600,15 @@
                     </label>
                     <select id="roleModalSelect" name="newRole" required
                             class="w-full px-3 py-2.5 bg-[#0f131d] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#e50914]">
-                        <option value="Admin">Quản trị viên (Admin - Toàn quyền phân quyền & tài khoản)</option>
-                        <option value="Manager">Quản lý (Manager - Quản lý phim, suất chiếu, phòng, giá vé)</option>
-                        <option value="Staff">Nhân viên (Staff - Bán vé POS & Báo cáo sự cố)</option>
                         <option value="Customer">Khách hàng (Customer - Đặt vé online & Tích điểm)</option>
+                        <option value="Staff">Nhân viên (Staff - Bán vé POS & Báo cáo sự cố)</option>
+                        <option value="Manager">Quản lý (Manager - Quản lý phim, suất chiếu, phòng, giá vé)</option>
                     </select>
                 </div>
 
-                <div class="p-2.5 bg-[#0f131d] rounded-xl border border-white/5 text-[11px] text-gray-400">
-                    <span class="text-amber-400 font-bold">Lưu ý an toàn:</span> Không thể hạ quyền tài khoản Admin hoạt động duy nhất trong hệ thống.
+                <div class="p-2.5 bg-[#0f131d] rounded-xl border border-white/5 text-[11px] text-gray-400 space-y-1">
+                    <div><span class="text-amber-400 font-bold">Lưu ý phân quyền:</span> Chỉ có thể phân quyền thành Customer, Staff hoặc Manager (không thể phân quyền thành Admin).</div>
+                    <div>Không thể hạ quyền tài khoản Admin hoạt động duy nhất trong hệ thống.</div>
                 </div>
 
                 <div class="flex justify-end gap-2.5 pt-2">
@@ -760,7 +760,12 @@
             document.getElementById('roleModalUserId').value = userId;
             document.getElementById('roleModalUserName').innerText = fullName;
             document.getElementById('roleModalUserEmail').innerText = email;
-            document.getElementById('roleModalSelect').value = currentRole;
+            const roleSelect = document.getElementById('roleModalSelect');
+            if (currentRole === 'Admin') {
+                roleSelect.value = 'Customer';
+            } else {
+                roleSelect.value = currentRole;
+            }
             document.getElementById('roleModal').classList.remove('hidden');
         }
         function closeRoleModal() {
