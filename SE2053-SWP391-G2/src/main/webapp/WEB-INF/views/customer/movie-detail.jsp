@@ -27,7 +27,7 @@
         <!-- Phần đầu: poster + thông tin chính, nền là poster làm mờ -->
         <section class="relative overflow-hidden border-b border-white/10">
             <c:if test="${not empty posterSrc}">
-                <img class="detail-backdrop" alt="" aria-hidden="true" onerror="this.remove()" src="<c:out value='${posterSrc}'/>"/>
+                <img class="detail-backdrop" alt="" aria-hidden="true" onerror="this.remove()" referrerpolicy="no-referrer" src="<c:out value='${posterSrc}'/>"/>
             </c:if>
             <div class="relative max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">
                 <a href="${ctx}/movies?tab=${comingSoon ? 'coming-soon' : 'now-showing'}"
@@ -40,7 +40,7 @@
                     <div class="movie-poster detail-poster shrink-0 mx-auto md:mx-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                         <span class="material-symbols-outlined text-6xl text-[#8e919f]">image</span>
                         <c:if test="${not empty posterSrc}">
-                            <img alt="Poster <c:out value='${movie.title}'/>" onerror="this.remove()" src="<c:out value='${posterSrc}'/>"/>
+                            <img alt="Poster <c:out value='${movie.title}'/>" onerror="this.remove()" referrerpolicy="no-referrer" src="<c:out value='${posterSrc}'/>"/>
                         </c:if>
                     </div>
 

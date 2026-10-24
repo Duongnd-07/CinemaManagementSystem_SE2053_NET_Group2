@@ -42,7 +42,7 @@
             <div class="movie-poster w-16 sm:w-20 shrink-0 rounded-lg overflow-hidden">
                 <span class="material-symbols-outlined text-3xl text-[#8e919f]">image</span>
                 <c:if test="${not empty posterSrc}">
-                    <img alt="" onerror="this.remove()" src="<c:out value='${posterSrc}'/>"/>
+                    <img alt="" onerror="this.remove()" referrerpolicy="no-referrer" src="<c:out value='${posterSrc}'/>"/>
                 </c:if>
             </div>
             <div class="min-w-0 flex-1 space-y-1">
