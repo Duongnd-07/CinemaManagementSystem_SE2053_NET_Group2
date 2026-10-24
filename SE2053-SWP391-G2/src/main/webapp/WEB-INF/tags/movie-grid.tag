@@ -23,7 +23,7 @@
                         <%-- Biểu tượng nằm dưới ảnh: hiện ra khi phim chưa có poster hoặc ảnh tải lỗi --%>
                         <span class="material-symbols-outlined text-5xl text-[#8e919f]">image</span>
                         <c:if test="${not empty movie.posterUrl}">
-                            <img alt="Poster <c:out value='${movie.title}'/>" loading="lazy" onerror="this.remove()"
+                            <img alt="Poster <c:out value='${movie.title}'/>" loading="lazy" onerror="this.remove()" referrerpolicy="no-referrer"
                                  src="${fn:startsWith(movie.posterUrl, 'http') ? '' : ctx.concat('/')}<c:out value='${movie.posterUrl}'/>"/>
                         </c:if>
                         <span class="age-badge age-${fn:toLowerCase(movie.ageRating)}"

@@ -57,7 +57,7 @@
                         <div class="seat-map-poster">
                             <span class="material-symbols-outlined text-4xl">movie</span>
                             <c:if test="${not empty movie.posterUrl}">
-                                <img alt="" onerror="this.remove()"
+                                <img alt="" onerror="this.remove()" referrerpolicy="no-referrer"
                                      src="${fn:startsWith(movie.posterUrl, 'http') ? '' : ctx.concat('/')}<c:out value='${movie.posterUrl}'/>"/>
                             </c:if>
                         </div>

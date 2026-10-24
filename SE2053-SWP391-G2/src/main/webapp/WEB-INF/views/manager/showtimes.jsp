@@ -205,7 +205,7 @@
                                     <div class="flex items-center gap-3">
                                         <c:choose>
                                             <c:when test="${not empty showtime.movie.posterUrl}">
-                                                <img src="${showtime.movie.posterUrl}" alt="Poster" class="w-10 h-14 object-cover rounded shadow-md border border-white/10 flex-shrink-0"/>
+                                                <img src="${showtime.movie.posterUrl}" alt="Poster" class="w-10 h-14 object-cover rounded shadow-md border border-white/10 flex-shrink-0" referrerpolicy="no-referrer"/>
                                             </c:when>
                                             <c:otherwise>
                                                 <div class="w-10 h-14 bg-surface-container-high rounded flex items-center justify-center text-outline flex-shrink-0">

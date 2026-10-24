@@ -116,7 +116,7 @@
                                 <div class="w-10 h-14 rounded overflow-hidden bg-surface-container-high shrink-0 flex items-center justify-center">
                                     <c:choose>
                                         <c:when test="${not empty movie.posterUrl}">
-                                            <img class="w-full h-full object-cover" alt="" loading="lazy"
+                                            <img class="w-full h-full object-cover" alt="" loading="lazy" referrerpolicy="no-referrer"
                                                  src="${fn:startsWith(movie.posterUrl, 'http') ? '' : ctx.concat('/')}<c:out value='${movie.posterUrl}'/>"/>
                                         </c:when>
                                         <c:otherwise><span class="material-symbols-outlined text-outline">image</span></c:otherwise>

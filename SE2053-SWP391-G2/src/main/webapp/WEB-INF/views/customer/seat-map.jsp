@@ -62,7 +62,7 @@
                     <div class="seat-map-poster">
                         <c:choose>
                             <c:when test="${not empty movie.posterUrl}">
-                                <img alt="Poster ${fn:escapeXml(movie.title)}"
+                                <img alt="Poster ${fn:escapeXml(movie.title)}" referrerpolicy="no-referrer"
                                      src="${fn:startsWith(movie.posterUrl, 'http') ? '' : ctx.concat('/')}<c:out value='${movie.posterUrl}'/>"/>
                             </c:when>
                             <c:otherwise>
