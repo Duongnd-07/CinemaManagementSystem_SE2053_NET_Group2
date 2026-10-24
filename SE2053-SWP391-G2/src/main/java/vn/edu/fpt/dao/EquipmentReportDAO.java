@@ -8,7 +8,6 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,11 +27,8 @@ public class EquipmentReportDAO {
             + "LEFT JOIN RoomEquipment eq ON eq.EquipmentID = r.EquipmentID "
             + "LEFT JOIN [User] u ON u.UserID = r.StaffID ";
 
-    // UC-26: việc chưa xong đứng trước, trong cùng trạng thái thì khẩn cấp hơn đứng trước
-    private static final String ORDER_FOR_MANAGER = "ORDER BY "
-            + "CASE r.Status WHEN 'Pending' THEN 0 WHEN 'In Progress' THEN 1 ELSE 2 END, "
-            + "CASE r.UrgencyLevel WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, "
-            + "r.ReportDate DESC, r.ReportID DESC ";
+    // UC-26: báo cáo gửi gần đây nhất đứng trước; lọc theo trạng thái bằng tab trên trang
+    private static final String ORDER_FOR_MANAGER = "ORDER BY r.ReportDate DESC, r.ReportID DESC ";
 
     // equipmentId: thiết bị cụ thể (RoomEquipment), null với báo cáo ghế hoặc phòng chưa khai báo thiết bị
     public int insert(Connection conn, EquipmentReport report, Integer equipmentId) throws SQLException {
@@ -179,24 +175,23 @@ public class EquipmentReportDAO {
         }
     }
 
-    // Số báo cáo thiết bị (không tính ghế) chưa xử lý xong của phòng có mức khẩn cấp thuộc urgencies
-    public int countOpenDevicesByUrgency(Connection conn, int roomId, List<String> urgencies) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Equipment_Report WHERE RoomID = ? AND SeatID IS NULL AND Status <> ? "
-                + "AND UrgencyLevel IN (" + String.join(", ", Collections.nCopies(urgencies.size(), "?")) + ")";
+    // Số báo cáo khác chưa xử lý xong của cùng một phòng (mọi loại thiết bị, kể cả ghế)
+    // {số ghế đang có báo cáo chưa xử lý xong, tổng số ghế} của phòng (UC-21 tự khóa phòng khi hỏng quá 50%)
+    public int[] countBrokenSeats(Connection conn, int roomId) throws SQLException {
+        String sql = "SELECT (SELECT COUNT(DISTINCT SeatID) FROM Equipment_Report "
+                + "WHERE RoomID = ? AND SeatID IS NOT NULL AND Status <> ?) AS Broken, "
+                + "(SELECT COUNT(*) FROM Seat WHERE RoomID = ?) AS Total";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            int idx = 1;
-            ps.setInt(idx++, roomId);
-            ps.setString(idx++, ReportStatus.RESOLVED);
-            for (String urgency : urgencies) {
-                ps.setString(idx++, urgency);
-            }
+            ps.setInt(1, roomId);
+            ps.setString(2, ReportStatus.RESOLVED);
+            ps.setInt(3, roomId);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt(1) : 0;
+                rs.next();
+                return new int[]{rs.getInt("Broken"), rs.getInt("Total")};
             }
         }
     }
 
-    // Số báo cáo khác chưa xử lý xong của cùng một phòng (mọi loại thiết bị, kể cả ghế)
     public int countOtherOpenByRoom(Connection conn, int roomId, int excludeReportId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM Equipment_Report WHERE RoomID = ? AND ReportID <> ? AND Status <> ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {

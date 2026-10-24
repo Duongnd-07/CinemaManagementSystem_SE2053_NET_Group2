@@ -138,7 +138,7 @@
             <%-- Thông tin báo cáo --%>
             <div class="grid grid-cols-2 gap-x-space-lg gap-y-space-sm text-body-md mb-space-md">
                 <div><span class="text-on-surface-variant">Thiết bị:</span> <c:out value="${categoryLabels[report.equipmentCategory]}"/></div>
-                <div><span class="text-on-surface-variant">Mức khẩn cấp:</span>
+                <div><span class="text-on-surface-variant">Mức khẩn cấp của phòng:</span>
                     <span class="cl-pill ${urgencyPills[report.urgencyLevel]}"><c:out value="${urgencyLabels[report.urgencyLevel]}"/></span></div>
                 <div><span class="text-on-surface-variant">Vị trí:</span> <c:out value="${report.roomName}"/><c:if test="${not empty report.seatLabel}"> • ${not empty report.seatId ? 'Ghế ' : ''}<c:out value="${report.seatLabel}"/></c:if></div>
                 <div><span class="text-on-surface-variant">Trạng thái:</span>
@@ -183,7 +183,7 @@
                     <input type="checkbox" name="lockRoom" value="1" class="mt-1" ${form.lockRoom ? 'checked' : ''}/>
                     <span>
                         <span class="text-on-surface font-label-lg">Khóa <c:out value="${report.roomName}"/> để sửa chữa</span>
-                        <span class="block text-body-sm text-on-surface-variant">Phòng bị khóa sẽ không xếp được suất chiếu mới. Bỏ tích để mở khóa phòng (không mở được khi còn từ 2 thiết bị không phải ghế hỏng mức Cao/Khẩn cấp); phòng tự mở khóa khi mọi sự cố đã xử lý xong hoặc còn dưới 2 thiết bị hỏng mức Cao/Khẩn cấp.</span>
+                        <span class="block text-body-sm text-on-surface-variant">Phòng bị khóa sẽ không xếp được suất chiếu mới. Bỏ tích để mở khóa phòng (không mở được khi còn một loại thiết bị hoặc số ghế hỏng quá 50% số lượng trong phòng); phòng tự mở khóa khi mọi sự cố đã xử lý xong hoặc không còn loại nào (kể cả ghế) hỏng quá 50%.</span>
                     </span>
                 </label>
                 <div class="flex items-center justify-end gap-space-md pt-space-sm">
