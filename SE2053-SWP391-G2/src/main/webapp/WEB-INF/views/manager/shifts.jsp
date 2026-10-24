@@ -47,6 +47,21 @@
             <jsp:include page="/WEB-INF/views/common/shift-report-body.jsp"/>
         </c:when>
         <c:otherwise>
+            <%-- Thời lượng ca do Manager cấu hình; hết giờ hệ thống tự kết ca và chốt số liệu --%>
+            <form method="post" action="${ctx}/manager/shifts"
+                  class="flex flex-wrap items-end gap-space-md mb-space-lg bg-surface-container-low rounded-xl border border-white/10 p-space-md"
+                  onsubmit="return confirm('Đổi thời lượng ca? Ca đang mở sẽ tính lại giờ tự kết; ca đã quá thời lượng mới sẽ bị kết ngay.');">
+                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                <input type="hidden" name="action" value="setHours"/>
+                <div>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="shiftHours">Thời lượng một ca (giờ)</label>
+                    <input class="${inputClass} h-11 w-28" type="number" id="shiftHours" name="shiftHours"
+                           min="${minShiftHours}" max="${maxShiftHours}" step="1" value="${shiftHours}" required/>
+                </div>
+                <button type="submit" class="h-11 px-space-lg rounded-full bg-primary-container text-on-primary-container font-label-lg">Lưu</button>
+                <p class="text-body-sm text-on-surface-variant pb-3">Từ ${minShiftHours} đến ${maxShiftHours} giờ. Hết giờ, ca tự kết thúc và chốt báo cáo; nhân viên được báo trước 15 phút.</p>
+            </form>
+
             <form method="get" action="${ctx}/manager/shifts" class="flex flex-wrap items-end gap-space-md mb-space-lg">
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="date">Ngày</label>

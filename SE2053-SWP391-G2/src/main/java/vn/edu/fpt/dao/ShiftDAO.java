@@ -195,6 +195,25 @@ public class ShiftDAO {
         }
     }
 
+    // Manager đổi thời lượng ca (dòng SHIFT_HOURS do sql/UC22_shift_cash_count.sql tạo); thêm dòng nếu DB chưa có
+    public void saveShiftHours(String configKey, int hours) throws SQLException {
+        String sql = "UPDATE SystemConfig SET ConfigValue = ?, UpdatedAt = GETDATE() WHERE ConfigKey = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, String.valueOf(hours));
+            ps.setString(2, configKey);
+            if (ps.executeUpdate() > 0) {
+                return;
+            }
+        }
+        String insert = "INSERT INTO SystemConfig (ConfigKey, ConfigValue, Description) VALUES (?, ?, ?)";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(insert)) {
+            ps.setString(1, configKey);
+            ps.setString(2, String.valueOf(hours));
+            ps.setString(3, "UC-22: số giờ tối đa của một ca bán tại quầy, hết giờ hệ thống tự kết ca");
+            ps.executeUpdate();
+        }
+    }
+
     // shortcut: chỉ lấy 30 ca gần nhất, chưa phân trang; thêm Page khi nhân viên cần xem lịch sử dài hơn
     public List<Shift> findRecentByStaff(int staffId) throws SQLException {
         return findMany(SELECT_FROM + JOIN_NAMES + "WHERE sh.StaffID = ? ORDER BY sh.StartedAt DESC "

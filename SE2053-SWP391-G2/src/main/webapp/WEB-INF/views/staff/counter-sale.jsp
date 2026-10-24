@@ -229,15 +229,19 @@
                                         <c:set var="typedQty" value="${form.quantities[item.concessionId]}"/>
                                         <div class="flex items-center justify-between gap-space-sm bg-surface-container-high rounded-lg px-space-md py-2">
                                             <div class="min-w-0">
-                                                <div class="font-label-lg truncate"><c:out value="${item.name}"/></div>
-                                                <div class="text-body-sm text-on-surface-variant">
+                                                <%-- Tên món dài xuống dòng để nhân viên đọc đủ, không cắt "..." --%>
+                                                <div class="font-label-lg break-words"><c:out value="${item.name}"/></div>
+                                                <div class="text-body-sm text-on-surface-variant whitespace-nowrap">
                                                     <fmt:formatNumber value="${item.unitPrice}" maxFractionDigits="0"/>đ · còn ${item.maxQuantity}
                                                 </div>
                                             </div>
-                                            <input class="${inputClass} h-10 w-20 text-center" type="number" min="0" max="${item.maxQuantity}"
-                                                   name="qty_${item.concessionId}" data-price="${item.unitPrice}"
-                                                   value="${not empty typedQty ? fn:escapeXml(typedQty) : (item.quantity > 0 ? item.quantity : '')}"
-                                                   placeholder="0" aria-label="Số lượng <c:out value='${item.name}'/>"/>
+                                            <%-- inputClass có w-full nên bọc khung rộng cố định, không để ô số lượng chiếm chỗ tên món --%>
+                                            <div class="w-20 shrink-0">
+                                                <input class="${inputClass} h-10 text-center" type="number" min="0" max="${item.maxQuantity}"
+                                                       name="qty_${item.concessionId}" data-price="${item.unitPrice}"
+                                                       value="${not empty typedQty ? fn:escapeXml(typedQty) : (item.quantity > 0 ? item.quantity : '')}"
+                                                       placeholder="0" aria-label="Số lượng <c:out value='${item.name}'/>"/>
+                                            </div>
                                         </div>
                                     </c:forEach>
                                 </div>
