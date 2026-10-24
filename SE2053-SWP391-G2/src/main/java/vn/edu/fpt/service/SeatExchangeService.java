@@ -81,6 +81,7 @@ public class SeatExchangeService {
     private final BookingDAO bookingDAO = new BookingDAO();
     private final SeatDAO seatDAO = new SeatDAO();
     private final EquipmentReportDAO reportDAO = new EquipmentReportDAO();
+    private final EquipmentReportService reportService = new EquipmentReportService();
     private final ShiftDAO shiftDAO = new ShiftDAO();
     private final ShiftService shiftService = new ShiftService();
     private final SystemConfigDAO configDAO = new SystemConfigDAO();
@@ -327,7 +328,9 @@ public class SeatExchangeService {
         report.setUrgencyLevel(UrgencyLevel.MEDIUM);
         report.setDescription(REPORT_DESCRIPTION_PREFIX + ticket.getTicketCode() + "): " + reason);
         report.setStatus(ReportStatus.PENDING);
-        reportDAO.insert(conn, report, null);
+        int reportId = reportDAO.insert(conn, report, null);
+        // Ghế hỏng mới có thể làm phòng vượt ngưỡng hỏng quá 50% số ghế (UC-21)
+        reportService.lockRoomIfOverHalf(conn, ticket.getRoomId(), reportId, staffId);
     }
 
     // Voucher đền bù cá nhân, dùng một lần, không cần đơn tối thiểu; khách vãng lai không có ví nên không tặng

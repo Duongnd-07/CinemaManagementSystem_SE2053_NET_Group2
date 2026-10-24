@@ -342,7 +342,8 @@
                     <c:if test="${not empty errors.trailer}"><p class="form-error"><c:out value="${errors.trailer}"/></p></c:if>
                 </div>
 
-                <%-- Poster: một nguồn duy nhất, ảnh xem trước luôn là ảnh sẽ được lưu. File tải lên được ưu tiên hơn URL --%>
+                <%-- Poster: chỉ chọn ảnh từ máy. Ô ẩn posterUrl giữ poster hiện tại khi sửa phim mà không chọn file mới
+                     (rỗng = bỏ poster); ảnh xem trước luôn là ảnh sẽ được lưu --%>
                 <c:set var="posterSrc" value="${empty form.posterUrl ? '' : (fn:startsWith(form.posterUrl, 'http') ? form.posterUrl : ctx.concat('/').concat(form.posterUrl))}"/>
                 <div data-poster-picker data-initial-url="<c:out value='${form.posterUrl}'/>" data-initial-src="<c:out value='${posterSrc}'/>">
                     <span class="block text-label-md text-on-surface-variant mb-2">Poster</span>
@@ -355,8 +356,7 @@
                         <div class="flex-1 min-w-0 space-y-2">
                             <input class="${inputClass}" id="posterFile" name="posterFile" type="file" accept="image/jpeg,image/png,image/webp"
                                    aria-label="Tải ảnh poster lên"/>
-                            <input class="${inputClass} read-only:opacity-50" id="posterUrl" name="posterUrl" type="text" maxlength="500"
-                                   value="<c:out value='${form.posterUrl}'/>" placeholder="hoặc dán URL ảnh https://..." aria-label="URL ảnh poster"/>
+                            <input id="posterUrl" name="posterUrl" type="hidden" value="<c:out value='${form.posterUrl}'/>"/>
                             <div class="flex items-center justify-between gap-space-sm">
                                 <p id="posterSource" class="text-outline text-body-sm" aria-live="polite"></p>
                                 <button type="button" id="posterClear" ${empty posterSrc ? 'hidden' : ''}

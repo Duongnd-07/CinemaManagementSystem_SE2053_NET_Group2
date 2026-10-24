@@ -141,7 +141,8 @@
                         <c:if test="${not empty errors.category}"><p class="form-error"><c:out value="${errors.category}"/></p></c:if>
                     </div>
                     <div>
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="urgency">Mức khẩn cấp <span class="req">*</span></label>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="urgency"
+                               title="Mức ảnh hưởng tới việc sử dụng phòng chiếu, không phải mức hư hỏng của thiết bị">Mức khẩn cấp của phòng <span class="req">*</span></label>
                         <select class="${inputClass}" id="urgency" name="urgency">
                             <option value="">-- Chọn mức --</option>
                             <c:forEach var="level" items="${urgencyLevels}">
@@ -216,7 +217,9 @@
                     <c:if test="${not empty errors.description}"><p class="form-error"><c:out value="${errors.description}"/></p></c:if>
                 </div>
                 <p class="text-body-sm text-on-surface-variant">
-                    Phòng có từ 2 thiết bị (không tính ghế) hỏng mức Cao hoặc Khẩn cấp chưa xử lý sẽ tự động khóa bảo trì.
+                    Mức khẩn cấp thể hiện tình trạng của phòng chiếu. Phòng tự động khóa bảo trì khi một loại thiết bị
+                    (máy chiếu, âm thanh, điều hòa) hỏng quá 50% số lượng trong phòng (VD hỏng 2/2 điều hòa),
+                    hoặc số ghế hỏng quá 50% tổng số ghế của phòng.
                 </p>
                 <p class="text-body-sm text-on-surface-variant" id="seatNotice">
                     Khi báo ghế hỏng, ghế sẽ được khóa bảo trì ngay và không bán được nữa.

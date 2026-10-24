@@ -5,9 +5,13 @@ import java.time.LocalDateTime;
 
 public class CancellableTicket {
     private int ticketId;
+    private int bookingId;
     private int seatId;
     private int showtimeId;
     private BigDecimal price;
+    private BigDecimal bookingTicketTotal;
+    private int bookingPointsEarned;
+    private int upcomingTicketCount;
     private String ticketStatus;
     private String bookingStatus;
     private String channel;
@@ -18,6 +22,14 @@ public class CancellableTicket {
 
     public int getTicketId() {
         return ticketId;
+    }
+
+    public int getBookingId() {
+        return bookingId;
+    }
+
+    public void setBookingId(int bookingId) {
+        this.bookingId = bookingId;
     }
 
     public void setTicketId(int ticketId) {
@@ -46,6 +58,30 @@ public class CancellableTicket {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public BigDecimal getBookingTicketTotal() {
+        return bookingTicketTotal;
+    }
+
+    public void setBookingTicketTotal(BigDecimal bookingTicketTotal) {
+        this.bookingTicketTotal = bookingTicketTotal;
+    }
+
+    public int getBookingPointsEarned() {
+        return bookingPointsEarned;
+    }
+
+    public void setBookingPointsEarned(int bookingPointsEarned) {
+        this.bookingPointsEarned = bookingPointsEarned;
+    }
+
+    public int getUpcomingTicketCount() {
+        return upcomingTicketCount;
+    }
+
+    public void setUpcomingTicketCount(int upcomingTicketCount) {
+        this.upcomingTicketCount = upcomingTicketCount;
     }
 
     public String getTicketStatus() {

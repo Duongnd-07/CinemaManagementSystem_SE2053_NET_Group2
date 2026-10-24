@@ -34,18 +34,22 @@ public class EquipmentReportService {
     private static final String LOG_ROOM_AUTO_UNLOCKED =
             "Tự động mở khóa phòng chiếu: không còn sự cố nào chưa xử lý.";
     private static final String LOG_ROOM_AUTO_UNLOCKED_BELOW_LIMIT =
-            "Tự động mở khóa phòng chiếu: còn dưới 2 thiết bị (không tính ghế) hỏng mức Cao/Khẩn cấp.";
+            "Tự động mở khóa phòng chiếu: không còn loại thiết bị nào (kể cả ghế) hỏng quá 50% số lượng trong phòng.";
     private static final String EQUIPMENT_DUPLICATE =
             "Thiết bị này của phòng đã có báo cáo #SC-{0} chưa xử lý xong, không cần báo lại.";
     private static final String UNIT_DUPLICATE = "{0} đã có báo cáo #SC-{1} chưa xử lý xong.";
     private static final String UNIT_INVALID = "Thiết bị không thuộc phòng và loại thiết bị đã chọn.";
-    private static final String LOG_ROOM_AUTO_LOCKED =
-            "Tự động khóa phòng chiếu: từ 2 thiết bị (không tính ghế) mức Cao/Khẩn cấp chưa xử lý.";
-    // Từ AUTO_LOCK_DEVICES thiết bị hỏng (không tính ghế) ở các mức này chưa xử lý xong thì phòng tự khóa bảo trì
-    private static final List<String> AUTO_LOCK_URGENCIES = List.of(UrgencyLevel.HIGH, UrgencyLevel.CRITICAL);
-    private static final int AUTO_LOCK_DEVICES = 2;
-    private static final String ROOM_UNLOCK_BLOCKED = "Không thể mở khóa phòng: phòng còn từ 2 thiết bị (không tính ghế) "
-            + "hỏng mức Cao/Khẩn cấp chưa xử lý xong.";
+    // Ghép chuỗi thay vì Messages.format để giữ nguyên dấu "/" trong "2/2"
+    private static final String LOG_ROOM_AUTO_LOCKED = "Tự động khóa phòng chiếu: hỏng quá 50% thiết bị cùng loại ";
+    private static final String ROOM_UNLOCK_BLOCKED = "Không thể mở khóa phòng: còn hỏng quá 50% thiết bị cùng loại ";
+    // Tự khóa phòng khi một loại thiết bị hỏng quá 50% số lượng của loại đó trong phòng (VD 2/2 điều hòa),
+    // hoặc số ghế hỏng quá 50% tổng số ghế. Mức khẩn cấp chỉ mô tả tình trạng phòng cho Manager, không quyết định
+    // việc khóa
+    private static final List<String> LOCK_CATEGORIES = List.of(EquipmentCategory.PROJECTOR,
+            EquipmentCategory.SOUND_SYSTEM, EquipmentCategory.AIR_CONDITIONING, EquipmentCategory.SEAT);
+    // Nhãn tiếng Việt cho thông báo khóa/mở phòng (ghế đếm riêng ở overHalfBroken)
+    private static final Map<String, String> CATEGORY_LABELS = Map.of(EquipmentCategory.PROJECTOR, "máy chiếu",
+            EquipmentCategory.SOUND_SYSTEM, "âm thanh", EquipmentCategory.AIR_CONDITIONING, "điều hòa");
 
     private final EquipmentReportDAO reportDAO = new EquipmentReportDAO();
     private final EquipmentReportLogDAO logDAO = new EquipmentReportLogDAO();
@@ -203,7 +207,7 @@ public class EquipmentReportService {
             try {
                 int lastReportId = 0;
                 for (int seatId : seatIds) {
-                    reportDAO.insert(conn, toReport(form, staffId, seatId), null);
+                    lastReportId = reportDAO.insert(conn, toReport(form, staffId, seatId), null);
                     // Ghế hỏng phải khóa ngay để không bán tiếp (rule "Defective seat operational lock")
                     seatDAO.updateStatus(conn, seatId, RoomStatus.MAINTENANCE);
                 }
@@ -213,15 +217,9 @@ public class EquipmentReportService {
                 if (seatIds.isEmpty() && unitIds.isEmpty()) {
                     lastReportId = reportDAO.insert(conn, toReport(form, staffId, null), null);
                 }
-                // Chỉ xét khi lần gửi này là thiết bị mức Cao/Khẩn cấp, để Manager đã mở khóa thủ công (UC-26)
-                // không bị khóa lại cho tới khi có báo cáo khẩn mới; đếm cộng dồn cả báo cáo gửi trước đó
-                int roomId = parseId(form.getRoomId());
-                if (!isSeat && AUTO_LOCK_URGENCIES.contains(form.getUrgency())
-                        && reportDAO.countOpenDevicesByUrgency(conn, roomId, AUTO_LOCK_URGENCIES) >= AUTO_LOCK_DEVICES
-                        && roomDAO.lockIfActive(conn, roomId)) {
-                    writeLog(conn, lastReportId, staffId, ReportStatus.PENDING, ReportStatus.PENDING,
-                            LOG_ROOM_AUTO_LOCKED);
-                    result.roomLocked = true;
+                // Chỉ xét khi lần gửi này có ghế / thiết bị cụ thể hỏng; đếm cộng dồn cả báo cáo gửi trước đó
+                if (!seatIds.isEmpty() || !unitIds.isEmpty()) {
+                    result.roomLocked = lockRoomIfOverHalf(conn, parseId(form.getRoomId()), lastReportId, staffId);
                 }
                 conn.commit();
             } catch (SQLException e) {
@@ -343,18 +341,19 @@ public class EquipmentReportService {
                 // Phòng tự mở khóa khi sự cố cuối cùng của phòng xử lý xong; còn sự cố dở thì chỉ mở khi quản lý bỏ tích
                 boolean resolved = statusChanged && ReportStatus.RESOLVED.equals(newStatus);
                 boolean roomClear = resolved && reportDAO.countOtherOpenByRoom(conn, report.getRoomId(), reportId) == 0;
-                // Xử lý xong một thiết bị hỏng nặng làm phòng còn dưới ngưỡng tự khóa (UC-21) thì cũng tự mở;
-                // ghế hỏng còn lại đã bị khóa riêng từng ghế nên không cần giữ khóa cả phòng
-                boolean belowLockLimit = resolved && !roomClear && report.getSeatId() == null
-                        && AUTO_LOCK_URGENCIES.contains(report.getUrgencyLevel())
-                        && reportDAO.countOpenDevicesByUrgency(conn, report.getRoomId(), AUTO_LOCK_URGENCIES)
-                        < AUTO_LOCK_DEVICES;
+                // Xử lý xong một ghế / thiết bị làm phòng không còn loại nào hỏng quá 50% (ngưỡng tự khóa UC-21) thì
+                // cũng tự mở; ghế hỏng còn lại đã bị khóa riêng từng ghế nên không cần giữ khóa cả phòng
+                boolean belowLockLimit = resolved && !roomClear
+                        && LOCK_CATEGORIES.contains(report.getEquipmentCategory())
+                        && overHalfBroken(conn, report.getRoomId()).isEmpty();
                 boolean autoUnlock = roomClear || belowLockLimit;
                 boolean lockRoom = form.isLockRoom() && !autoUnlock;
-                // Còn đủ thiết bị hỏng nặng để tự khóa (UC-21) thì không cho bỏ tích; đếm sau khi đã đổi trạng thái ở trên
-                if (!lockRoom && !autoUnlock && isRoomLocked(report) && reportDAO.countOpenDevicesByUrgency(
-                        conn, report.getRoomId(), AUTO_LOCK_URGENCIES) >= AUTO_LOCK_DEVICES) {
-                    throw new ValidationException(Map.of("general", ROOM_UNLOCK_BLOCKED));
+                // Còn loại thiết bị hỏng quá 50% thì không cho bỏ tích; đếm sau khi đã đổi trạng thái ở trên
+                if (!lockRoom && !autoUnlock && isRoomLocked(report)) {
+                    String overHalf = overHalfBroken(conn, report.getRoomId());
+                    if (!overHalf.isEmpty()) {
+                        throw new ValidationException(Map.of("general", ROOM_UNLOCK_BLOCKED + overHalf + "."));
+                    }
                 }
                 if (lockRoom != isRoomLocked(report)) {
                     roomDAO.updateStatus(conn, report.getRoomId(),
@@ -384,6 +383,32 @@ public class EquipmentReportService {
             result.upcomingShowtimes = roomDAO.countUpcomingShowtimes(report.getRoomId());
         }
         return result;
+    }
+
+    // Khóa phòng (đang hoạt động) nếu một loại thiết bị hoặc số ghế hỏng quá 50%; gọi trong transaction vừa tạo
+    // báo cáo reportId (UC-21 gửi báo cáo, UC-20 đổi ghế hỏng). Trả về true nếu phòng vừa bị khóa
+    public boolean lockRoomIfOverHalf(Connection conn, int roomId, int reportId, int staffId) throws SQLException {
+        String overHalf = overHalfBroken(conn, roomId);
+        if (overHalf.isEmpty() || !roomDAO.lockIfActive(conn, roomId)) {
+            return false;
+        }
+        writeLog(conn, reportId, staffId, ReportStatus.PENDING, ReportStatus.PENDING,
+                LOG_ROOM_AUTO_LOCKED + overHalf + ".");
+        return true;
+    }
+
+    // Các loại hỏng quá 50% của phòng dạng "(điều hòa 2/2, ghế 40/75)"; rỗng nếu không có
+    private String overHalfBroken(Connection conn, int roomId) throws SQLException {
+        List<String> parts = new ArrayList<>();
+        for (Map.Entry<String, int[]> entry : equipmentDAO.findOverHalfBroken(conn, roomId).entrySet()) {
+            parts.add(CATEGORY_LABELS.getOrDefault(entry.getKey(), entry.getKey()) + " "
+                    + entry.getValue()[0] + "/" + entry.getValue()[1]);
+        }
+        int[] seats = reportDAO.countBrokenSeats(conn, roomId);
+        if (seats[0] * 2 > seats[1]) {
+            parts.add("ghế " + seats[0] + "/" + seats[1]);
+        }
+        return parts.isEmpty() ? "" : "(" + String.join(", ", parts) + ")";
     }
 
     public boolean isRoomLocked(EquipmentReport report) {

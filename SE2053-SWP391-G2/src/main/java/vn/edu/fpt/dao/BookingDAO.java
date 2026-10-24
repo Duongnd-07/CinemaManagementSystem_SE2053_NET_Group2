@@ -336,6 +336,29 @@ public class BookingDAO {
         }
     }
 
+    public boolean revokeEarnedPoints(Connection conn, int userId, int points) throws SQLException {
+        String sql = "UPDATE [User] SET PointBalance = PointBalance - ? "
+                + "WHERE UserID = ? AND CONVERT(BIGINT, PointBalance) - ? >= -2147483648";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, points);
+            ps.setInt(2, userId);
+            ps.setInt(3, points);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    public long sumTicketCancellationPointReversals(Connection conn, int bookingId) throws SQLException {
+        String sql = "SELECT COALESCE(SUM(CONVERT(BIGINT, -PointsChange)), 0) "
+                + "FROM LoyaltyPointHistory WHERE BookingID = ? AND TransactionType = 'Adjustment' "
+                + "AND Description LIKE N'Thu hồi điểm do hủy vé UC16 #%'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, bookingId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 0L;
+            }
+        }
+    }
+
     public boolean addPoints(Connection conn, int userId, int points) throws SQLException {
         String sql = "UPDATE [User] SET PointBalance = PointBalance + ? "
                 + "WHERE UserID = ? AND PointBalance <= 2147483647 - ?";

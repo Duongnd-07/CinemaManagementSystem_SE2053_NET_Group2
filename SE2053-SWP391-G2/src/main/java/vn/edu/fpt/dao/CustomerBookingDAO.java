@@ -65,8 +65,13 @@ public class CustomerBookingDAO {
 
     public CancellableTicket findCancellationCandidate(Connection conn, int ticketId, int customerId)
             throws SQLException {
-        String sql = "SELECT t.TicketID, t.SeatID, b.ShowtimeID, t.Price, t.Status AS TicketStatus, "
-                + "b.Status AS BookingStatus, b.Channel, s.StartTime FROM Ticket t WITH (UPDLOCK, ROWLOCK) "
+        String sql = "SELECT t.TicketID, b.BookingID, t.SeatID, b.ShowtimeID, t.Price, b.PointsEarned, "
+                + "(SELECT SUM(allTicket.Price) FROM Ticket allTicket WHERE allTicket.BookingID = b.BookingID) "
+                + "AS BookingTicketTotal, "
+                + "(SELECT COUNT(*) FROM Ticket upcoming WHERE upcoming.BookingID = b.BookingID "
+                + "AND upcoming.Status = 'Upcoming') AS UpcomingTicketCount, "
+                + "t.Status AS TicketStatus, b.Status AS BookingStatus, b.Channel, s.StartTime "
+                + "FROM Ticket t WITH (UPDLOCK, ROWLOCK) "
                 + "JOIN Booking b WITH (UPDLOCK, ROWLOCK) ON b.BookingID = t.BookingID "
                 + "JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
                 + "WHERE t.TicketID = ? AND b.CustomerID = ?";
@@ -79,9 +84,13 @@ public class CustomerBookingDAO {
                 }
                 CancellableTicket ticket = new CancellableTicket();
                 ticket.setTicketId(rs.getInt("TicketID"));
+                ticket.setBookingId(rs.getInt("BookingID"));
                 ticket.setSeatId(rs.getInt("SeatID"));
                 ticket.setShowtimeId(rs.getInt("ShowtimeID"));
                 ticket.setPrice(rs.getBigDecimal("Price"));
+                ticket.setBookingTicketTotal(rs.getBigDecimal("BookingTicketTotal"));
+                ticket.setBookingPointsEarned(rs.getInt("PointsEarned"));
+                ticket.setUpcomingTicketCount(rs.getInt("UpcomingTicketCount"));
                 ticket.setTicketStatus(rs.getString("TicketStatus"));
                 ticket.setBookingStatus(rs.getString("BookingStatus"));
                 ticket.setChannel(rs.getString("Channel"));

@@ -34,8 +34,7 @@ public final class Messages {
             "Phim còn suất chiếu sau ngày kết thúc chiếu mới. Vui lòng hủy các suất đó trước.";
     public static final String MOVIE_FORMAT_INVALID = "Định dạng chiếu không hợp lệ.";
     public static final String MOVIE_GENRE_INVALID = "Thể loại không hợp lệ.";
-    public static final String MOVIE_POSTER_URL_INVALID =
-            "Đường dẫn poster phải là URL http/https hợp lệ (không dấu, không khoảng trắng).";
+    public static final String MOVIE_POSTER_INVALID = "Poster không hợp lệ. Vui lòng chọn ảnh poster từ máy.";
     public static final String MOVIE_POSTER_FILE_INVALID = "Poster chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.";
     public static final String MOVIE_POSTER_FILE_TOO_LARGE = "Poster vượt quá dung lượng tối đa 5MB.";
     public static final String MOVIE_POSTER_SAVE_FAILED = "Không lưu được file poster. Vui lòng thử lại.";

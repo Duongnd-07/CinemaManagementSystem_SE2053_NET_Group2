@@ -39,7 +39,7 @@ public class EquipmentReportServlet extends HttpServlet {
     private static final String ITEM_LABEL = "báo cáo sự cố";
     private static final String STAFF_ONLY = "Chỉ nhân viên mới được gửi báo cáo sự cố.";
     private static final String ROOM_AUTO_LOCKED =
-            "Phòng chiếu đã tự động khóa bảo trì vì có từ 2 thiết bị hỏng mức Cao/Khẩn cấp.";
+            "Phòng chiếu đã tự động khóa bảo trì vì một loại thiết bị hoặc số ghế hỏng quá 50% số lượng trong phòng.";
     private static final String ROOM_AUTO_LOCKED_SHOWTIMES = " Phòng đang có {0} suất chiếu sắp tới, cần báo quản lý.";
 
     private final EquipmentReportService reportService = new EquipmentReportService();
