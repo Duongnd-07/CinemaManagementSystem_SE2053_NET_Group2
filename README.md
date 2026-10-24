@@ -1,1 +1,185 @@
-# CinemaManagementSystem
+# Cinema Management System (SE2053 – SWP391 – Group 2)
+
+Hệ thống quản lý rạp chiếu phim: đặt vé online, bán vé tại quầy (POS), quản lý phim/suất chiếu/phòng/ghế, voucher, tích điểm, báo cáo. Chi tiết nghiệp vụ xem tài liệu **Group2_SRS** (các mã `UC-xx`, `BF-xx`, `GB-xx`, `JOB-xx`, `API-xx` trong README này tham chiếu tới SRS).
+
+## 1. Công nghệ
+
+| Hạng mục         | Lựa chọn                                           |
+| ---------------- | -------------------------------------------------- |
+| Ngôn ngữ         | Java 21                                            |
+| Build            | Maven (`SE2053-SWP391-G2/pom.xml`), encoding UTF-8 |
+| Web              | Java Servlet + JSP (MVC thuần), chạy trên Tomcat   |
+| CSDL             | SQL Server (`cinemaDB`), JDBC `mssql-jdbc`         |
+| Truy cập dữ liệu | JDBC thuần qua `DBContext` (không dùng ORM)        |
+
+## 2. Cấu trúc thư mục
+
+```
+SE2053-SWP391-G2/
+├─ pom.xml
+└─ src/main/
+   ├─ java/vn/edu/fpt/
+   │  ├─ controller/{auth,customer,staff,manager,admin}   # Servlet theo actor
+   │  ├─ service/        # Nghiệp vụ (business rule GB-xx nằm ở đây)
+   │  ├─ dao/            # Truy vấn SQL, trả về model
+   │  ├─ model/          # Entity (POJO) ánh xạ bảng
+   │  ├─ filter/         # Authentication / Authorization (RBAC), encoding
+   │  ├─ listener/       # Khởi động Background Job (JOB-01, JOB-02, JOB-03)
+   │  └─ util/           # DBContext, helper dùng chung
+   ├─ resources/         # ConnectDB.properties, config.properties
+   └─ webapp/
+      ├─ WEB-INF/views/{auth,common,customer,staff,manager,admin}   # JSP (ẩn khỏi truy cập trực tiếp)
+      └─ assets/{css,js,images}
+```
+
+Luồng bắt buộc: **JSP → Controller → Service → DAO → DB**. Không được nhảy cách tầng.
+
+| Tầng       | Được làm                                                                   | Không được làm                                  |
+| ---------- | -------------------------------------------------------------------------- | ----------------------------------------------- |
+| Controller | Đọc/validate cú pháp request, gọi Service, set attribute, forward/redirect | Viết SQL, chứa business rule, dùng `Connection` |
+| Service    | Business rule, tính tiền, điều phối nhiều DAO, quản lý transaction         | Dùng `HttpServletRequest/Response`, in HTML     |
+| DAO        | SQL, map `ResultSet` ↔ model                                               | Business rule, gọi Service khác                 |
+| Model      | Field + getter/setter                                                      | Logic nghiệp vụ, truy cập DB                    |
+| JSP        | Hiển thị bằng JSTL/EL                                                      | Scriptlet `<% %>`, SQL, logic nghiệp vụ         |
+
+## 3. Quy tắc đặt tên
+
+| Đối tượng         | Quy tắc                                                                                    | Ví dụ                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Package           | chữ thường, `vn.edu.fpt.<tầng>[.<actor>]`                                                  | `vn.edu.fpt.controller.customer`                                  |
+| Class             | `PascalCase`; hậu tố theo tầng                                                             | `BookingController`, `BookingService`, `BookingDAO`, `AuthFilter` |
+| Model             | Danh từ số ít, trùng tên bảng                                                              | `Booking`, `SeatHold`, `Movie`                                    |
+| Method / biến     | `camelCase`, động từ cho method                                                            | `findByShowtimeId`, `holdSeats`                                   |
+| Hằng số           | `UPPER_SNAKE_CASE`                                                                         | `SEAT_HOLD_MINUTES`                                               |
+| Bảng / cột DB     | Bảng `PascalCase`; cột `PascalCase` (`BookingID`, `ShowtimeID`) – thống nhất với script DB | `Booking.FinalAmount`                                             |
+| Field model ↔ cột | `camelCase` ↔ `PascalCase`                                                                 | `finalAmount` ↔ `FinalAmount`                                     |
+| JSP               | `kebab-case.jsp` trong thư mục theo actor                                                  | `views/customer/seat-map.jsp`                                     |
+| URL               | chữ thường, `kebab-case`, tiền tố theo actor                                               | `/customer/booking`, `/staff/pos`, `/admin/users`                 |
+| Webhook API       | `POST /api/v1/commerce/payment/webhook/{vnpay\|sepay}` (SRS API-02/03)                     |                                                                   |
+| CSS/JS            | `kebab-case`                                                                               | `assets/css/seat-map.css`                                         |
+| Git branch        | `<tên>/<loại>-<mô-tả>`                                                                     | `duong/feature-login`                                             |
+
+### Quy ước ánh xạ kiểu dữ liệu (theo model hiện có)
+
+- Khóa chính: `int`; khóa ngoại có thể `NULL` → `Integer` (vd. `Booking.customerId`, `staffId`, `voucherId`).
+- Tiền tệ: `BigDecimal` (tuyệt đối **không** dùng `double/float`).
+- Thời gian: `java.time.LocalDateTime` / `LocalDate`; không dùng `java.util.Date`.
+- Trạng thái (status): hằng số/enum thống nhất với SRS, không viết chuỗi "magic" rải rác:
+  - Seat: `AVAILABLE | PENDING | SOLD | MAINTENANCE`
+  - Booking: `Pending | Paid | Cancelled`; kênh: `Online | Counter`
+  - Ticket: `Upcoming | Watched | Exchanged | Cancelled`
+  - Movie: `Coming Soon | Now Showing | Ended | Hidden`; tuổi: `P | C13 | C16 | C18`
+  - User: `Active | Suspended | Deactivated`; vai trò: `Admin | Manager | Staff | Customer`
+
+## 4. Quy tắc code Java
+
+1. **Format**: indent 4 space, không dùng tab; mỗi file một class public; dòng ≤ 120 ký tự; `{` cùng dòng; luôn dùng `{}` cho `if/for`.
+2. **Import**: không `import x.*`; xóa import thừa.
+3. **Model**: constructor mặc định + private field + getter/setter (giữ nguyên phong cách `Booking.java`).
+4. **DAO**
+   - Luôn dùng `PreparedStatement` với tham số `?`. **Cấm** nối chuỗi vào SQL (chống SQL Injection).
+   - Dùng `try-with-resources` cho `Connection/PreparedStatement/ResultSet`.
+   - Lấy kết nối bằng `DBContext.getConnection()`; riêng nghiệp vụ nhiều bước, Service mở transaction và truyền `Connection` xuống DAO (`setAutoCommit(false)` → `commit/rollback`).
+   - Cột nullable đọc bằng `rs.getObject(..., Integer.class)` / kiểm tra `wasNull()`.
+5. **Controller**
+   - Một Servlet cho mỗi chức năng; dùng `@WebServlet`, tách `doGet` (hiển thị) / `doPost` (xử lý).
+   - **POST thành công → redirect (PRG)** để tránh submit lại form.
+   - Mọi input từ người dùng phải được validate ở server (không tin JS).
+   - View đặt trong `WEB-INF/views` và truy cập qua `RequestDispatcher.forward`.
+6. **Xử lý lỗi & log**
+   - Không `e.printStackTrace()` / `System.out.println` trong code nghiệp vụ; dùng `java.util.logging` (hoặc logger thống nhất cả nhóm).
+   - Không nuốt exception rỗng (`catch (Exception e) {}`). Lỗi hiển thị cho người dùng bằng thông điệp chuẩn (mục 7), không lộ stack trace/SQL.
+7. **Comment**: chỉ comment _vì sao_ (đặc biệt chỗ gắn với rule SRS, ví dụ `// GB-08: duration + 15 phút dọn phòng`). Không comment lại điều code đã tự nói.
+8. **Không code chết**: không để code bị comment-out, `TODO` không có người phụ trách.
+
+## 5. Quy tắc nghiệp vụ bắt buộc tuân thủ (trích từ SRS)
+
+Những rule này phải được enforce ở **Service + ràng buộc DB**, không chỉ ở giao diện.
+
+| Mã                     | Quy tắc                                                                                                               | Gợi ý triển khai                                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| GB-01                  | Giữ ghế `PENDING` 10 phút (600s); hết hạn tự về `AVAILABLE`; bán tại quầy không bị hold timeout                       | `SeatHold.expiresAt`; thời gian đọc từ cấu hình `SEAT_HOLD_MINUTES`, **không hard-code**; JOB-01 dọn dẹp mỗi 1 phút |
+| GB-01/Mutual exclusion | Một ghế/suất chỉ bị giữ bởi 1 phiên thanh toán                                                                        | Unique `(ShowtimeID, SeatID)` + transaction/lock; xử lý xung đột đồng thời                                          |
+| GB-02                  | Ghế có đúng 1 trong 4 trạng thái; không quay ngược từ `SOLD`/`MAINTENANCE`                                            | State machine trong Service                                                                                         |
+| GB-03                  | Mỗi phim đúng 1 độ tuổi (P/C13/C16/C18); phim giới hạn tuổi cần xác nhận trước checkout                               | Validate khi tạo phim + modal xác nhận                                                                              |
+| GB-04                  | Tích điểm không phân hạng; tỉ lệ do Admin cấu hình                                                                    | Đọc `POINT_EARN_PERCENT`, `POINT_EXCHANGE_RATE` từ bảng cấu hình                                                    |
+| GB-05                  | Tối đa **1 voucher/đơn**, tổng tiền ≥ `MinOrderAmount`, không cộng dồn                                                | Validate ở Service tính tiền                                                                                        |
+| GB-06                  | Hủy vé online ≥ 2 giờ trước giờ chiếu → voucher **80%**, không hoàn tiền mặt; ghế về `AVAILABLE`                      | `CancellationService` sinh voucher                                                                                  |
+| GB-07                  | Chỉ người có vé `Watched` mới được review; 1 review/phim/người, gửi lại = cập nhật                                    | Unique `(MovieID, UserID)`                                                                                          |
+| GB-08                  | Suất chiếu: kết thúc = bắt đầu + thời lượng + **15 phút**; không chồng lấn trong cùng phòng; bắt đầu phải ở tương lai | Kiểm tra xung đột khi lưu                                                                                           |
+| GB-09                  | Ghế hỏng → `MAINTENANCE` ngay; ưu tiên đổi: cùng hạng → nâng hạng miễn phí → hoàn 100% + voucher nếu phòng đầy        | Module đổi ghế của POS                                                                                              |
+| GB-10                  | Trừ tồn kho ngay khi thanh toán thành công; giá & tồn kho ≥ 0; hết hàng → `Out of Stock`                              | Trừ trong cùng transaction thanh toán                                                                               |
+| GB-11                  | Danh mục công khai chỉ hiện phim `Now Showing`/`Coming Soon`                                                          | Điều kiện lọc ở query public                                                                                        |
+| GB-12                  | **Không hard-delete** tài khoản, phim đã có bán, đơn hàng → đổi trạng thái; `LoyaltyPointHistory` chỉ **append-only** | Không viết `DELETE` cho các bảng này; điều chỉnh điểm bằng dòng bù trừ mới                                          |
+
+Ràng buộc duy nhất: email, SĐT (user), tiêu đề phim, tên thể loại, tên phòng, tên đồ ăn, mã voucher, mã vé, QR token, `(RoomID, RowName, ColNumber)` cho ghế, `(BookingID, SeatID)` cho vé.
+
+## 6. Bảo mật & phân quyền (RBAC)
+
+- Vai trò: **Guest, Customer, Staff, Manager, Admin**. Áp quyền bằng `filter/` theo tiền tố URL (`/customer/*`, `/staff/*`, `/manager/*`, `/admin/*`); URL công khai chỉ gồm duyệt phim, suất chiếu, sơ đồ ghế, đăng nhập/đăng ký.
+- Mật khẩu **chỉ lưu hash** (BCrypt/PBKDF2 + salt); không bao giờ log hoặc trả mật khẩu/hash ra giao diện.
+- Chống SQL Injection (PreparedStatement), XSS (`<c:out>` / `fn:escapeXml`, không in thẳng `${param.x}` vào HTML), CSRF (token cho form POST).
+- Webhook thanh toán phải xác thực chữ ký (VNPay: **HMAC-SHA512**, SePay: HMAC) và xử lý idempotent (nhận lặp không tạo trùng giao dịch/vé).
+- Session: `invalidate()` khi logout; không đặt dữ liệu nhạy cảm trong URL.
+- **Không commit** mật khẩu DB và khóa cổng thanh toán: `ConnectDB.properties` mỗi máy tự tạo từ file mẫu, khóa VNPay đặt trong file cấu hình ngoài (mục 10). Ngoại lệ nhóm đã thống nhất: `config.properties` (tài khoản Gmail gửi OTP dùng chung) được commit vì dự án chỉ chạy local.
+
+## 7. Giao diện & thông điệp
+
+- Ngôn ngữ giao diện: tiếng Việt; tiền tệ định dạng VND (`329.000đ`); giờ `HH:mm`.
+- Thông điệp hệ thống dùng mã chuẩn của SRS, lưu tập trung (không rải chuỗi trong code), ví dụ: `MSG01` không có kết quả, `MSG02` trường bắt buộc (`The * field is required.`), `MSG08` vượt độ dài tối đa, `MSG09` sai tài khoản/mật khẩu.
+- Lỗi validate hiển thị màu đỏ dưới ô nhập; thao tác thành công dùng toast.
+- JSP: dùng JSTL/EL; tách phần lặp (header, footer, menu) vào `views/common`; CSS/JS tách file trong `assets/`, không viết inline dài.
+
+## 8. Background Job (`listener/`)
+
+| Job    | Lịch        | Nhiệm vụ                                                                                                       | Khi lỗi                            |
+| ------ | ----------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| JOB-01 | 1 phút/lần  | Hủy hold quá 10 phút, trả ghế về `AVAILABLE`, ghi log số ghế đã nhả                                            | Thử lại ở lần chạy kế tiếp         |
+| JOB-02 | 15 phút/lần | Gửi email nhắc suất chiếu (kèm QR) cho vé xác nhận trước giờ chiếu 1–2 giờ; đánh dấu đã gửi để không gửi trùng | Ghi cảnh báo, thử lại tối đa 3 lần |
+| JOB-03 | 00:00 hằng ngày + 1 lần khi khởi động | Phim `Coming Soon` tới `ReleaseDate` -> `Now Showing`; phim `Now Showing` qua `EndDate` (và không còn suất đang chiếu) -> `Ended`; ghi nhật ký UC-32 | Thử lại ở lần chạy kế tiếp |
+
+Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `ServletContextListener` và **shutdown** khi `contextDestroyed`.
+
+## 9. Git workflow
+
+- Nhánh chính: `main` (luôn build được). Mỗi thành viên làm trên nhánh riêng (vd. `duong`) rồi mở Pull Request vào `main`; ít nhất 1 người review.
+- Commit message: `<type>: <mô tả ngắn>` với type ∈ `feat | fix | refactor | docs | style | test | chore`. Ví dụ: `feat: add seat hold service (GB-01)`.
+- Mỗi commit một thay đổi logic; không commit file build (`target/`, `*.class`), file IDE, file chứa mật khẩu. Thêm `.gitignore` cho `target/`, `.idea/`, `*.iml`, `.vscode/`.
+- Trước khi tạo PR: build thành công, tự kiểm tra luồng chính, đã kéo `main` mới nhất và giải quyết conflict.
+
+## 10. Chạy dự án
+
+1. Cài JDK 21, Maven, Tomcat (10.x nếu dùng `jakarta.servlet`), SQL Server.
+2. Tạo database bằng `SE2053-SWP391-G2/sql/cinemaDB.sql`, chạy các migration nghiệp vụ cần dùng (bao gồm `SE2053-SWP391-G2/sql/UC28_vouchers.sql` cho UC-28 và `SE2053-SWP391-G2/sql/UC14_vnpay.sql` cho UC-14), rồi mới nạp dữ liệu mẫu bằng `SE2053-SWP391-G2/sql/cinemaDB_data.sql`. Thứ tự này bảo đảm dữ liệu voucher dùng đúng các cột và giá trị được bổ sung bởi migration UC-28. Thứ tự đầy đủ đang dùng: `cinemaDB.sql` → `UC01_email_verification.sql` → `UC14_vnpay.sql` → `UC23_add_movie_formats.sql` → `UC23_movie_lifecycle_details.sql` → `UC19-29_staff_ops.sql` → `UC28_vouchers.sql` → `UC05_movie_search_indexes.sql` → `UC25_sweetbox_two_cells.sql` → `UC25_room_inactive_status.sql` → `cinemaDB_data.sql` → `UC02_seed_passwords.sql` (→ `UC09_seed_seat_map.sql` nếu cần dữ liệu test sơ đồ ghế). Khi chạy bằng `sqlcmd` nhớ thêm cờ `-I` (bật `QUOTED_IDENTIFIER` như SSMS). **DB đã có sẵn** thì chỉ cần chạy thêm migration mới, ví dụ `UC14_vnpay.sql` (lưu giao dịch và trạng thái callback), `UC23_movie_lifecycle_details.sql` (ngày kết thúc chiếu, quốc gia/ngôn ngữ/nhà phát hành, tên phim chỉ không trùng theo cặp tên + năm khởi chiếu), `UC25_sweetbox_two_cells.sql` (ghế đôi Sweetbox chiếm 2 cột, sức chứa tính 2 người - xem mục 12) và `UC25_room_inactive_status.sql` (thêm trạng thái phòng Dừng hoạt động). Sao chép `ConnectDB.properties.example` thành `ConnectDB.properties` trong `SE2053-SWP391-G2/src/main/resources/` rồi điền thông tin DB của máy mình; không commit file này. `config.properties` cùng thư mục là cấu hình **dùng chung của nhóm** (bật đăng nhập thật, Gmail gửi OTP) và được commit sẵn, pull về là chạy được. Muốn dùng giá trị riêng cho máy mình thì không sửa file chung mà tạo file ngoài chỉ chứa các key cần ghi đè: đặt ở `%CATALINA_BASE%\conf\cineluxe\config.properties`, hoặc chỉ đường dẫn bằng JVM argument `-Dapp.config=<đường-dẫn-tuyệt-đối>` / biến môi trường `APP_CONFIG_FILE` (đường dẫn sai thì ứng dụng không khởi động). Từng key cũng ghi đè được bằng biến môi trường `APP_<KEY>`, ví dụ `APP_PAYMENT_VNPAY_TMN_CODE`. File ngoài không commit. Để bật VNPay, cấu hình `payment.vnpay.tmn-code`, `payment.vnpay.hash-secret`, `payment.vnpay.payment-url`, `payment.vnpay.return-url`, `payment.vnpay.callback-url` và đăng ký callback URL công khai HTTPS tại VNPay. Không commit mã terminal hoặc hash secret; kết quả chuyển hướng trình duyệt không được dùng để xác nhận thanh toán.
+   - `payment.vnpay.return-url` phải trỏ tới `/customer/booking/payment/return`; `payment.vnpay.callback-url` phải trỏ tới `/api/v1/commerce/payment/webhook/vnpay` và đăng ký làm IPN URL tại VNPay (VNPay gọi IPN bằng GET; endpoint nhận cả GET và POST). Nếu callback thành công nhưng không khớp đơn/tiền hoặc không còn điều kiện chốt vé, giao dịch được ghi `ReviewRequired` và cần được đối soát thủ công; kiểm tra log mức `SEVERE`.
+3. Build trong thư mục `SE2053-SWP391-G2`: `mvn clean package`.
+4. Deploy WAR lên Tomcat và mở `http://localhost:8080/<context>/`.
+5. Kiểm tra kết nối DB nhanh bằng cách chạy `main` của `vn.edu.fpt.util.DBContext`.
+
+### Tình trạng use case đang tích hợp
+
+- **UC-14 Make Online Payment** tích hợp VNPay qua adapter trong `vn.edu.fpt.service.payment`. Đơn phải thuộc customer đang đăng nhập; hệ thống lưu transaction reference, xác minh HMAC-SHA512 từ callback IPN, đối chiếu số tiền và xử lý idempotent trong transaction trước khi cập nhật booking/vé. URL return từ trình duyệt chỉ hiển thị trạng thái đang xử lý, không xác nhận thanh toán. Cần chạy `UC14_vnpay.sql` và cấu hình các khóa sandbox/URL local trước khi dùng.
+- Phần gửi email nhắc suất chiếu của **UC-18** cần JOB-02 và các đơn/vé được tạo từ luồng UC-13; trang thông báo và lưu trạng thái đọc đã hoạt động độc lập.
+- UC-11 đọc số dư từ `User.PointBalance`; migration tạo ledger append-only `LoyaltyPointHistory` và nạp giao dịch điểm từ các đơn đã thanh toán hiện có. Các luồng đặt vé sau này cần append giao dịch vào ledger trong cùng transaction với cập nhật điểm; không tạo hạng thành viên vì GB-04 quy định loyalty không phân hạng.
+
+## 11. Checklist trước khi tạo Pull Request
+
+- [ ] Đúng tầng (Controller/Service/DAO/Model), không có SQL ngoài DAO, không có logic ngoài Service
+- [ ] Mọi SQL dùng `PreparedStatement`; tài nguyên đóng bằng try-with-resources
+- [ ] Tiền dùng `BigDecimal`, thời gian dùng `java.time`, trạng thái dùng hằng số/enum
+- [ ] Đã áp dụng đúng rule `GB-xx` liên quan và có ràng buộc DB tương ứng
+- [ ] Không hard-delete các bảng bị cấm (GB-12); không sửa/xóa dòng `LoyaltyPointHistory`
+- [ ] Có kiểm tra quyền (filter/role) cho URL mới; input đã validate ở server; output đã escape
+- [ ] Thông điệp dùng mã `MSGxx`, không hard-code chuỗi lỗi
+- [ ] Không còn `System.out.println`, `printStackTrace`, import thừa, code comment-out
+- [ ] Không commit mật khẩu/khóa bí mật, file `target/`
+- [ ] Commit message đúng quy ước, PR mô tả rõ UC/GB liên quan
+
+## 12. Ghế đôi (Sweetbox)
+
+- Ghế đôi là **một** bản ghi `Seat` chiếm **2 cột liền nhau**; `ColNumber` là cột bên trái (ghế đôi `H1` chiếm cột 1–2, ghế kế tiếp trong hàng bắt đầu từ cột 3). Không tạo bản ghi cho cột bên phải.
+- Một vé ghế đôi dành cho 2 người: **giá = giá 2 ghế thường**; ghế VIP = giá suất chiếu + phụ thu `SEAT_SURCHARGE_VIP` (mặc định 30.000đ, đổi trong bảng `SystemConfig`). Dùng chung `vn.edu.fpt.service.TicketPricing.priceOf(...)` khi đặt vé (UC-13) và bán tại quầy (UC-19), không tự tính lại.
+- **Sức chứa** tính theo người: ghế đôi = 2 (`SeatType.capacityOf`). `Room.TotalSeats` lưu sức chứa; tỷ lệ lấp đầy (UC-29) tính số chỗ đã bán và sức chứa theo cùng quy tắc.
+- Số cột ghế chiếm trên sơ đồ: `SeatType.widthOf` (UC-09 cho ghế đôi trải 2 cột, UC-25 thiết kế theo ô).
+- Ghế đã bán vé cho suất chưa kết thúc không được đổi loại, khóa hay xóa (UC-25).
+- DB tạo trước quy ước này: chạy `SE2053-SWP391-G2/sql/UC25_sweetbox_two_cells.sql` (an toàn khi chạy lại).

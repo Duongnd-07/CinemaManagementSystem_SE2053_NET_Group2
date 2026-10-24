@@ -1,0 +1,188 @@
+/* UC-25 trình thiết kế sơ đồ ghế. Màu loại ghế trùng seat-map.css (UC-09) để xem trước giống trang của khách. */
+:root {
+    --re-cell: 30px;
+    --re-gap: 5px;
+    --re-standard: #8e919f;
+    --re-vip: #ffb95f;
+    --re-sweetbox: #f472b6;
+    --re-off: #3a3f4d;
+}
+
+.room-screen {
+    margin: 0 auto 20px;
+    max-width: 560px;
+    padding: 6px 0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    color: #e9bcb6;
+    border-top: 3px solid #e50914;
+    border-radius: 50% 50% 0 0 / 14px 14px 0 0;
+    box-shadow: 0 -10px 24px -10px rgba(229, 9, 20, 0.6);
+}
+
+.room-grid-wrap {
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.room-grid {
+    display: grid;
+    grid-template-columns: 24px repeat(var(--cols, 12), var(--re-cell)) 24px;
+    gap: var(--re-gap);
+    justify-content: center;
+    width: max-content;
+    margin: 0 auto;
+    user-select: none;
+    touch-action: none;
+}
+
+.grid-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--re-cell);
+    font-size: 11px;
+    font-weight: 700;
+    color: #8e919f;
+    border-radius: 6px;
+    background: none;
+    border: 0;
+}
+
+button.grid-label {
+    cursor: pointer;
+}
+
+button.grid-label:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.grid-label-corner {
+    visibility: hidden;
+}
+
+.cell {
+    position: relative;
+    display: inline-block;
+    width: var(--re-cell);
+    height: var(--re-cell);
+    border-radius: 7px 7px 4px 4px;
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    padding: 0;
+}
+
+.cell-S {
+    border-color: var(--re-standard);
+    background: rgba(142, 145, 159, 0.18);
+}
+
+.cell-V {
+    border-color: var(--re-vip);
+    background: rgba(255, 185, 95, 0.2);
+}
+
+.cell-C {
+    border-color: var(--re-sweetbox);
+    background: rgba(244, 114, 182, 0.2);
+}
+
+/* Ghế bị khóa: giữ màu viền theo loại, nền tối và gạch chéo */
+.cell-off {
+    background: var(--re-off) repeating-linear-gradient(45deg, transparent 0 5px, rgba(255, 255, 255, 0.12) 5px 7px);
+    opacity: 0.8;
+}
+
+.cell-aisle {
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    background: transparent;
+}
+
+.cell:hover {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+}
+
+/* Dấu chấm góc trên cho ghế bị giới hạn thao tác */
+.lock-sold::after,
+.lock-report::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid #0f131d;
+}
+
+.lock-sold::after {
+    background: #e50914;
+}
+
+.lock-report::after {
+    background: #fbbf24;
+}
+
+.tool {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.tool:has(input:checked) {
+    border-color: #e50914;
+    background: rgba(229, 9, 20, 0.12);
+}
+
+.tool input {
+    accent-color: #e50914;
+}
+
+.tool-swatch {
+    width: 22px;
+    height: 22px;
+    cursor: inherit;
+}
+
+.room-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 18px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: #8e919f;
+}
+
+.room-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.room-legend .cell {
+    width: 18px;
+    height: 18px;
+    cursor: default;
+}
+
+/* Ghế đôi: một nút chiếm 2 cột của lưới */
+.cell-wide {
+    grid-column: span 2;
+    width: auto;
+}
+
+.room-legend .cell-wide,
+.tool-swatch-wide {
+    width: 40px;
+}

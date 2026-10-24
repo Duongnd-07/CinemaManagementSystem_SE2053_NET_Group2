@@ -1,0 +1,243 @@
+/* UC-09 View Real-Time Seat Map.
+   Loại ghế (BR-SEAT-03) thể hiện bằng màu viền/vạch đáy, trạng thái (BR-SEAT-01) bằng màu nền
+   để một ghế VIP đã bán vẫn nhận ra là VIP. */
+.seat-map-page {
+    --seat-size: 32px;
+    --seat-gap: 6px;
+    --seat-standard: #8e919f;
+    --seat-vip: #ffb95f;
+    --seat-sweetbox: #f472b6;
+    --seat-pending: #3b82f6;
+    --seat-sold: #e50914;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: var(--cl-bg);
+    color: var(--cl-text);
+}
+
+.seat-map-poster {
+    flex: none;
+    width: 96px;
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cl-card-raised);
+    color: var(--cl-text-muted);
+}
+
+.seat-map-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.seat-map-meta-label {
+    color: #8e919f;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.age-badge {
+    padding: 2px 8px;
+    border: 1px solid rgba(229, 9, 20, 0.5);
+    border-radius: 6px;
+    background: rgba(229, 9, 20, 0.15);
+    color: #ffb4aa;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.seat-map-alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border: 1px solid rgba(229, 9, 20, 0.45);
+    border-radius: 12px;
+    background: rgba(147, 0, 10, 0.35);
+    color: #ffdad6;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.seat-map-alert[hidden] {
+    display: none;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--cl-success);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+    animation: live-pulse 2s infinite;
+}
+
+.live-dot.is-stale {
+    background: #8e919f;
+    animation: none;
+}
+
+@keyframes live-pulse {
+    70% {
+        box-shadow: 0 0 0 8px rgba(52, 211, 153, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+    }
+}
+
+/* Phòng nhiều cột thì cuộn ngang trong khung, không làm vỡ trang trên điện thoại */
+.seat-map-scroll {
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.seat-map-stage {
+    width: max-content;
+    min-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--seat-gap);
+}
+
+.seat-map-screen {
+    width: 80%;
+    min-width: 200px;
+    margin-bottom: 28px;
+    padding-top: 10px;
+    border-top: 4px solid rgba(255, 255, 255, 0.75);
+    border-radius: 50% 50% 0 0 / 14px 14px 0 0;
+    box-shadow: 0 -12px 24px -10px rgba(255, 255, 255, 0.45);
+    color: #8e919f;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4em;
+}
+
+.seat-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.seat-row-label {
+    width: 20px;
+    color: #8e919f;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.seat-row-cells {
+    display: grid;
+    grid-template-columns: repeat(var(--seat-cols), var(--seat-size));
+    gap: var(--seat-gap);
+}
+
+.seat-gap {
+    width: var(--seat-size);
+    height: var(--seat-size);
+}
+
+.seat {
+    --seat-type: var(--seat-standard);
+    width: var(--seat-size);
+    height: var(--seat-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--seat-type);
+    border-radius: 8px 8px 5px 5px;
+    box-shadow: inset 0 -3px 0 var(--seat-type);
+    color: var(--seat-type);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: default;
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.seat--vip {
+    --seat-type: var(--seat-vip);
+}
+
+/* Ghế đôi là một ghế chiếm 2 cột của lưới (UC-25) */
+.seat--sweetbox {
+    --seat-type: var(--seat-sweetbox);
+    border-radius: 12px 12px 5px 5px;
+    grid-column: span 2;
+    width: auto;
+}
+
+.seat--legend.seat--sweetbox {
+    width: calc(var(--seat-size) * 2 + var(--seat-gap));
+}
+
+.seat.is-available:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.seat.is-pending {
+    border-color: var(--seat-pending);
+    background: rgba(59, 130, 246, 0.35);
+    color: #dbeafe;
+}
+
+.seat.is-sold {
+    border-color: var(--seat-sold);
+    background: rgba(229, 9, 20, 0.75);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.seat.is-maintenance {
+    border-color: #5e3f3b;
+    background: repeating-linear-gradient(45deg, #313540 0 4px, #1c1f2a 4px 8px);
+    color: #8e919f;
+    text-decoration: line-through;
+}
+
+.seat-map-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--cl-border);
+}
+
+.legend-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    font-size: 13px;
+}
+
+.legend-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-list b {
+    color: #fff;
+}
+
+.seat--legend {
+    --seat-size: 20px;
+}
+
+@media (max-width: 640px) {
+    .seat-map-page {
+        --seat-size: 26px;
+        --seat-gap: 4px;
+    }
+
+    .seat-row {
+        gap: 6px;
+    }
+}
