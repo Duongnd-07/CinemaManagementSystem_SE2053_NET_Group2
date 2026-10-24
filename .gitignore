@@ -2,6 +2,8 @@ target/
 .idea/
 *.iml
 .vscode/
+.smarttomcat/
+**/conf/Catalina/
 
 # Machine-specific configuration. src/main/resources/config.properties is shared by the team and committed;
 # put per-machine overrides in SE2053-SWP391-G2/config.properties (see README section 10).
