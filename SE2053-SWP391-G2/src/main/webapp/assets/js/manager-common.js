@@ -12,8 +12,8 @@ document.querySelectorAll('form[data-confirm]').forEach(function (form) {
     });
 });
 
-// UC-23: poster chỉ có một nguồn tại một thời điểm và ảnh xem trước luôn là ảnh sẽ được lưu.
-// Chọn file -> khóa ô URL (server cũng ưu tiên file); bỏ file -> dùng lại URL cũ; gõ URL -> xem trước URL đó.
+// UC-23: poster chỉ chọn từ ảnh trong máy, ảnh xem trước luôn là ảnh sẽ được lưu.
+// Chọn file -> xem trước file; bỏ file -> quay lại poster hiện tại (ô ẩn posterUrl); "Bỏ poster" -> phim không có poster.
 var posterPicker = document.querySelector('[data-poster-picker]');
 if (posterPicker) {
     var MAX_POSTER_BYTES = 5 * 1024 * 1024;
@@ -51,10 +51,9 @@ if (posterPicker) {
             posterObjectUrl = null;
         }
         var file = posterFile.files[0];
-        posterUrl.readOnly = !!file;
         if (file) {
             posterObjectUrl = URL.createObjectURL(file);
-            showPoster(posterObjectUrl, 'Dùng file: ' + file.name + ' (URL bên dưới được bỏ qua)');
+            showPoster(posterObjectUrl, 'Dùng file: ' + file.name);
             posterClear.textContent = 'Bỏ file đã chọn';
             posterClear.hidden = false;
             return;
@@ -62,21 +61,16 @@ if (posterPicker) {
         var value = posterUrl.value.trim();
         posterClear.textContent = 'Bỏ poster';
         posterClear.hidden = !value;
-        if (!value) {
-            showPoster('', 'Chưa có poster');
-        } else if (value === initialPosterUrl && initialPosterSrc) {
-            // Giữ nguyên poster hiện tại (URL ngoài hoặc ảnh đã tải lên trước đó)
-            showPoster(initialPosterSrc, /^https?:\/\//i.test(value) ? 'Dùng ảnh từ URL' : 'Dùng ảnh đã tải lên trước đó');
-        } else if (/^https?:\/\//i.test(value)) {
-            showPoster(value, 'Dùng ảnh từ URL');
+        if (value && value === initialPosterUrl && initialPosterSrc) {
+            showPoster(initialPosterSrc, 'Đang dùng poster hiện tại');
         } else {
-            showPoster('', 'URL phải bắt đầu bằng http:// hoặc https://');
+            showPoster('', 'Chưa có poster');
         }
     };
 
     posterPreview.addEventListener('error', function () {
         if (posterPreview.getAttribute('src')) {
-            showPoster('', 'Không tải được ảnh từ URL này');
+            showPoster('', 'Không tải được ảnh poster');
         }
     });
     posterFile.addEventListener('change', function () {
@@ -88,9 +82,8 @@ if (posterPicker) {
         }
         refreshPoster();
     });
-    posterUrl.addEventListener('input', refreshPoster);
     posterClear.addEventListener('click', function () {
-        // Đang chọn file thì chỉ bỏ file (quay về URL cũ); không thì xóa URL -> phim không có poster
+        // Đang chọn file thì chỉ bỏ file (quay về poster hiện tại); không thì xóa poster hiện tại -> phim không có poster
         if (posterFile.files.length) {
             posterFile.value = '';
         } else {

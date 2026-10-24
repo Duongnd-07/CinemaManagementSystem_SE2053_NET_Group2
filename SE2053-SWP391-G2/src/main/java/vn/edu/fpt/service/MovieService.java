@@ -1,7 +1,5 @@
 package vn.edu.fpt.service;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -46,7 +44,7 @@ public class MovieService {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final int SQL_UNIQUE_VIOLATION = 2627;
     private static final int SQL_UNIQUE_INDEX_VIOLATION = 2601;
-    // PosterURL/TrailerURL là cột VARCHAR: chỉ nhận ký tự ASCII in được, không khoảng trắng
+    // TrailerURL là cột VARCHAR: chỉ nhận ký tự ASCII in được, không khoảng trắng
     private static final Pattern URL_CHARS = Pattern.compile("^[\\x21-\\x7E]+$");
     private static final Pattern YOUTUBE = Pattern.compile(
             "^https?://(www\\.|m\\.)?(youtube\\.com/(watch\\?(.*&)?v=|embed/|shorts/)|youtu\\.be/)[\\w-]{11}([?&#].*)?$",
@@ -418,33 +416,16 @@ public class MovieService {
         }
     }
 
+    // Poster chỉ lấy từ file tải lên trong máy (không nhập URL). Không chọn file mới thì posterUrl (ô ẩn) chỉ được là
+    // rỗng (bỏ poster) hoặc giữ nguyên poster hiện tại của chính phim đó - tránh sửa form để trỏ sang (rồi xóa nhầm)
+    // poster phim khác. Phim cũ đang dùng URL ngoài vẫn giữ được nếu không đổi poster.
     private void validatePoster(MovieForm form, Movie current, Map<String, String> errors) {
-        // Có file upload thì URL nhập tay bị thay thế, không cần kiểm tra
         if (!form.getUploadedPoster().isEmpty()) {
             return;
         }
         String poster = form.getPosterUrl().trim();
-        if (poster.length() > MAX_URL) {
-            errors.put("poster", Messages.format(Messages.MSG08, MAX_URL));
-        } else if (!poster.isEmpty() && !isValidPoster(poster, current)) {
-            errors.put("poster", Messages.MOVIE_POSTER_URL_INVALID);
-        }
-    }
-
-    // Đường dẫn file nội bộ chỉ được giữ nguyên của chính phim đó, tránh trỏ sang (rồi xóa nhầm) poster phim khác
-    private boolean isValidPoster(String poster, Movie current) {
-        if (PosterStorage.isStoredPath(poster)) {
-            return current != null && poster.equals(current.getPosterUrl());
-        }
-        if (!URL_CHARS.matcher(poster).matches()) {
-            return false;
-        }
-        try {
-            URI uri = new URI(poster);
-            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
-                    && uri.getHost() != null;
-        } catch (URISyntaxException e) {
-            return false;
+        if (!poster.isEmpty() && (current == null || !poster.equals(current.getPosterUrl()))) {
+            errors.put("poster", Messages.MOVIE_POSTER_INVALID);
         }
     }
 
