@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
-// Ảnh PNG của mã QR vé (nội dung là Ticket.QRCode) để nhúng vào email xác nhận đặt vé
+// Ảnh PNG của mã QR vé (nội dung là thông tin vé dạng văn bản) để nhúng vào email xác nhận đặt vé
 public final class QrCodeImage {
     private static final int BLACK = 0xFF000000;
     private static final int WHITE = 0xFFFFFFFF;
@@ -22,8 +22,9 @@ public final class QrCodeImage {
     public static byte[] png(String content, int size) throws IOException {
         BitMatrix matrix;
         try {
+            // UTF-8 để tiếng Việt có dấu không bị lỗi font khi điện thoại đọc mã
             matrix = new QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, size, size,
-                    Map.of(EncodeHintType.MARGIN, 1));
+                    Map.of(EncodeHintType.MARGIN, 1, EncodeHintType.CHARACTER_SET, "UTF-8"));
         } catch (WriterException e) {
             throw new IOException("Không tạo được mã QR", e);
         }

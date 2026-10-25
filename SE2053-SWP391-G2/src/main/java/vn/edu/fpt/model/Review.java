@@ -8,7 +8,12 @@ public class Review {
     private int userId;
     private int rating;
     private String comment;
+    private String status;
+    private String hiddenReason;
+    private Integer hiddenByUserId;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime hiddenAt;
 
     public Review() {
     }
@@ -53,11 +58,51 @@ public class Review {
         this.comment = comment;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getHiddenReason() {
+        return hiddenReason;
+    }
+
+    public void setHiddenReason(String hiddenReason) {
+        this.hiddenReason = hiddenReason;
+    }
+
+    public Integer getHiddenByUserId() {
+        return hiddenByUserId;
+    }
+
+    public void setHiddenByUserId(Integer hiddenByUserId) {
+        this.hiddenByUserId = hiddenByUserId;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getHiddenAt() {
+        return hiddenAt;
+    }
+
+    public void setHiddenAt(LocalDateTime hiddenAt) {
+        this.hiddenAt = hiddenAt;
     }
 }

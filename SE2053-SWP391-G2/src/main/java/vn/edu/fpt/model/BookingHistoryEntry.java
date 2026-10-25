@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public class BookingHistoryEntry {
     private int bookingId;
     private int ticketId;
+    private int movieId;
     private String movieTitle;
     private String seatLabel;
     private String ticketCode;
@@ -17,8 +18,26 @@ public class BookingHistoryEntry {
     private BigDecimal finalAmount;
     private LocalDateTime bookingTime;
     private LocalDateTime showtimeStart;
+    // UC-17/GB-07: vé đã thanh toán, chưa hủy/đổi, suất chiếu đã kết thúc và phim chưa bị ẩn -> được đánh giá
+    private boolean reviewEligible;
 
     public BookingHistoryEntry() {
+    }
+
+    public int getMovieId() {
+        return movieId;
+    }
+
+    public void setMovieId(int movieId) {
+        this.movieId = movieId;
+    }
+
+    public boolean isReviewEligible() {
+        return reviewEligible;
+    }
+
+    public void setReviewEligible(boolean reviewEligible) {
+        this.reviewEligible = reviewEligible;
     }
 
     public int getBookingId() {

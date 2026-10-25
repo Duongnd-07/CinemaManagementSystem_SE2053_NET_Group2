@@ -329,6 +329,23 @@ public final class Messages {
     public static final String BOOKING_SEAT_ORPHAN =
             "Không được để trống một ghế lẻ ({0}) ở giữa hoặc cạnh ghế bạn chọn. Vui lòng chọn lại ghế.";
 
+    // UC-17 Rate & Review Movie
+    public static final String REVIEW_RATING_INVALID = "Số sao đánh giá phải từ 1 đến 5.";
+    public static final String REVIEW_NOT_ELIGIBLE =
+            "Bạn cần có vé đã thanh toán và suất chiếu đã kết thúc mới có thể đánh giá phim này.";
+    public static final String REVIEW_MOVIE_UNAVAILABLE = "Phim hiện không khả dụng để đánh giá.";
+    public static final String REVIEW_HIDDEN_LOCKED =
+            "Đánh giá này đang bị ẩn do vi phạm nên không thể sửa hoặc xóa.";
+    public static final String REVIEW_NOT_FOUND = "Không tìm thấy đánh giá.";
+    public static final String REVIEW_CREATED = "Gửi đánh giá thành công! Cảm ơn bạn đã chia sẻ cảm nhận.";
+    public static final String REVIEW_UPDATED = "Đã cập nhật đánh giá của bạn.";
+    public static final String REVIEW_DELETED = "Đã xóa đánh giá của bạn.";
+    public static final String REVIEW_HIDDEN = "Đã ẩn đánh giá vi phạm.";
+    public static final String REVIEW_UNHIDDEN = "Đã bỏ ẩn đánh giá.";
+    public static final String REVIEW_NOTIFICATION_HIDDEN_TITLE = "Đánh giá của bạn đã bị ẩn";
+    public static final String REVIEW_NOTIFICATION_HIDDEN_MESSAGE =
+            "Đánh giá của bạn cho phim \"{0}\" đã bị ẩn do vi phạm. Lý do: {1}";
+
     // UC-33: Manage System Configurations
     public static final String CONFIG_SAVED = "Lưu cấu hình thành công ({0} tham số được cập nhật).";
     public static final String CONFIG_NO_CHANGES = "Không có thay đổi nào để lưu.";

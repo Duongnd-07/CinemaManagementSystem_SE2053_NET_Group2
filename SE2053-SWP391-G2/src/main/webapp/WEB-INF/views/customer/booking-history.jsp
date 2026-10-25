@@ -76,6 +76,13 @@
                                         <a class="mt-2 inline-flex w-fit items-center rounded-lg border border-red-400/30 px-4 py-2 font-semibold text-[#ffb4ab] hover:bg-red-500/10"
                                            href="${ctx}/customer/cancel-ticket?ticketId=${ticket.ticketId}">Yêu cầu hủy vé</a>
                                     </c:if>
+                                    <%-- UC-17/GB-07: suất chiếu đã kết thúc và vé còn hiệu lực -> được đánh giá phim --%>
+                                    <c:if test="${ticket.reviewEligible}">
+                                        <a class="mt-2 inline-flex w-fit items-center gap-1 rounded-lg border border-[#ffb95f]/30 px-4 py-2 font-semibold text-[#ffb95f] hover:bg-[#ffb95f]/10"
+                                           href="${ctx}/customer/reviews?movieId=${ticket.movieId}">
+                                            <span class="material-symbols-outlined text-base">star</span>Đánh giá phim
+                                        </a>
+                                    </c:if>
                                 </div>
                             </div>
                         </article>
