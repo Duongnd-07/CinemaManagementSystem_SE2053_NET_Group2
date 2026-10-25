@@ -40,6 +40,9 @@
         <a class="${itemBase} ${active == 'equipment-reports' ? itemActive : itemIdle}" href="${ctx}/manager/equipment-reports">
             <span class="material-symbols-outlined mr-space-md">build</span>Sự cố thiết bị
         </a>
+        <a class="${itemBase} ${active == 'reviews' ? itemActive : itemIdle}" href="${ctx}/manager/reviews">
+            <span class="material-symbols-outlined mr-space-md">reviews</span>Đánh giá phim
+        </a>
         <a class="${itemBase} ${active == 'shifts' ? itemActive : itemIdle}" href="${ctx}/manager/shifts">
             <span class="material-symbols-outlined mr-space-md">schedule</span>Báo cáo ca
         </a>

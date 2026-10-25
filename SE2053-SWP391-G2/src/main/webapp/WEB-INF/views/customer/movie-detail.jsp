@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" import="java.time.format.DateTimeFormatter" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="dateFormat" value="${DateTimeFormatter.ofPattern('dd/MM/yyyy')}"/>
 <%-- Mô tả nhãn phân loại theo Thông tư 12/2015/TT-BVHTTDL (hệ nhãn P/C13/C16/C18) --%>
@@ -24,6 +25,13 @@
     <jsp:include page="/WEB-INF/views/common/public-header.jsp"/>
 
     <main class="flex-1">
+        <c:if test="${not empty flashSuccess or not empty flashError}">
+            <div role="status" class="max-w-7xl mx-auto mt-4 px-6 sm:px-10">
+                <div class="rounded-xl border p-4 ${not empty flashSuccess ? 'border-emerald-500/30 bg-emerald-950/40 text-emerald-200' : 'border-red-500/30 bg-red-950/40 text-red-200'}">
+                    <c:out value="${not empty flashSuccess ? flashSuccess : flashError}"/>
+                </div>
+            </div>
+        </c:if>
         <!-- Phần đầu: poster + thông tin chính, nền là poster làm mờ -->
         <section class="relative overflow-hidden border-b border-white/10">
             <c:if test="${not empty posterSrc}">
@@ -164,8 +172,15 @@
                 </c:choose>
             </section>
         </div>
+
+        <div class="max-w-7xl mx-auto px-6 sm:px-10 pb-10">
+            <ui:review-panel movieId="${movie.movieId}" baseUrl="${ctx}/movies/detail?id=${movie.movieId}"
+                              summary="${reviewSummary}" myReview="${myReview}" reviewPage="${reviewPage}"
+                              canReview="${canReview}" isCustomer="${isCustomer}" csrfToken="${csrfToken}"/>
+        </div>
     </main>
 
     <jsp:include page="/WEB-INF/views/common/public-footer.jsp"/>
+    <script src="${ctx}/assets/js/movie-review.js"></script>
 </body>
 </html>

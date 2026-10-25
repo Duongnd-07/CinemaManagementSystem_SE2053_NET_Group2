@@ -214,7 +214,7 @@ public final class EmailService {
                 }
                 MimeBodyPart qr = new MimeBodyPart();
                 qr.setDataHandler(new DataHandler(new ByteArrayDataSource(
-                        QrCodeImage.png(tickets.get(i).getQrCode(), 220), "image/png")));
+                        QrCodeImage.png(ticketQrText(confirmation, tickets.get(i)), 440), "image/png")));
                 qr.setContentID("<" + qrContentId(i) + ">");
                 qr.setDisposition(MimeBodyPart.INLINE);
                 qr.setFileName("QR-" + tickets.get(i).getTicketCode() + ".png");
@@ -239,13 +239,34 @@ public final class EmailService {
         return "ticket-qr-" + index + "@cineluxe";
     }
 
+    // Nội dung ảnh QR trong email: thông tin vé dạng văn bản để quét bằng camera điện thoại là đọc được như vé giấy
+    // (không cần mạng, không phụ thuộc server). Ticket.QRCode trong DB không đổi, được ghi ở dòng "Mã soát vé".
+    private static String ticketQrText(BookingConfirmation confirmation, ReminderTicket ticket) {
+        String showtime = confirmation.getShowtimeStart() == null ? ""
+                : confirmation.getShowtimeStart().format(DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy"));
+        String room = nullToEmpty(confirmation.getRoomName())
+                + (confirmation.getRoomFormat() == null ? "" : " (" + confirmation.getRoomFormat() + ")");
+        return "CINELUXE - VÉ XEM PHIM\n"
+                + "Phim: " + nullToEmpty(confirmation.getMovieTitle()) + "\n"
+                + "Suất chiếu: " + showtime + "\n"
+                + "Phòng: " + room + "\n"
+                + "Ghế: " + nullToEmpty(ticket.getSeatLabel()) + "\n"
+                + "Mã vé: " + nullToEmpty(ticket.getTicketCode()) + "\n"
+                + "Mã đơn: #" + confirmation.getBookingId() + "\n"
+                + "Mã soát vé: " + nullToEmpty(ticket.getQrCode());
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
     private static String bookingConfirmationHtml(BookingConfirmation confirmation) {
         StringBuilder tickets = new StringBuilder();
         List<ReminderTicket> lines = confirmation.getTickets();
         for (int i = 0; i < lines.size(); i++) {
             ReminderTicket ticket = lines.get(i);
             String qr = ticket.getQrCode() == null ? ""
-                    : "<img src=\"cid:" + qrContentId(i) + "\" width=\"160\" height=\"160\" alt=\"QR vé "
+                    : "<img src=\"cid:" + qrContentId(i) + "\" width=\"200\" height=\"200\" alt=\"QR vé "
                     + escapeHtml(ticket.getSeatLabel()) + "\" style=\"display:block;margin:8px auto;background:#fff;"
                     + "border-radius:8px;\"/><div style=\"font-size:11px;color:#8e919f;word-break:break-all;\">"
                     + escapeHtml(ticket.getQrCode()) + "</div>";

@@ -28,9 +28,13 @@ public class CustomerBookingDAO {
     }
 
     public List<BookingHistoryEntry> findHistory(int customerId, int offset, int limit) throws SQLException {
-        String sql = "SELECT b.BookingID, t.TicketID, m.Title, seat.RowName, seat.ColNumber, t.TicketCode, "
+        // UC-17/GB-07: "đã xem" suy ra từ suất chiếu đã kết thúc (chưa có luồng check-in riêng đổi vé sang Watched)
+        String sql = "SELECT b.BookingID, t.TicketID, m.MovieID, m.Title, seat.RowName, seat.ColNumber, t.TicketCode, "
                 + "t.QRCode, t.Status AS TicketStatus, b.Status AS BookingStatus, b.Channel, t.Price, b.FinalAmount, "
-                + "b.BookingTime, s.StartTime" + HISTORY_FROM
+                + "b.BookingTime, s.StartTime, "
+                + "CASE WHEN b.Status = 'Paid' AND t.Status IN ('Upcoming', 'Watched') "
+                + "AND s.EndTime <= GETDATE() AND m.Status <> 'Hidden' THEN 1 ELSE 0 END AS Reviewable"
+                + HISTORY_FROM
                 + " ORDER BY b.BookingTime DESC, b.BookingID DESC, t.TicketID DESC "
                 + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
         List<BookingHistoryEntry> entries = new ArrayList<>();
@@ -43,6 +47,7 @@ public class CustomerBookingDAO {
                     BookingHistoryEntry entry = new BookingHistoryEntry();
                     entry.setBookingId(rs.getInt("BookingID"));
                     entry.setTicketId(rs.getInt("TicketID"));
+                    entry.setMovieId(rs.getInt("MovieID"));
                     entry.setMovieTitle(rs.getString("Title"));
                     entry.setSeatLabel(rs.getString("RowName") + rs.getInt("ColNumber"));
                     entry.setTicketCode(rs.getString("TicketCode"));
@@ -56,6 +61,7 @@ public class CustomerBookingDAO {
                     entry.setBookingTime(bookingTime == null ? null : bookingTime.toLocalDateTime());
                     Timestamp startTime = rs.getTimestamp("StartTime");
                     entry.setShowtimeStart(startTime == null ? null : startTime.toLocalDateTime());
+                    entry.setReviewEligible(rs.getInt("Reviewable") == 1);
                     entries.add(entry);
                 }
             }
