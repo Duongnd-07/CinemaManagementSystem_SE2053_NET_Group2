@@ -18,6 +18,8 @@ public class Voucher {
     private String voucherType;
     private BigDecimal minOrderAmount;
     private Integer createdByUserId;
+    private Integer movieId;
+    private String movieTitle;
 
     public Voucher() {
     }
@@ -132,5 +134,21 @@ public class Voucher {
 
     public void setCreatedByUserId(Integer createdByUserId) {
         this.createdByUserId = createdByUserId;
+    }
+
+    public Integer getMovieId() {
+        return movieId;
+    }
+
+    public void setMovieId(Integer movieId) {
+        this.movieId = movieId;
+    }
+
+    public String getMovieTitle() {
+        return movieTitle;
+    }
+
+    public void setMovieTitle(String movieTitle) {
+        this.movieTitle = movieTitle;
     }
 }

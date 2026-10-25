@@ -73,6 +73,10 @@ public class MovieService {
         return movieDAO.findById(movieId);
     }
 
+    public List<Movie> listAllTitles() throws SQLException {
+        return movieDAO.findAllTitles();
+    }
+
     // UC-04: phim công khai nhóm theo trạng thái (Đang chiếu, Sắp chiếu); nhóm không có phim là danh sách rỗng
     public Map<String, List<Movie>> listPublicMovies() throws SQLException {
         return searchPublicMovies(new MovieSearchForm());

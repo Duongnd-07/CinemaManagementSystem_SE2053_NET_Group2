@@ -198,7 +198,7 @@ public class CounterSaleService {
                 quote.customer = customer;
             }
         }
-        priceVoucher(conn, form, quote);
+        priceVoucher(conn, form, quote, showtime.getMovieId());
         pricePoints(conn, form, quote, lock);
         return quote;
     }
@@ -295,10 +295,12 @@ public class CounterSaleService {
     }
 
     // GB-05 giống UC-13: còn hiệu lực, công khai hoặc thuộc chính khách, đạt đơn tối thiểu, chưa hết lượt
-    private void priceVoucher(Connection conn, CounterSaleForm form, CounterQuote quote) throws SQLException {
+    private void priceVoucher(Connection conn, CounterSaleForm form, CounterQuote quote, int movieId)
+            throws SQLException {
+        // Phim chỉ giới hạn điều kiện áp dụng; giá trị giảm vẫn tính trên toàn đơn gồm vé và bắp nước.
         BigDecimal gross = quote.getGrossTotal();
         if (quote.customer != null) {
-            for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, quote.customer.getUserId())) {
+            for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, quote.customer.getUserId(), movieId)) {
                 quote.vouchers.add(new CheckoutVoucherOption(voucher.getVoucherCode(), voucher.getDiscountType(),
                         voucher.getDiscountValue(), voucher.getMinOrderAmount(), voucher.getExpiryDate(),
                         gross.compareTo(voucher.getMinOrderAmount()) < 0,
@@ -315,7 +317,7 @@ public class CounterSaleService {
             return;
         }
         Voucher voucher = bookingDAO.findVoucherByCode(conn, code);
-        if (!isVoucherUsable(conn, quote.customer, voucher, gross)) {
+        if (!isVoucherUsable(conn, quote.customer, voucher, gross, movieId)) {
             quote.errors.put(ERROR_VOUCHER, Messages.BOOKING_VOUCHER_INVALID);
             return;
         }
@@ -327,7 +329,7 @@ public class CounterSaleService {
         quote.voucherCode = voucher.getVoucherCode();
     }
 
-    private boolean isVoucherUsable(Connection conn, User customer, Voucher voucher, BigDecimal gross)
+    private boolean isVoucherUsable(Connection conn, User customer, Voucher voucher, BigDecimal gross, int movieId)
             throws SQLException {
         if (voucher == null || !VoucherService.ACTIVE.equals(voucher.getStatus())) {
             return false;
@@ -339,6 +341,9 @@ public class CounterSaleService {
         }
         Integer owner = voucher.getOwnerUserId();
         if (owner != null && owner != customer.getUserId()) {
+            return false;
+        }
+        if (voucher.getMovieId() != null && voucher.getMovieId() != movieId) {
             return false;
         }
         if (gross.compareTo(voucher.getMinOrderAmount()) < 0) {

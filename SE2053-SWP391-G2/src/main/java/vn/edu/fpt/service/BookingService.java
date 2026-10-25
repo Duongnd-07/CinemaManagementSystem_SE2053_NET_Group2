@@ -187,7 +187,7 @@ public class BookingService {
                 }
             }
             BookingQuote quote = quote(conn, customer, context.ticketTotal, picked, forSale,
-                    checkout.getVoucherCode(), checkout.getPointsRedeemed(), errors);
+                    checkout.getVoucherCode(), checkout.getPointsRedeemed(), context.movie.getMovieId(), errors);
             remember(checkout, picked, quote);
             return checkoutView(conn, customer, context, forSale, picked, quote, errors);
         }
@@ -802,17 +802,19 @@ public class BookingService {
                                       Map<Integer, Concession> forSale, Map<Integer, Integer> picked,
                                       BookingQuote quote, Map<String, String> errors) throws SQLException {
         return new CheckoutView(context.showtime, context.movie, context.room, context.seats,
-                concessionLines(forSale, picked), quote, walletVouchers(conn, customer, quote),
+                concessionLines(forSale, picked), quote,
+                walletVouchers(conn, customer, quote, context.movie.getMovieId()),
                 availablePoints(conn, customer.getUserId()), pointRate(conn), context.remainingSeconds, errors);
     }
 
     // Bước 7: voucher còn hiệu lực trong ví của khách để chọn nhanh thay vì phải nhớ mã.
     // Cùng điều kiện với isVoucherUsable: đủ đơn tối thiểu (GB-05), voucher cá nhân chưa nằm trong đơn khác.
-    private List<CheckoutVoucherOption> walletVouchers(Connection conn, User customer, BookingQuote quote)
+    private List<CheckoutVoucherOption> walletVouchers(
+            Connection conn, User customer, BookingQuote quote, int movieId)
             throws SQLException {
         BigDecimal gross = quote.getGrossTotal();
         List<CheckoutVoucherOption> options = new ArrayList<>();
-        for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, customer.getUserId())) {
+        for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, customer.getUserId(), movieId)) {
             boolean applied = voucher.getVoucherCode().equals(quote.getVoucherCode());
             boolean belowMinOrder = gross.compareTo(voucher.getMinOrderAmount()) < 0;
             boolean inOtherOrder = !applied && bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
@@ -858,14 +860,15 @@ public class BookingService {
         }
         String voucherCode = form.getVoucherCode() == null ? ""
                 : form.getVoucherCode().trim().toUpperCase(Locale.ROOT);
-        BookingQuote quote = quote(conn, customer, context.ticketTotal, picked, forSale, voucherCode, points, errors);
+        BookingQuote quote = quote(conn, customer, context.ticketTotal, picked, forSale, voucherCode, points,
+                context.movie.getMovieId(), errors);
         remember(checkout, picked, quote);
         return new Applied(quote, forSale, errors);
     }
 
     // Bước 8. Voucher (GB-05) không hợp lệ -> bỏ voucher (E3); điểm vượt số dư -> bỏ điểm (E4)
     private BookingQuote quote(Connection conn, User customer, BigDecimal ticketTotal, Map<Integer, Integer> picked,
-                               Map<Integer, Concession> forSale, String voucherCode, int points,
+                               Map<Integer, Concession> forSale, String voucherCode, int points, int movieId,
                                Map<String, String> errors) throws SQLException {
         BigDecimal concessionTotal = BigDecimal.ZERO;
         for (Map.Entry<Integer, Integer> entry : picked.entrySet()) {
@@ -874,11 +877,12 @@ public class BookingService {
         }
         BigDecimal gross = ticketTotal.add(concessionTotal);
 
+        // Voucher giới hạn phim được xác thực theo suất chiếu, nhưng giảm trên toàn đơn gồm cả bắp nước.
         Voucher voucher = null;
         BigDecimal voucherDiscount = BigDecimal.ZERO;
         if (voucherCode != null && !voucherCode.isEmpty()) {
             voucher = bookingDAO.findVoucherByCode(conn, voucherCode);
-            if (isVoucherUsable(conn, customer, voucher, gross)) {
+            if (isVoucherUsable(conn, customer, voucher, gross, movieId)) {
                 voucherDiscount = discountOf(voucher, gross);
             } else {
                 errors.put(ERROR_VOUCHER, Messages.BOOKING_VOUCHER_INVALID);
@@ -906,7 +910,7 @@ public class BookingService {
 
     // GB-05: voucher còn hiệu lực, công khai hoặc thuộc chính khách, đơn đạt giá trị tối thiểu.
     // Voucher công khai: mỗi khách dùng một lần. Voucher cá nhân: dùng một lần (đơn Pending còn hạn cũng tính).
-    private boolean isVoucherUsable(Connection conn, User customer, Voucher voucher, BigDecimal gross)
+    private boolean isVoucherUsable(Connection conn, User customer, Voucher voucher, BigDecimal gross, int movieId)
             throws SQLException {
         if (voucher == null || !VoucherService.ACTIVE.equals(voucher.getStatus())) {
             return false;
@@ -918,6 +922,9 @@ public class BookingService {
         }
         Integer owner = voucher.getOwnerUserId();
         if (owner != null && owner != customer.getUserId()) {
+            return false;
+        }
+        if (voucher.getMovieId() != null && voucher.getMovieId() != movieId) {
             return false;
         }
         if (gross.compareTo(voucher.getMinOrderAmount()) < 0) {
