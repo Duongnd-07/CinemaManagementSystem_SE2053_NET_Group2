@@ -90,12 +90,6 @@ public class SystemConfigService {
                 values.put(param, new BigDecimal(raw));
             }
         }
-        // BR-33-03: ngưỡng bán chạy phải lớn hơn ngưỡng bán chậm
-        BigDecimal top = values.get(SystemConfigParam.TOP_MOVIE_OCCUPANCY_PERCENT);
-        BigDecimal low = values.get(SystemConfigParam.LOW_MOVIE_OCCUPANCY_PERCENT);
-        if (top != null && low != null && top.compareTo(low) <= 0) {
-            errors.put(SystemConfigParam.TOP_MOVIE_OCCUPANCY_PERCENT.getKey(), Messages.CONFIG_OCCUPANCY_ORDER);
-        }
         if (!errors.isEmpty()) {
             errors.put(GENERAL_ERROR, Messages.CONFIG_INVALID);
             throw new ValidationException(errors);

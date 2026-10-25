@@ -53,11 +53,11 @@
             <p class="text-headline-lg mt-space-xs">${promotionScheduled}</p>
         </div>
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
-            <p class="text-on-surface-variant">Voucher hoàn 80% còn hiệu lực</p>
+            <p class="text-on-surface-variant">Voucher hoàn vé còn hiệu lực</p>
             <p class="text-headline-lg text-primary mt-space-xs">${refund80Active}</p>
         </div>
         <div class="bg-surface-container-low rounded-xl border border-white/5 p-space-lg">
-            <p class="text-on-surface-variant">Voucher hoàn 80% hết hạn</p>
+            <p class="text-on-surface-variant">Voucher hoàn vé hết hạn</p>
             <p class="text-headline-lg mt-space-xs">${refund80Expired}</p>
         </div>
     </section>
@@ -72,7 +72,7 @@
             <option value="">Tất cả loại voucher</option>
             <c:forEach var="type" items="${voucherTypes}">
                 <option value="${type}" ${typeFilter == type ? 'selected' : ''}>
-                    ${type == 'Refund80' ? 'Hoàn vé 80%' : 'Khuyến mãi'}
+                    ${type == 'Refund80' ? 'Hoàn vé' : 'Khuyến mãi'}
                 </option>
             </c:forEach>
         </select>
@@ -101,7 +101,7 @@
                     <tr class="hover:bg-surface-container transition-colors">
                         <td class="py-4 px-5 font-label-lg"><c:out value="${voucher.voucherCode}"/></td>
                         <td class="py-4 px-5">
-                            <c:out value="${voucher.voucherType == 'Refund80' ? 'Hoàn vé 80%' : 'Khuyến mãi'}"/>
+                            <c:out value="${voucher.voucherType == 'Refund80' ? 'Hoàn vé' : 'Khuyến mãi'}"/>
                         </td>
                         <td class="py-4 px-5">
                             <c:choose>
