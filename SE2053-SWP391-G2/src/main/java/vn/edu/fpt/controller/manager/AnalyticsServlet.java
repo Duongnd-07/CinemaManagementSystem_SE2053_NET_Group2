@@ -51,7 +51,6 @@ public class AnalyticsServlet extends HttpServlet {
             request.setAttribute("revenueSeries", revenueSeries);
             request.setAttribute("revenueMax", Collections.max(revenueSeries.values()));
             request.setAttribute("rooms", rooms);
-            request.setAttribute("overallOccupancy", analyticsService.overallOccupancy(rooms));
             request.setAttribute("movies", analyticsService.moviePerformance(start, end));
             request.setAttribute("topThreshold", analyticsService.topThreshold());
             request.setAttribute("lowThreshold", analyticsService.lowThreshold());

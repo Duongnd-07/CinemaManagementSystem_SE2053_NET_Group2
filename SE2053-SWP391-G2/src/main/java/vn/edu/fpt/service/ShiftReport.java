@@ -36,16 +36,23 @@ public class ShiftReport {
         private final String seats;
         private final String customerName;
         private final String paymentMethod;
+        // Mã chuẩn chi POS / mã giao dịch ngân hàng để đối chiếu khi kết ca; null với tiền mặt
+        private final String paymentReference;
         private final BigDecimal finalAmount;
 
         public Order(int bookingId, LocalDateTime bookingTime, String seats, String customerName,
-                     String paymentMethod, BigDecimal finalAmount) {
+                     String paymentMethod, String paymentReference, BigDecimal finalAmount) {
             this.bookingId = bookingId;
             this.bookingTime = bookingTime;
             this.seats = seats;
             this.customerName = customerName;
             this.paymentMethod = paymentMethod;
+            this.paymentReference = paymentReference;
             this.finalAmount = finalAmount;
+        }
+
+        public String getPaymentReference() {
+            return paymentReference;
         }
 
         public int getBookingId() {

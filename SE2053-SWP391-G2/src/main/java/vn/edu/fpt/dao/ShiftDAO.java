@@ -138,7 +138,8 @@ public class ShiftDAO {
                 }
             }
         }
-        String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.FinalAmount, c.FullName AS CustomerName "
+        String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.PaymentReference, b.FinalAmount, "
+                + "c.FullName AS CustomerName "
                 + "FROM Booking b LEFT JOIN [User] c ON c.UserID = b.CustomerID "
                 + "WHERE b.ShiftID = ? AND b.Status = ? AND b.Channel = ? ORDER BY b.BookingTime DESC, b.BookingID DESC";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -151,7 +152,8 @@ public class ShiftDAO {
                     StringBuilder label = seats.get(bookingId);
                     report.getOrders().add(new ShiftReport.Order(bookingId,
                             rs.getTimestamp("BookingTime").toLocalDateTime(), label == null ? "" : label.toString(),
-                            rs.getString("CustomerName"), rs.getString("PaymentMethod"), rs.getBigDecimal("FinalAmount")));
+                            rs.getString("CustomerName"), rs.getString("PaymentMethod"), rs.getString("PaymentReference"),
+                            rs.getBigDecimal("FinalAmount")));
                 }
             }
         }

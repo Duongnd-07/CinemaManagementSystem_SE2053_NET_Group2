@@ -20,6 +20,9 @@
             <a class="${navBase} ${activeMenu == 'counter' ? navActive : navIdle}" href="${ctx}/staff/counter">
                 <span class="material-symbols-outlined text-[20px]">point_of_sale</span>Bán vé tại quầy
             </a>
+            <a class="${navBase} ${activeMenu == 'counter-history' ? navActive : navIdle}" href="${ctx}/staff/counter-history">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span>Lịch sử bán vé
+            </a>
             <a class="${navBase} ${activeMenu == 'shifts' ? navActive : navIdle}" href="${ctx}/staff/shifts">
                 <span class="material-symbols-outlined text-[20px]">schedule</span>Ca làm việc
             </a>

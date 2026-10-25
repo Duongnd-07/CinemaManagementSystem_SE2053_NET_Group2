@@ -82,10 +82,26 @@
             <div class="text-headline-md text-on-surface"><fmt:formatNumber value="${summary.ticketCount}"/></div>
             <div class="text-body-sm text-on-surface-variant mt-space-xs">Vé còn hiệu lực của các đơn trong kỳ</div>
         </div>
+        <%-- Phim bán nhiều / ít vé nhất trong kỳ: movies đã sắp theo số chỗ đã bán giảm dần (AnalyticsDAO) --%>
         <div class="cl-card p-space-lg">
-            <div class="text-body-sm text-on-surface-variant mb-space-xs">Tỷ lệ lấp đầy</div>
-            <div class="text-headline-md text-on-surface"><fmt:formatNumber value="${overallOccupancy}" maxFractionDigits="1"/>%</div>
-            <div class="text-body-sm text-on-surface-variant mt-space-xs">Các suất chiếu diễn ra trong kỳ</div>
+            <c:choose>
+                <c:when test="${empty movies}">
+                    <div class="text-body-sm text-on-surface-variant mb-space-xs">Phim bán chạy / bán chậm</div>
+                    <div class="text-body-md text-on-surface-variant">Chưa có suất chiếu nào trong kỳ</div>
+                </c:when>
+                <c:otherwise>
+                    <c:set var="topMovie" value="${movies[0]}"/>
+                    <c:set var="lowMovie" value="${movies[fn:length(movies) - 1]}"/>
+                    <div class="text-body-sm text-on-surface-variant mb-space-xs">Phim bán nhiều vé nhất</div>
+                    <div class="text-title-lg text-on-surface truncate" title="${fn:escapeXml(topMovie.name)}"><c:out value="${topMovie.name}"/></div>
+                    <div class="text-body-sm text-emerald-300"><fmt:formatNumber value="${topMovie.ticketCount}"/> chỗ đã bán</div>
+                    <c:if test="${fn:length(movies) > 1}">
+                        <div class="text-body-sm text-on-surface-variant mt-space-sm mb-space-xs">Phim bán ít vé nhất</div>
+                        <div class="text-title-lg text-on-surface truncate" title="${fn:escapeXml(lowMovie.name)}"><c:out value="${lowMovie.name}"/></div>
+                        <div class="text-body-sm text-amber-300"><fmt:formatNumber value="${lowMovie.ticketCount}"/> chỗ đã bán</div>
+                    </c:if>
+                </c:otherwise>
+            </c:choose>
         </div>
     </div>
 

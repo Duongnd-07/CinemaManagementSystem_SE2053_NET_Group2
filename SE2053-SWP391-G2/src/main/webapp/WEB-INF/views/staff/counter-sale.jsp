@@ -354,6 +354,21 @@
                             <p class="mt-1 text-emerald-300">Tiền thối: <b><fmt:formatNumber value="${quote.changeDue}" maxFractionDigits="0"/>đ</b></p>
                         </c:if>
                     </div>
+                    <%-- Thẻ / chuyển khoản: chỉ xác nhận khi đã thấy tiền về, nhập mã giao dịch làm bằng chứng (đối chiếu ở UC-22) --%>
+                    <input type="hidden" name="transferNote" value="${form.transferNote}"/>
+                    <div id="referenceField" class="space-y-space-sm" ${form.paymentMethod == 'Card' or form.paymentMethod == 'Transfer' ? '' : 'hidden'}>
+                        <div data-method="Transfer" class="rounded-lg border border-white/10 bg-surface-container-high p-space-sm text-body-sm"
+                             ${form.paymentMethod == 'Transfer' ? '' : 'hidden'}>
+                            Nội dung chuyển khoản khách cần ghi: <b class="text-primary tracking-wider">${form.transferNote}</b>
+                            <span class="block text-on-surface-variant">Đợi app ngân hàng báo đã nhận đúng số tiền với nội dung này rồi nhập mã giao dịch.</span>
+                        </div>
+                        <label class="block text-label-md text-on-surface-variant" for="paymentReference">
+                            <span data-method="Card" ${form.paymentMethod == 'Card' ? '' : 'hidden'}>Mã chuẩn chi trên hóa đơn POS (6 số)</span>
+                            <span data-method="Transfer" ${form.paymentMethod == 'Transfer' ? '' : 'hidden'}>Mã giao dịch ngân hàng</span>
+                        </label>
+                        <input class="${inputClass} h-11 uppercase" type="text" id="paymentReference" name="paymentReference" maxlength="30"
+                               value="<c:out value='${form.paymentReference}'/>" placeholder="VD: 123456 / FT26297XXXXXX" autocomplete="off"/>
+                    </div>
                     <c:if test="${not empty errors.payment}"><p class="form-error"><c:out value="${errors.payment}"/></p></c:if>
 
                     <button type="submit" name="action" value="quote"
@@ -374,6 +389,6 @@
     </c:choose>
 </main>
 
-<script src="${ctx}/assets/js/counter-sale.js?v=1"></script>
+<script src="${ctx}/assets/js/counter-sale.js?v=2"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 package vn.edu.fpt.dao;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,6 +15,7 @@ import vn.edu.fpt.model.Booking;
 import vn.edu.fpt.model.BookingChannel;
 import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.model.Movie;
+import vn.edu.fpt.model.PaymentMethod;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.model.Showtime;
@@ -68,11 +70,14 @@ public class CounterSaleDAO {
         return showtimes;
     }
 
-    // Đơn tại quầy đã thu tiền ngay nên lưu thẳng trạng thái Paid, kèm nhân viên và ca; khách vãng lai CustomerID NULL
-    public int insertBooking(Connection conn, Booking booking) throws SQLException {
+    // Đơn tại quầy đã thu tiền ngay nên lưu thẳng trạng thái Paid, kèm nhân viên và ca; khách vãng lai CustomerID NULL.
+    // paymentReference: mã chuẩn chi POS / mã giao dịch ngân hàng, null với tiền mặt;
+    // cashReceived: tiền mặt khách đưa (để tính tiền thối), null với thẻ / chuyển khoản
+    public int insertBooking(Connection conn, Booking booking, String paymentReference, BigDecimal cashReceived)
+            throws SQLException {
         String sql = "INSERT INTO Booking (CustomerID, StaffID, ShowtimeID, VoucherID, TotalPrice, DiscountAmount, "
-                + "FinalAmount, PaymentMethod, BookingTime, Status, Channel, PointsRedeemed, PointsEarned, ShiftID) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?, ?, ?, ?)";
+                + "FinalAmount, PaymentMethod, BookingTime, Status, Channel, PointsRedeemed, PointsEarned, ShiftID, "
+                + "PaymentReference, CashReceived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             setNullableInt(ps, 1, booking.getCustomerId());
             ps.setInt(2, booking.getStaffId());
@@ -87,6 +92,8 @@ public class CounterSaleDAO {
             ps.setInt(11, booking.getPointsRedeemed());
             ps.setInt(12, booking.getPointsEarned());
             ps.setInt(13, booking.getShiftId());
+            ps.setString(14, paymentReference);
+            ps.setBigDecimal(15, cashReceived);
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (!keys.next()) {
@@ -97,9 +104,21 @@ public class CounterSaleDAO {
         }
     }
 
+    // Đơn chuyển khoản đã dùng mã giao dịch ngân hàng này; null nếu chưa dùng
+    public Integer findBookingIdByTransferReference(Connection conn, String reference) throws SQLException {
+        String sql = "SELECT TOP 1 BookingID FROM Booking WHERE PaymentMethod = ? AND PaymentReference = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, PaymentMethod.TRANSFER);
+            ps.setString(2, reference);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        }
+    }
+
     // Chỉ đơn bán tại quầy; null nếu không có
     public CounterReceipt findReceipt(int bookingId) throws SQLException {
-        String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.TotalPrice, b.DiscountAmount, "
+        String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.PaymentReference, b.TotalPrice, b.DiscountAmount, "
                 + "b.FinalAmount, b.PointsRedeemed, b.PointsEarned, m.Title, r.RoomName, s.StartTime, "
                 + "st.FullName AS StaffName, c.FullName AS CustomerName, v.VoucherCode, sh.CounterNo "
                 + "FROM Booking b JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
@@ -120,6 +139,7 @@ public class CounterSaleDAO {
                     receipt.setBookingId(rs.getInt("BookingID"));
                     receipt.setBookingTime(rs.getTimestamp("BookingTime").toLocalDateTime());
                     receipt.setPaymentMethod(rs.getString("PaymentMethod"));
+                    receipt.setPaymentReference(rs.getString("PaymentReference"));
                     receipt.setTotalPrice(rs.getBigDecimal("TotalPrice"));
                     receipt.setDiscountAmount(rs.getBigDecimal("DiscountAmount"));
                     receipt.setFinalAmount(rs.getBigDecimal("FinalAmount"));

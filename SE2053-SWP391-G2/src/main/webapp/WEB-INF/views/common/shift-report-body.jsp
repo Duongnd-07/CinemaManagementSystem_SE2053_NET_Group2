@@ -175,7 +175,8 @@
                                 <td>${fn:substring(o.bookingTime, 11, 16)}</td>
                                 <td><c:out value="${o.seats}"/></td>
                                 <td><c:out value="${empty o.customerName ? 'Khách vãng lai' : o.customerName}"/></td>
-                                <td>${paymentLabels[o.paymentMethod]}</td>
+                                <td>${paymentLabels[o.paymentMethod]}<c:if test="${not empty o.paymentReference}">
+                                    <span class="block text-body-sm text-on-surface-variant">Mã GD: <c:out value="${o.paymentReference}"/></span></c:if></td>
                                 <td class="text-right"><fmt:formatNumber value="${o.finalAmount}" maxFractionDigits="0"/>đ</td>
                             </tr>
                         </c:forEach>

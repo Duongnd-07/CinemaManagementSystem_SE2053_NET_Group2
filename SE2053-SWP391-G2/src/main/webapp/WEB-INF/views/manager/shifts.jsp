@@ -80,7 +80,10 @@
                         <table class="w-full text-left text-body-md">
                             <thead class="text-label-md text-on-surface-variant border-b border-white/10">
                             <tr><th class="px-space-md py-2">Ca</th><th>Nhân viên</th><th>Quầy</th><th>Bắt đầu</th><th>Kết thúc</th>
-                                <th class="text-right">Thực thu</th><th class="px-space-md">Két tiền mặt</th></tr>
+                                <th class="text-right" title="Tiền lẻ có trong két khi mở ca">Tiền đầu ca</th>
+                                <th class="text-right">Thực thu</th>
+                                <th class="text-right" title="Tiền mặt đếm được trong két khi kết ca">Tiền cuối ca</th>
+                                <th class="px-space-md">Két tiền mặt</th></tr>
                             </thead>
                             <tbody class="divide-y divide-white/5">
                             <c:forEach var="s" items="${shifts}">
@@ -94,8 +97,14 @@
                                         <c:otherwise>${fn:substring(s.endedAt, 11, 16)}
                                             <span class="text-body-sm text-on-surface-variant">${empty s.closedBy ? '(tự kết)' : ''}</span></c:otherwise>
                                     </c:choose></td>
+                                    <td class="text-right"><fmt:formatNumber value="${s.openingCash}" maxFractionDigits="0"/>đ</td>
                                     <td class="text-right"><c:if test="${not empty s.cashTotal}">
                                         <fmt:formatNumber value="${s.cashTotal + s.transferTotal + s.cardTotal}" maxFractionDigits="0"/>đ</c:if></td>
+                                    <%-- Số đếm thực tế khi kết ca; ca đang mở hoặc chưa đếm thì chưa có --%>
+                                    <td class="text-right"><c:choose>
+                                        <c:when test="${not empty s.countedCash}"><fmt:formatNumber value="${s.countedCash}" maxFractionDigits="0"/>đ</c:when>
+                                        <c:otherwise><span class="text-on-surface-variant">-</span></c:otherwise>
+                                    </c:choose></td>
                                     <td class="px-space-md"><c:choose>
                                         <c:when test="${empty s.endedAt}">-</c:when>
                                         <c:when test="${empty s.countedCash}"><span class="cl-pill cl-pill--warning">Chưa đếm</span></c:when>

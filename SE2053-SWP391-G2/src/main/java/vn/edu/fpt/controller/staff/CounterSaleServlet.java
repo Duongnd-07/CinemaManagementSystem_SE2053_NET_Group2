@@ -248,6 +248,8 @@ public class CounterSaleServlet extends HttpServlet {
         form.setPoints(trim(request.getParameter("points")));
         form.setPaymentMethod(trim(request.getParameter("paymentMethod")));
         form.setCashReceived(trim(request.getParameter("cashReceived")));
+        form.setPaymentReference(trim(request.getParameter("paymentReference")));
+        form.setTransferNote(trim(request.getParameter("transferNote")));
         form.setAgeConfirmed("1".equals(request.getParameter("ageConfirmed")));
         return form;
     }

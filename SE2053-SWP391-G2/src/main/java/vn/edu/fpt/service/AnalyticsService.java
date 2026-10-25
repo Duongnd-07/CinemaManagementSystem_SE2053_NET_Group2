@@ -108,16 +108,6 @@ public class AnalyticsService {
         return analyticsDAO.configInt(CONFIG_LOW, DEFAULT_LOW);
     }
 
-    // Tỷ lệ lấp đầy chung = tổng vé / tổng sức chứa của mọi suất trong kỳ
-    public double overallOccupancy(List<OccupancyStat> rooms) {
-        OccupancyStat total = new OccupancyStat();
-        for (OccupancyStat room : rooms) {
-            total.setTicketCount(total.getTicketCount() + room.getTicketCount());
-            total.setCapacity(total.getCapacity() + room.getCapacity());
-        }
-        return total.getOccupancyPercent();
-    }
-
     static String tierOf(double occupancyPercent, int top, int low) {
         if (occupancyPercent >= top) {
             return TIER_TOP;

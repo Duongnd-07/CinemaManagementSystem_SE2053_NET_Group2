@@ -70,6 +70,12 @@ public class CounterSaleService {
     private static final String PAYMENT_INVALID = "Vui lòng chọn hình thức thanh toán.";
     private static final String CASH_INVALID = "Tiền khách đưa không hợp lệ.";
     private static final String CASH_SHORT = "Tiền khách đưa chưa đủ, còn thiếu {0}đ.";
+    private static final String CARD_REFERENCE_INVALID = "Nhập mã chuẩn chi 6 số in trên hóa đơn máy POS sau khi cà thẻ thành công.";
+    private static final String TRANSFER_REFERENCE_INVALID =
+            "Nhập mã giao dịch ngân hàng (6-30 chữ/số) trong thông báo đã nhận tiền.";
+    private static final String TRANSFER_REFERENCE_USED = "Mã giao dịch này đã được dùng cho đơn #{0}, kiểm tra lại giao dịch.";
+    private static final String TRANSFER_REFERENCE_TAKEN = "Mã giao dịch này vừa được dùng cho đơn khác, kiểm tra lại giao dịch.";
+    private static final String TRANSFER_REFERENCE_INDEX = "UX_Booking_TransferReference";
 
     // Cùng cấu hình và giá trị mặc định với BookingService (UC-13)
     private static final List<String> AGE_RESTRICTED = List.of("C13", "C16", "C18");
@@ -121,7 +127,7 @@ public class CounterSaleService {
     public CounterQuote quote(CounterSaleForm form) throws SQLException, ValidationException {
         try (Connection conn = DBContext.getConnection()) {
             CounterQuote quote = price(conn, form, false);
-            checkPayment(form, quote, false);
+            checkPayment(conn, form, quote, false);
             return quote;
         }
     }
@@ -142,7 +148,7 @@ public class CounterSaleService {
                     throw error(ERROR_SHIFT, SHIFT_EXPIRED);
                 }
                 CounterQuote quote = price(conn, form, true);
-                checkPayment(form, quote, true);
+                checkPayment(conn, form, quote, true);
                 if (!quote.isValid()) {
                     throw new ValidationException(quote.errors);
                 }
@@ -151,6 +157,11 @@ public class CounterSaleService {
                 return quote;
             } catch (SQLException | ValidationException | RuntimeException e) {
                 conn.rollback();
+                // Hai quầy nhập cùng một mã chuyển khoản cùng lúc: UX_Booking_TransferReference chặn đơn đến sau
+                if (e instanceof SQLException sql && isDuplicateKey(sql)
+                        && String.valueOf(sql.getMessage()).contains(TRANSFER_REFERENCE_INDEX)) {
+                    throw error(ERROR_PAYMENT, TRANSFER_REFERENCE_TAKEN);
+                }
                 // Hai quầy bán cùng ghế cùng lúc: UX_Ticket_Showtime_Seat chặn giao dịch đến sau
                 if (e instanceof SQLException sql && isDuplicateKey(sql)) {
                     throw error(ERROR_SEATS, Messages.BOOKING_SEAT_TAKEN);
@@ -373,7 +384,8 @@ public class CounterSaleService {
     }
 
     // required = false khi chỉ tính tiền: chưa chọn hình thức thì chưa báo lỗi, nhưng vẫn tính tiền thối nếu có
-    private void checkPayment(CounterSaleForm form, CounterQuote quote, boolean required) {
+    private void checkPayment(Connection conn, CounterSaleForm form, CounterQuote quote, boolean required)
+            throws SQLException {
         String method = form.getPaymentMethod();
         if (!PAYMENT_METHODS.contains(method)) {
             if (required) {
@@ -382,6 +394,7 @@ public class CounterSaleService {
             return;
         }
         if (!PaymentMethod.CASH.equals(method)) {
+            checkReference(conn, method, paymentReference(form), quote, required);
             return;
         }
         String raw = form.getCashReceived().trim().replace(".", "").replace(",", "");
@@ -403,6 +416,29 @@ public class CounterSaleService {
         quote.changeDue = cash.subtract(quote.getFinalAmount());
     }
 
+    // Thẻ / chuyển khoản không tự xác minh được với ngân hàng: bắt buộc mã giao dịch làm bằng chứng tiền đã về,
+    // lưu vào đơn để Manager đối chiếu với hóa đơn POS và sao kê khi kết ca (UC-22). Đơn 0đ không cần mã
+    private void checkReference(Connection conn, String method, String reference, CounterQuote quote,
+                                boolean required) throws SQLException {
+        if (quote.getFinalAmount().signum() == 0 || (reference.isEmpty() && !required)) {
+            return;
+        }
+        boolean card = PaymentMethod.CARD.equals(method);
+        if (!reference.matches(card ? "\\d{6}" : "[A-Z0-9]{6,30}")) {
+            quote.errors.put(ERROR_PAYMENT, card ? CARD_REFERENCE_INVALID : TRANSFER_REFERENCE_INVALID);
+            return;
+        }
+        Integer usedBy = card ? null : counterDAO.findBookingIdByTransferReference(conn, reference);
+        if (usedBy != null) {
+            quote.errors.put(ERROR_PAYMENT, Messages.format(TRANSFER_REFERENCE_USED, String.valueOf(usedBy)));
+        }
+    }
+
+    // Mã giao dịch viết hoa, bỏ khoảng trắng; tiền mặt không lưu mã
+    private String paymentReference(CounterSaleForm form) {
+        return form.getPaymentReference().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+    }
+
     private int save(Connection conn, CounterSaleForm form, CounterQuote quote, int staffId, int shiftId)
             throws SQLException, ValidationException {
         Integer customerId = quote.customer == null ? null : quote.customer.getUserId();
@@ -422,7 +458,11 @@ public class CounterSaleService {
         booking.setChannel(BookingChannel.COUNTER);
         booking.setPointsRedeemed(quote.pointsRedeemed);
         booking.setPointsEarned(pointsEarned);
-        int bookingId = counterDAO.insertBooking(conn, booking);
+        boolean cash = PaymentMethod.CASH.equals(form.getPaymentMethod());
+        String reference = cash ? "" : paymentReference(form);
+        // checkPayment đã tính tiền thối từ tiền khách đưa; đơn 0đ không nhập tiền thì không có
+        BigDecimal cashReceived = cash && quote.changeDue != null ? quote.getFinalAmount().add(quote.changeDue) : null;
+        int bookingId = counterDAO.insertBooking(conn, booking, reference.isEmpty() ? null : reference, cashReceived);
 
         List<Ticket> tickets = new ArrayList<>();
         for (BookingSeatLine seat : quote.seats) {

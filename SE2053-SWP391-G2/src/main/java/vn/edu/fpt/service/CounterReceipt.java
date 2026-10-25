@@ -17,6 +17,7 @@ public class CounterReceipt {
     private String customerName;
     private String paymentMethod;
     private String voucherCode;
+    private String paymentReference;
     private BigDecimal totalPrice;
     private BigDecimal discountAmount;
     private BigDecimal finalAmount;
@@ -130,6 +131,15 @@ public class CounterReceipt {
 
     public String getVoucherCode() {
         return voucherCode;
+    }
+
+    // Mã chuẩn chi POS / mã giao dịch ngân hàng; null với tiền mặt
+    public String getPaymentReference() {
+        return paymentReference;
+    }
+
+    public void setPaymentReference(String paymentReference) {
+        this.paymentReference = paymentReference;
     }
 
     public void setVoucherCode(String voucherCode) {

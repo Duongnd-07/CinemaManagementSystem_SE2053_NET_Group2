@@ -1,5 +1,6 @@
 package vn.edu.fpt.service;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,7 +18,23 @@ public class CounterSaleForm {
     private String points = "";
     private String paymentMethod = "";
     private String cashReceived = "";
+    // Thẻ: mã chuẩn chi trên hóa đơn POS; chuyển khoản: mã giao dịch ngân hàng
+    private String paymentReference = "";
+    // Nội dung khách ghi khi chuyển khoản để nhân viên tìm đúng giao dịch trên app ngân hàng; giữ nguyên qua các lần
+    // Tính tiền của cùng một đơn nhờ ô ẩn trên form
+    private String transferNote = newTransferNote();
     private boolean ageConfirmed;
+
+    private static final String NOTE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private static String newTransferNote() {
+        StringBuilder note = new StringBuilder("CINE");
+        for (int i = 0; i < 6; i++) {
+            note.append(NOTE_CHARS.charAt(RANDOM.nextInt(NOTE_CHARS.length())));
+        }
+        return note.toString();
+    }
 
     public int getShowtimeId() {
         return showtimeId;
@@ -81,6 +98,25 @@ public class CounterSaleForm {
 
     public void setCashReceived(String cashReceived) {
         this.cashReceived = cashReceived;
+    }
+
+    public String getPaymentReference() {
+        return paymentReference;
+    }
+
+    public void setPaymentReference(String paymentReference) {
+        this.paymentReference = paymentReference;
+    }
+
+    public String getTransferNote() {
+        return transferNote;
+    }
+
+    // Chỉ nhận giá trị đúng dạng do server tạo; trống hoặc sai thì giữ mã mới
+    public void setTransferNote(String transferNote) {
+        if (transferNote != null && transferNote.matches("CINE[A-Z0-9]{6}")) {
+            this.transferNote = transferNote;
+        }
     }
 
     public boolean isAgeConfirmed() {

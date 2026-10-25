@@ -78,6 +78,11 @@
             <div class="flex justify-between text-body-sm text-on-surface-variant">
                 <span>Hình thức</span><span>${paymentLabels[r.paymentMethod]}</span>
             </div>
+            <c:if test="${not empty r.paymentReference}">
+                <div class="flex justify-between text-body-sm text-on-surface-variant">
+                    <span>${r.paymentMethod == 'Card' ? 'Mã chuẩn chi' : 'Mã giao dịch'}</span><span><c:out value="${r.paymentReference}"/></span>
+                </div>
+            </c:if>
             <c:if test="${not empty r.customerName}">
                 <div class="flex justify-between text-body-sm text-on-surface-variant">
                     <span>Khách thành viên</span><span><c:out value="${r.customerName}"/> · +${r.pointsEarned} điểm</span>

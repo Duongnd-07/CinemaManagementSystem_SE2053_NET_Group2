@@ -46,6 +46,9 @@
         <a class="${itemBase} ${active == 'shifts' ? itemActive : itemIdle}" href="${ctx}/manager/shifts">
             <span class="material-symbols-outlined mr-space-md">schedule</span>Báo cáo ca
         </a>
+        <a class="${itemBase} ${active == 'counter-history' ? itemActive : itemIdle}" href="${ctx}/manager/counter-history">
+            <span class="material-symbols-outlined mr-space-md">receipt_long</span>Lịch sử bán tại quầy
+        </a>
         <a class="${itemBase} ${active == 'reports' ? itemActive : itemIdle}" href="${ctx}/manager/reports">
             <span class="material-symbols-outlined mr-space-md">bar_chart</span>Báo cáo
         </a>
