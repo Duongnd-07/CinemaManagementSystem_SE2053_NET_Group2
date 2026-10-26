@@ -372,7 +372,11 @@ public class ShowtimeService {
                 showtime.setStartTime(startTime);
                 showtime.setEndTime(endTime);
                 showtime.setBasePrice(basePrice);
-                showtime.setTranslationType(form.getTranslationType());
+                String translationType = form.getTranslationType();
+                if (translationType == null || translationType.isBlank() || (!translationType.equals("Phụ đề") && !translationType.equals("Lồng tiếng"))) {
+                    translationType = "Phụ đề";
+                }
+                showtime.setTranslationType(translationType);
 
                 if (showtimeId == null || showtimeId <= 0) {
                     // Tạo mới luôn là Active (Góp ý 4)
@@ -522,7 +526,11 @@ public class ShowtimeService {
                 st.setEndTime(end);
                 st.setBasePrice(price);
                 st.setStatus(ShowtimeStatus.ACTIVE);
-                st.setTranslationType(form.getTranslationType());
+                String translationType = form.getTranslationType();
+                if (translationType == null || translationType.isBlank() || (!translationType.equals("Phụ đề") && !translationType.equals("Lồng tiếng"))) {
+                    translationType = "Phụ đề";
+                }
+                st.setTranslationType(translationType);
                 plannedShowtimes.add(st);
             }
         }
