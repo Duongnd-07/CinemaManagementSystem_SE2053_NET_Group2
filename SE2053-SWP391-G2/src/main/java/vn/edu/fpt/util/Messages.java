@@ -176,6 +176,8 @@ public final class Messages {
     public static final String VOUCHER_CODE_INVALID = "Mã chỉ gồm chữ in hoa, chữ số, dấu gạch ngang; dài 4-32 ký tự.";
     public static final String VOUCHER_CODE_DUPLICATE = "Mã voucher đã tồn tại trong hệ thống.";
     public static final String VOUCHER_DISCOUNT_TYPE_INVALID = "Loại giảm giá không hợp lệ.";
+    public static final String VOUCHER_SCOPE_INVALID = "Phạm vi áp dụng voucher không hợp lệ.";
+    public static final String VOUCHER_MOVIE_INVALID = "Vui lòng chọn phim hợp lệ.";
     public static final String VOUCHER_DISCOUNT_VALUE_INVALID =
             "Mức giảm phải lớn hơn 0; giảm theo phần trăm không vượt quá 100%, giảm tiền phải là số nguyên.";
     public static final String VOUCHER_MIN_ORDER_INVALID = "Giá trị đơn tối thiểu phải là số nguyên không âm.";

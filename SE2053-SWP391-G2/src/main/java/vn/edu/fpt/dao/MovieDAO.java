@@ -58,6 +58,21 @@ public class MovieDAO {
         }
     }
 
+    public List<Movie> findAllTitles() throws SQLException {
+        List<Movie> movies = new ArrayList<>();
+        String sql = "SELECT MovieID, Title FROM Movie ORDER BY Title";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Movie movie = new Movie();
+                movie.setMovieId(rs.getInt("MovieID"));
+                movie.setTitle(rs.getString("Title"));
+                movies.add(movie);
+            }
+        }
+        return movies;
+    }
+
     public Map<String, Integer> countByStatus(String keyword) throws SQLException {
         String sql = "SELECT Status, COUNT(*) AS Total FROM Movie " + buildWhere(keyword, null) + " GROUP BY Status";
         Map<String, Integer> result = new HashMap<>();

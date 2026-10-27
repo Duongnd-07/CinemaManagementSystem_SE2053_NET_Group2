@@ -391,7 +391,7 @@ public class BookingDAO {
             + "StartDate, ExpiryDate, UsageLimit, OwnerUserID, "
             + "CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() THEN 'Expired' "
             + "WHEN Status = 'Active' AND StartDate > GETDATE() THEN 'Scheduled' ELSE Status END AS Status, "
-            + "VoucherType, MinOrderAmount FROM Voucher ";
+            + "VoucherType, MinOrderAmount, MovieID FROM Voucher ";
 
     public Voucher findVoucherByCode(Connection conn, String voucherCode) throws SQLException {
         // Khóa ghi voucher trong lúc đọc để tránh race condition khi nhiều booking cùng dùng 1 voucher
@@ -405,12 +405,14 @@ public class BookingDAO {
     }
 
     // Voucher còn hiệu lực trong ví của khách (voucher cá nhân, kể cả hoàn vé 80%), hạn gần nhất lên trước
-    public List<Voucher> findActiveVouchersOfOwner(Connection conn, int ownerUserId) throws SQLException {
+    public List<Voucher> findActiveVouchersOfOwner(Connection conn, int ownerUserId, int movieId)
+            throws SQLException {
         String sql = VOUCHER_COLUMNS + "WHERE OwnerUserID = ? AND Status = 'Active' AND ExpiryDate > GETDATE() "
-                + "ORDER BY ExpiryDate, VoucherID";
+                + "AND (MovieID IS NULL OR MovieID = ?) ORDER BY ExpiryDate, VoucherID";
         List<Voucher> vouchers = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, ownerUserId);
+            ps.setInt(2, movieId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     vouchers.add(mapVoucher(rs));
@@ -436,6 +438,7 @@ public class BookingDAO {
         voucher.setVoucherType(rs.getString("VoucherType"));
         BigDecimal minOrder = rs.getBigDecimal("MinOrderAmount");
         voucher.setMinOrderAmount(minOrder == null ? BigDecimal.ZERO : minOrder);
+        voucher.setMovieId(rs.getObject("MovieID", Integer.class));
         return voucher;
     }
 
