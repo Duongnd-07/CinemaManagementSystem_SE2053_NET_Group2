@@ -133,11 +133,15 @@ public class MovieReviewServlet extends HttpServlet {
             }
         }
         int userId = currentUser(request).getUserId();
+        Integer star = reviewService.normalizeStar(request.getParameter("star"));
+        String sort = reviewService.normalizeSort(request.getParameter("sort"));
         request.setAttribute("movie", movie);
         request.setAttribute("reviewSummary", reviewService.summarize(movie.getMovieId()));
         request.setAttribute("myReview", reviewService.findMine(movie.getMovieId(), userId));
         request.setAttribute("reviewPage",
-                reviewService.listOthers(movie.getMovieId(), userId, parsePage(request)));
+                reviewService.listOthers(movie.getMovieId(), userId, star, sort, parsePage(request)));
+        request.setAttribute("reviewStar", star);
+        request.setAttribute("reviewSort", sort);
         request.setAttribute("canReview", reviewService.canWriteReview(movie.getMovieId(), userId));
         request.setAttribute("csrfToken", CsrfToken.get(session));
         request.getRequestDispatcher(VIEW).forward(request, response);
