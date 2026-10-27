@@ -74,8 +74,13 @@ public class MovieDetailServlet extends HttpServlet {
             }
         }
 
+        Integer star = reviewService.normalizeStar(request.getParameter("star"));
+        String sort = reviewService.normalizeSort(request.getParameter("sort"));
         request.setAttribute("reviewSummary", reviewService.summarize(movie.getMovieId()));
-        request.setAttribute("reviewPage", reviewService.listOthers(movie.getMovieId(), userId, parsePage(request)));
+        request.setAttribute("reviewPage",
+                reviewService.listOthers(movie.getMovieId(), userId, star, sort, parsePage(request)));
+        request.setAttribute("reviewStar", star);
+        request.setAttribute("reviewSort", sort);
         request.setAttribute("isCustomer", isCustomer);
         if (isCustomer) {
             request.setAttribute("myReview", reviewService.findMine(movie.getMovieId(), userId));

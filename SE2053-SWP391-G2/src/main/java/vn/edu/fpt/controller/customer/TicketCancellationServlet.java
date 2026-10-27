@@ -38,6 +38,8 @@ public class TicketCancellationServlet extends HttpServlet {
         try {
             CancellableTicket ticket = cancellationService.getForConfirmation(ticketId, user.getUserId());
             request.setAttribute("ticket", ticket);
+            request.setAttribute("minimumHours", cancellationService.minimumHours());
+            request.setAttribute("voucherPercent", cancellationService.voucherPercent());
             request.setAttribute("csrfToken", CsrfToken.get(request.getSession()));
             request.getRequestDispatcher(VIEW).forward(request, response);
         } catch (ValidationException e) {
@@ -63,10 +65,11 @@ public class TicketCancellationServlet extends HttpServlet {
         }
         User user = (User) request.getSession(false).getAttribute("user");
         try {
-            cancellationService.cancel(ticketId, user.getUserId());
+            int voucherPercent = cancellationService.cancel(ticketId, user.getUserId());
             ActivityLogger.info(request, LogEventType.BOOKING, "Hủy vé online", "Ticket", ticketId,
                     "Hoàn voucher tài khoản theo chính sách hủy vé");
-            request.getSession().setAttribute(FLASH_SUCCESS, Messages.TICKET_CANCELLATION_SUCCESS);
+            request.getSession().setAttribute(FLASH_SUCCESS,
+                    Messages.format(Messages.TICKET_CANCELLATION_SUCCESS, String.valueOf(voucherPercent)));
             response.sendRedirect(request.getContextPath() + "/customer/bookings");
         } catch (ValidationException e) {
             request.getSession().setAttribute(FLASH_ERROR, e.getErrors().getOrDefault(

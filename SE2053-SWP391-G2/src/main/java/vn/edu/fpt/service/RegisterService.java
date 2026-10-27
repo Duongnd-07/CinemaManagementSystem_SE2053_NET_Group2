@@ -34,6 +34,7 @@ public class RegisterService {
 
     private final UserDAO userDAO;
     private final EmailVerificationDAO emailVerificationDAO;
+    private final WelcomeVoucherService welcomeVoucherService = new WelcomeVoucherService();
 
     public RegisterService() {
         this(new UserDAO(), new EmailVerificationDAO());
@@ -200,6 +201,9 @@ public class RegisterService {
 
         // Đánh dấu mã OTP đã được sử dụng thành công
         emailVerificationDAO.markUsed(ev.getVerificationId());
+
+        // UC-33: tặng voucher người mới theo cấu hình hệ thống
+        welcomeVoucherService.grant(user.getUserId());
 
         return user;
     }

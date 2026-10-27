@@ -328,7 +328,11 @@
                                             <div class="inline-flex items-center gap-1.5">
                                                 <!-- Nút Sửa thông tin (Edit Profile) -->
                                                 <button type="button"
-                                                        onclick="openEditModal('${u.userId}', '<c:out value="${u.fullName}"/>', '<c:out value="${u.email}"/>', '<c:out value="${u.phone}"/>')"
+                                                        data-user-id="${u.userId}"
+                                                        data-full-name="<c:out value="${u.fullName}"/>"
+                                                        data-email="<c:out value="${u.email}"/>"
+                                                        data-phone="<c:out value="${u.phone}"/>"
+                                                        onclick="openEditModal(this.dataset.userId, this.dataset.fullName, this.dataset.email, this.dataset.phone)"
                                                         class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/5 hover:bg-emerald-500/20 text-emerald-300 border border-white/10 hover:border-emerald-500/40 transition flex items-center gap-1"
                                                         title="Sửa thông tin tài khoản">
                                                     <span class="material-symbols-outlined text-sm">edit</span>
@@ -338,7 +342,11 @@
                                                 <!-- Nút Phân quyền (Role) -->
                                                 <button type="button"
                                                         ${isSelf ? 'disabled title="Không thể tự đổi quyền của chính mình"' : ''}
-                                                        onclick="openRoleModal('${u.userId}', '<c:out value="${u.fullName}"/>', '<c:out value="${u.email}"/>', '${u.role}')"
+                                                        data-user-id="${u.userId}"
+                                                        data-full-name="<c:out value="${u.fullName}"/>"
+                                                        data-email="<c:out value="${u.email}"/>"
+                                                        data-role="${u.role}"
+                                                        onclick="openRoleModal(this.dataset.userId, this.dataset.fullName, this.dataset.email, this.dataset.role)"
                                                         class="px-2.5 py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1 ${isSelf ? 'opacity-30 cursor-not-allowed bg-white/5 text-gray-500' : 'bg-white/5 hover:bg-amber-500/20 text-amber-300 border border-white/10 hover:border-amber-500/40'}">
                                                     <span class="material-symbols-outlined text-sm">swap_horiz</span>
                                                     <span>Phân quyền</span>
@@ -347,7 +355,11 @@
                                                 <!-- Nút Đổi trạng thái (Status) -->
                                                 <button type="button"
                                                         ${isSelf ? 'disabled title="Không thể tự khóa tài khoản của chính mình"' : ''}
-                                                        onclick="openStatusModal('${u.userId}', '<c:out value="${u.fullName}"/>', '<c:out value="${u.email}"/>', '${u.status}')"
+                                                        data-user-id="${u.userId}"
+                                                        data-full-name="<c:out value="${u.fullName}"/>"
+                                                        data-email="<c:out value="${u.email}"/>"
+                                                        data-status="${u.status}"
+                                                        onclick="openStatusModal(this.dataset.userId, this.dataset.fullName, this.dataset.email, this.dataset.status)"
                                                         class="px-2.5 py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1 ${isSelf ? 'opacity-30 cursor-not-allowed bg-white/5 text-gray-500' : 'bg-white/5 hover:bg-blue-500/20 text-blue-300 border border-white/10 hover:border-blue-500/40'}">
                                                     <span class="material-symbols-outlined text-sm">lock_reset</span>
                                                     <span>Trạng thái</span>
@@ -355,7 +367,10 @@
 
                                                 <!-- Nút Đặt lại mật khẩu -->
                                                 <button type="button"
-                                                        onclick="openResetPasswordModal('${u.userId}', '<c:out value="${u.fullName}"/>', '<c:out value="${u.email}"/>')"
+                                                        data-user-id="${u.userId}"
+                                                        data-full-name="<c:out value="${u.fullName}"/>"
+                                                        data-email="<c:out value="${u.email}"/>"
+                                                        onclick="openResetPasswordModal(this.dataset.userId, this.dataset.fullName, this.dataset.email)"
                                                         class="p-1.5 text-gray-400 hover:text-[#ffb95f] hover:bg-white/5 rounded-lg border border-transparent hover:border-white/10 transition"
                                                         title="Đặt lại mật khẩu">
                                                     <span class="material-symbols-outlined text-base">key</span>

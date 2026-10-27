@@ -169,7 +169,7 @@ public final class Messages {
     public static final String VOUCHER_UPDATED = "Mã khuyến mãi đã được cập nhật.";
     public static final String VOUCHER_DELETED = "Mã khuyến mãi đã được xóa.";
     public static final String VOUCHER_NOT_FOUND = "Không tìm thấy voucher.";
-    public static final String VOUCHER_SYSTEM_MANAGED = "Voucher hoàn 80% do hệ thống quản lý, không thể sửa hoặc xóa.";
+    public static final String VOUCHER_SYSTEM_MANAGED = "Voucher hoàn vé do hệ thống quản lý, không thể sửa hoặc xóa.";
     public static final String VOUCHER_DELETE_IN_USE = "Voucher đã được gắn với đơn đặt vé nên không thể xóa.";
     public static final String VOUCHER_IMMUTABLE = "Voucher đã sử dụng hoặc bị vô hiệu hóa nên không thể chỉnh sửa.";
     public static final String VOUCHER_ID_INVALID = "Voucher không hợp lệ. Vui lòng tải lại danh sách.";
@@ -196,9 +196,9 @@ public final class Messages {
     public static final String TICKET_CANCELLATION_NOT_ALLOWED =
             "Vé này không ở trạng thái hợp lệ để hủy.";
     public static final String TICKET_CANCELLATION_WINDOW =
-            "Không thể hủy vé trong vòng 2 giờ trước giờ chiếu theo quy định.";
+            "Không thể hủy vé trong vòng {0} giờ trước giờ chiếu theo quy định.";
     public static final String TICKET_CANCELLATION_SUCCESS =
-            "Đã hủy vé và cấp voucher hoàn 80% giá vé vào ví của bạn.";
+            "Đã hủy vé và cấp voucher hoàn {0}% giá vé vào ví của bạn.";
     public static final String CUSTOMER_ACTION_FAILED = "Không thể hoàn tất thao tác. Vui lòng thử lại.";
 
     // UC-01 Register Account
@@ -356,7 +356,6 @@ public final class Messages {
     public static final String CONFIG_NOT_INTEGER = "{0} phải là số nguyên.";
     public static final String CONFIG_TOO_MANY_DECIMALS = "{0} chỉ được có tối đa {1} chữ số thập phân.";
     public static final String CONFIG_OUT_OF_RANGE = "{0} phải từ {1} đến {2} {3}.";
-    public static final String CONFIG_OCCUPANCY_ORDER = "Ngưỡng phim bán chạy phải lớn hơn ngưỡng phim bán chậm.";
 
     // UC-32: View System Logs
     public static final String LOG_NOT_FOUND = "Không có nhật ký nào khớp với bộ lọc đã chọn.";

@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" import="java.time.format.DateTimeFormatter" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="dateFormat" value="${DateTimeFormatter.ofPattern('dd/MM/yyyy')}"/>
@@ -65,6 +66,18 @@
                         </div>
 
                         <h1 class="text-3xl sm:text-4xl font-extrabold text-white leading-tight"><c:out value="${movie.title}"/></h1>
+
+                        <%-- View Movie Rating & Review: điểm trung bình, bấm để xuống phần đánh giá --%>
+                        <a href="#reviews" class="inline-flex items-center gap-2 text-sm text-[#dfe2f1] hover:text-white transition">
+                            <span class="material-symbols-outlined text-xl text-[#ffb95f]">star</span>
+                            <c:choose>
+                                <c:when test="${reviewSummary.totalReviews > 0}">
+                                    <span class="text-lg font-extrabold text-white"><fmt:formatNumber value="${reviewSummary.averageRating}" pattern="0.0"/></span>
+                                    <span class="text-[#8e919f]">/5 · ${reviewSummary.totalReviews} đánh giá</span>
+                                </c:when>
+                                <c:otherwise><span class="text-[#8e919f]">Chưa có đánh giá</span></c:otherwise>
+                            </c:choose>
+                        </a>
 
                         <!-- Nhãn tuổi nổi bật kèm mô tả theo quy định -->
                         <div class="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-white/10 w-fit max-w-full">
@@ -176,7 +189,8 @@
         <div class="max-w-7xl mx-auto px-6 sm:px-10 pb-10">
             <ui:review-panel movieId="${movie.movieId}" baseUrl="${ctx}/movies/detail?id=${movie.movieId}"
                               summary="${reviewSummary}" myReview="${myReview}" reviewPage="${reviewPage}"
-                              canReview="${canReview}" isCustomer="${isCustomer}" csrfToken="${csrfToken}"/>
+                              canReview="${canReview}" isCustomer="${isCustomer}" csrfToken="${csrfToken}"
+                              star="${reviewStar}" sort="${reviewSort}"/>
         </div>
     </main>
 

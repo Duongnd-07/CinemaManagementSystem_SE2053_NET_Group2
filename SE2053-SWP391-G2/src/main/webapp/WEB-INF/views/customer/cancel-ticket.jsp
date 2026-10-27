@@ -14,8 +14,8 @@
             <p class="text-sm text-[#e9bcb6]">Đơn vé #<c:out value="${ticket.ticketId}"/></p>
             <h1 class="mt-2 text-2xl font-bold text-white">Xác nhận hủy vé</h1>
             <p class="mt-4 leading-7 text-gray-300">
-                Vé chỉ được hủy nếu còn ít nhất 2 giờ trước giờ chiếu. Khi hủy thành công, ghế được mở bán lại
-                và một voucher có giá trị bằng 80% giá vé sẽ được cấp vào ví của bạn; không hoàn tiền mặt.
+                Vé chỉ được hủy nếu còn ít nhất ${minimumHours} giờ trước giờ chiếu. Khi hủy thành công, ghế được mở bán lại
+                và một voucher có giá trị bằng ${voucherPercent}% giá vé sẽ được cấp vào ví của bạn; không hoàn tiền mặt.
             </p>
             <p class="mt-4 text-sm text-gray-400">Thời gian chiếu: <c:out value="${ticket.showtimeStart}"/></p>
             <div class="mt-7 flex flex-wrap gap-3">
