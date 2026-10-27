@@ -49,27 +49,38 @@ public class ReviewDAO {
         }
     }
 
-    public int countVisibleByMovie(int movieId, int excludeUserId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Review WHERE MovieID = ? AND Status = 'Visible' AND UserID <> ?";
+    // star = null: mọi mức sao
+    public int countVisibleByMovie(int movieId, int excludeUserId, Integer star) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Review WHERE MovieID = ? AND Status = 'Visible' AND UserID <> ?"
+                + (star == null ? "" : " AND Rating = ?");
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, movieId);
             ps.setInt(2, excludeUserId);
+            if (star != null) {
+                ps.setInt(3, star);
+            }
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : 0;
             }
         }
     }
 
-    // excludeUserId = 0 (Guest/không đăng nhập) không loại trừ ai vì không có UserID = 0
-    public List<ReviewView> findVisibleByMovie(int movieId, int excludeUserId, int offset, int limit)
-            throws SQLException {
+    // excludeUserId = 0 (Guest/không đăng nhập) không loại trừ ai vì không có UserID = 0.
+    // orderBy chỉ nhận các hằng số ORDER BY do ReviewService chọn, không lấy trực tiếp từ request
+    public List<ReviewView> findVisibleByMovie(int movieId, int excludeUserId, Integer star, String orderBy,
+            int offset, int limit) throws SQLException {
         String sql = VIEW_SELECT + "WHERE r.MovieID = ? AND r.Status = 'Visible' AND r.UserID <> ? "
-                + "ORDER BY r.CreatedAt DESC, r.ReviewID DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+                + (star == null ? "" : "AND r.Rating = ? ")
+                + "ORDER BY " + orderBy + " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, movieId);
-            ps.setInt(2, excludeUserId);
-            ps.setInt(3, offset);
-            ps.setInt(4, limit);
+            int idx = 1;
+            ps.setInt(idx++, movieId);
+            ps.setInt(idx++, excludeUserId);
+            if (star != null) {
+                ps.setInt(idx++, star);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx, limit);
             return mapViews(ps);
         }
     }
