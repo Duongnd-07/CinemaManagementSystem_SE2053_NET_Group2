@@ -53,12 +53,18 @@
                             <div class="mt-4 grid gap-3 border-t border-white/10 pt-4 md:grid-cols-2">
                                 <div>
                                     <c:choose>
-                                        <c:when test="${ticket.bookingStatus == 'Paid' and ticket.ticketStatus != 'Cancelled'}">
-                                            <p class="text-xs text-gray-400">Mã QR vé</p>
-                                            <code class="mt-1 block break-all rounded-lg bg-[#0f131d] p-3 text-xs text-[#ffb95f]"><c:out value="${ticket.qrCode}"/></code>
+                                        <c:when test="${ticket.bookingStatus == 'Paid' and (ticket.ticketStatus == 'Upcoming' or ticket.ticketStatus == 'Watched' or ticket.ticketStatus == 'Exchanged')}">
+                                            <p class="text-xs ${ticket.ticketStatus == 'Upcoming' ? 'text-emerald-300' : 'text-gray-400'}">
+                                                <c:choose>
+                                                    <c:when test="${ticket.ticketStatus == 'Upcoming'}">Mã QR vé · Chưa sử dụng</c:when>
+                                                    <c:when test="${ticket.ticketStatus == 'Watched'}">Mã QR vé · Đã sử dụng (đã xem)</c:when>
+                                                    <c:otherwise>Mã QR vé · Đã sử dụng (đã đổi)</c:otherwise>
+                                                </c:choose>
+                                            </p>
+                                            <code class="mt-1 block break-all rounded-lg bg-[#0f131d] p-3 text-xs ${ticket.ticketStatus == 'Upcoming' ? 'text-emerald-300' : 'text-gray-400'}"><c:out value="${ticket.qrCode}"/></code>
                                         </c:when>
                                         <c:otherwise>
-                                            <p class="text-xs text-gray-400">Mã QR chỉ hiển thị với vé đã thanh toán và còn hiệu lực.</p>
+                                            <p class="text-xs text-gray-400">Mã QR chỉ hiển thị với vé đã thanh toán và chưa bị hủy.</p>
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
