@@ -78,6 +78,8 @@ public class MovieListServlet extends HttpServlet {
 
         request.setAttribute("nowShowing", nowShowing);
         request.setAttribute("comingSoon", comingSoon);
+        request.setAttribute("moviePage", movieService.pagePublicMovies(
+                TAB_COMING_SOON.equals(tab) ? comingSoon : nowShowing, parseInt(param(request, "page"))));
         request.setAttribute("search", search);
         request.setAttribute("filterQuery", toQuery(search));
         request.setAttribute("filtered", !search.isEmpty());
@@ -111,5 +113,13 @@ public class MovieListServlet extends HttpServlet {
     private String param(HttpServletRequest request, String name) {
         String value = request.getParameter(name);
         return value == null ? "" : value;
+    }
+
+    private int parseInt(String value) {
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

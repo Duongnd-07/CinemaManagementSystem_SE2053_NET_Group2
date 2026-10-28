@@ -26,6 +26,7 @@ import vn.edu.fpt.util.PosterStorage;
 
 public class MovieService {
     public static final int PAGE_SIZE = 8;
+    public static final int PUBLIC_PAGE_SIZE = 12;
     public static final int MAX_DURATION = 600;
     public static final int MAX_SYNOPSIS = 4000;
     public static final int MAX_KEYWORD = 100;
@@ -95,6 +96,12 @@ public class MovieService {
             groups.get(publicStatusOf(movie)).add(movie);
         }
         return groups;
+    }
+
+    // UC-04: phân trang phim của tab đang xem; danh mục đã nạp đủ từ searchPublicMovies để đếm số phim ở cả hai tab
+    public Page<Movie> pagePublicMovies(List<Movie> movies, int page) throws SQLException {
+        return Page.of(page, PUBLIC_PAGE_SIZE, movies.size(),
+                (offset, limit) -> movies.subList(offset, Math.min(offset + limit, movies.size())));
     }
 
     // Lọc theo độ tuổi người xem: chọn một nhãn thì gồm mọi phim người ở độ tuổi đó được xem
