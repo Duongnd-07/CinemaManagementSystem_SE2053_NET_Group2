@@ -909,7 +909,7 @@ public class BookingService {
     }
 
     // GB-05: voucher còn hiệu lực, công khai hoặc thuộc chính khách, đơn đạt giá trị tối thiểu.
-    // Voucher công khai: mỗi khách dùng một lần. Voucher cá nhân: dùng một lần (đơn Pending còn hạn cũng tính).
+    // Voucher công khai theo hạn mức mỗi khách; voucher cá nhân dùng một lần (đơn Pending còn hạn cũng tính).
     private boolean isVoucherUsable(Connection conn, User customer, Voucher voucher, BigDecimal gross, int movieId)
             throws SQLException {
         if (voucher == null || !VoucherService.ACTIVE.equals(voucher.getStatus())) {
@@ -934,8 +934,12 @@ public class BookingService {
                 && bookingDAO.countActiveVoucherUses(conn, voucher.getVoucherId()) >= voucher.getUsageLimit()) {
             return false;
         }
-        return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(),
-                owner == null ? Integer.valueOf(customer.getUserId()) : null, 0);
+        if (owner == null) {
+            int perUserLimit = voucher.getPerUserUsageLimit() == null ? 1 : voucher.getPerUserUsageLimit();
+            return bookingDAO.countActiveVoucherUsesByCustomer(conn, voucher.getVoucherId(),
+                    customer.getUserId()) < perUserLimit;
+        }
+        return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
     }
 
     private BigDecimal discountOf(Voucher voucher, BigDecimal gross) {

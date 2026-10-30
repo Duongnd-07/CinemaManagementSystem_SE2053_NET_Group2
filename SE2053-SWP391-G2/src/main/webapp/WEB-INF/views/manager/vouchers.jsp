@@ -90,6 +90,7 @@
                     <th class="py-4 px-5">Mức giảm</th>
                     <th class="py-4 px-5">Đơn tối thiểu</th>
                     <th class="py-4 px-5">Đã dùng / đang giữ</th>
+                    <th class="py-4 px-5">Lượt dùng/người</th>
                     <th class="py-4 px-5">Ngày tạo</th>
                     <th class="py-4 px-5">Bắt đầu</th>
                     <th class="py-4 px-5">Hạn sử dụng</th>
@@ -130,6 +131,14 @@
                                 <c:otherwise>Cá nhân</c:otherwise>
                             </c:choose>
                         </td>
+                        <td class="py-4 px-5">
+                            <c:choose>
+                                <c:when test="${voucher.voucherType == 'Promotion'}">
+                                    <c:out value="${voucher.perUserUsageLimit}"/>
+                                </c:when>
+                                <c:otherwise>Cá nhân</c:otherwise>
+                            </c:choose>
+                        </td>
                         <td class="py-4 px-5"><c:out value="${voucher.createdAt}"/></td>
                         <td class="py-4 px-5"><c:out value="${voucher.startDate}"/></td>
                         <td class="py-4 px-5"><c:out value="${voucher.expiryDate}"/></td>
@@ -154,7 +163,7 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty voucherPage.items}">
-                    <tr><td colspan="11" class="py-12 px-6 text-center text-on-surface-variant">
+                    <tr><td colspan="12" class="py-12 px-6 text-center text-on-surface-variant">
                         <c:out value="${msgNoResult}"/>
                     </td></tr>
                 </c:if>
@@ -255,10 +264,20 @@
                         <c:if test="${not empty errors.expiryDate}"><p class="form-error"><c:out value="${errors.expiryDate}"/></p></c:if>
                     </div>
                     <div>
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="usageLimit">Giới hạn lượt dùng</label>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="usageLimit">Giới hạn tổng lượt dùng</label>
                         <input id="usageLimit" name="usageLimit" class="${inputClass} w-full"
                                type="number" min="1" step="1" required value="<c:out value='${form.usageLimit}'/>"/>
                         <c:if test="${not empty errors.usageLimit}"><p class="form-error"><c:out value="${errors.usageLimit}"/></p></c:if>
+                    </div>
+                    <div>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="perUserUsageLimit">Giới hạn lượt dùng/người</label>
+                        <input id="perUserUsageLimit" name="perUserUsageLimit" class="${inputClass} w-full"
+                               type="number" min="1" step="1" required
+                               value="<c:out value='${form.perUserUsageLimit}'/>"/>
+                        <p class="mt-1 text-sm text-on-surface-variant">
+                            Số lần tối đa mỗi tài khoản được dùng campaign này.
+                        </p>
+                        <c:if test="${not empty errors.perUserUsageLimit}"><p class="form-error"><c:out value="${errors.perUserUsageLimit}"/></p></c:if>
                     </div>
                 </div>
                 <div class="flex justify-end gap-space-sm pt-space-sm">

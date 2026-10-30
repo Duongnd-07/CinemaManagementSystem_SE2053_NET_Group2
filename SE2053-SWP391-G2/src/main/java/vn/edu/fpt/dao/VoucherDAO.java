@@ -18,7 +18,7 @@ import vn.edu.fpt.util.DBContext;
 public class VoucherDAO {
     private static final String SELECT_COLUMNS = "SELECT Voucher.VoucherID, Voucher.VoucherCode, "
             + "Voucher.DiscountValue, Voucher.DiscountType, Voucher.CreatedAt, Voucher.StartDate, "
-            + "Voucher.ExpiryDate, Voucher.UsageLimit, "
+            + "Voucher.ExpiryDate, Voucher.UsageLimit, Voucher.PerUserUsageLimit, "
             + "(SELECT COUNT(*) FROM Booking b WHERE b.VoucherID = Voucher.VoucherID "
             + "AND (b.Status = 'Paid' OR (b.Status = 'Pending' AND EXISTS "
             + "(SELECT 1 FROM Seat_Hold h WHERE h.SessionID = 'BOOKING-' + CAST(b.BookingID AS VARCHAR(20)) "
@@ -90,12 +90,16 @@ public class VoucherDAO {
     public boolean update(Voucher voucher) throws SQLException {
         String sql = "UPDATE Voucher SET VoucherCode = ?, DiscountValue = ?, DiscountType = ?, "
                 + "StartDate = ?, ExpiryDate = ?, UsageLimit = ?, Status = ?, VoucherType = ?, "
-                + "MinOrderAmount = ?, CreatedByUserID = ?, MovieID = ? "
+                + "MinOrderAmount = ?, CreatedByUserID = ?, MovieID = ?, PerUserUsageLimit = ? "
                 + "WHERE VoucherID = ? AND ? >= (SELECT COUNT(*) FROM Booking b "
                 + "WHERE b.VoucherID = Voucher.VoucherID AND (b.Status = 'Paid' OR "
                 + "(b.Status = 'Pending' AND EXISTS (SELECT 1 FROM Seat_Hold h "
                 + "WHERE h.SessionID = 'BOOKING-' + CAST(b.BookingID AS VARCHAR(20)) "
-                + "AND h.ExpiryTime > GETDATE()))))";
+                + "AND h.ExpiryTime > GETDATE())))) AND NOT EXISTS (SELECT 1 FROM Booking b "
+                + "WHERE b.VoucherID = Voucher.VoucherID AND b.CustomerID IS NOT NULL AND "
+                + "(b.Status = 'Paid' OR (b.Status = 'Pending' AND EXISTS (SELECT 1 FROM Seat_Hold h "
+                + "WHERE h.SessionID = 'BOOKING-' + CAST(b.BookingID AS VARCHAR(20)) "
+                + "AND h.ExpiryTime > GETDATE()))) GROUP BY b.CustomerID HAVING COUNT(*) > ?)";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, voucher.getVoucherCode());
             ps.setBigDecimal(2, voucher.getDiscountValue());
@@ -116,8 +120,10 @@ public class VoucherDAO {
             } else {
                 ps.setInt(11, voucher.getMovieId());
             }
-            ps.setInt(12, voucher.getVoucherId());
-            ps.setInt(13, voucher.getUsageLimit());
+            ps.setInt(12, voucher.getPerUserUsageLimit());
+            ps.setInt(13, voucher.getVoucherId());
+            ps.setInt(14, voucher.getUsageLimit());
+            ps.setInt(15, voucher.getPerUserUsageLimit());
             return ps.executeUpdate() > 0;
         }
     }
@@ -188,10 +194,25 @@ public class VoucherDAO {
         }
     }
 
+    public int maxActiveUsesPerUser(int voucherId) throws SQLException {
+        String sql = "SELECT COALESCE(MAX(UsageCount), 0) FROM ("
+                + "SELECT COUNT(*) AS UsageCount FROM Booking b WHERE b.VoucherID = ? "
+                + "AND b.CustomerID IS NOT NULL AND (b.Status = 'Paid' OR "
+                + "(b.Status = 'Pending' AND EXISTS (SELECT 1 FROM Seat_Hold h "
+                + "WHERE h.SessionID = 'BOOKING-' + CAST(b.BookingID AS VARCHAR(20)) "
+                + "AND h.ExpiryTime > GETDATE()))) GROUP BY b.CustomerID) activeUses";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, voucherId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
     public int insertPromotion(Voucher voucher) throws SQLException {
         String sql = "INSERT INTO Voucher (VoucherCode, DiscountValue, DiscountType, StartDate, ExpiryDate, "
-                + "UsageLimit, OwnerUserID, Status, VoucherType, MinOrderAmount, CreatedByUserID, MovieID) "
-                + "VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)";
+                + "UsageLimit, OwnerUserID, Status, VoucherType, MinOrderAmount, CreatedByUserID, MovieID, "
+                + "PerUserUsageLimit) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, voucher.getVoucherCode());
@@ -213,6 +234,7 @@ public class VoucherDAO {
             } else {
                 ps.setInt(11, voucher.getMovieId());
             }
+            ps.setInt(12, voucher.getPerUserUsageLimit());
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 return keys.next() ? keys.getInt(1) : 0;
@@ -255,6 +277,7 @@ public class VoucherDAO {
         Timestamp expiryDate = rs.getTimestamp("ExpiryDate");
         voucher.setExpiryDate(expiryDate == null ? null : expiryDate.toLocalDateTime());
         voucher.setUsageLimit(rs.getObject("UsageLimit", Integer.class));
+        voucher.setPerUserUsageLimit(rs.getObject("PerUserUsageLimit", Integer.class));
         voucher.setUsageCount(rs.getInt("UsageCount"));
         voucher.setOwnerUserId(rs.getObject("OwnerUserID", Integer.class));
         voucher.setStatus(rs.getString("Status"));

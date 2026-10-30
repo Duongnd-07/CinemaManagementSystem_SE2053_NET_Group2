@@ -187,6 +187,10 @@ public final class Messages {
     public static final String VOUCHER_USAGE_LIMIT_INVALID = "Giới hạn lượt dùng phải là số nguyên dương.";
     public static final String VOUCHER_USAGE_LIMIT_BELOW_USAGE =
             "Giới hạn lượt dùng không được thấp hơn số lượt đã dùng hoặc đang giữ.";
+    public static final String VOUCHER_PER_USER_USAGE_LIMIT_INVALID =
+            "Giới hạn lượt dùng trên mỗi tài khoản phải là số nguyên dương.";
+    public static final String VOUCHER_PER_USER_USAGE_LIMIT_BELOW_USAGE =
+            "Giới hạn mỗi tài khoản không được thấp hơn số lượt đã dùng hoặc đang giữ.";
     public static final String CUSTOMER_DATA_NOT_FOUND = "Không tìm thấy dữ liệu tài khoản.";
     public static final String BOOKING_HISTORY_EMPTY = "Bạn chưa có lịch sử đặt vé nào.";
     public static final String VOUCHER_WALLET_EMPTY = "Ví voucher của bạn hiện đang trống.";

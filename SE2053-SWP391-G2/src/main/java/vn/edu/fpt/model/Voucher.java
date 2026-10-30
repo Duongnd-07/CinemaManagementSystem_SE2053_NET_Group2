@@ -12,6 +12,7 @@ public class Voucher {
     private LocalDateTime startDate;
     private LocalDateTime expiryDate;
     private Integer usageLimit;
+    private Integer perUserUsageLimit;
     private int usageCount;
     private Integer ownerUserId;
     private String status;
@@ -86,6 +87,14 @@ public class Voucher {
 
     public void setUsageLimit(Integer usageLimit) {
         this.usageLimit = usageLimit;
+    }
+
+    public Integer getPerUserUsageLimit() {
+        return perUserUsageLimit;
+    }
+
+    public void setPerUserUsageLimit(Integer perUserUsageLimit) {
+        this.perUserUsageLimit = perUserUsageLimit;
     }
 
     public int getUsageCount() {

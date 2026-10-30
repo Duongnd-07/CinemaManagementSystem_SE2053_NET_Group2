@@ -87,6 +87,7 @@ public class VoucherService {
         voucher.setStartDate(LocalDateTime.parse(form.getStartDate().trim()));
         voucher.setExpiryDate(LocalDateTime.parse(form.getExpiryDate().trim()));
         voucher.setUsageLimit(Integer.valueOf(form.getUsageLimit().trim()));
+        voucher.setPerUserUsageLimit(Integer.valueOf(form.getPerUserUsageLimit().trim()));
         voucher.setVoucherType(VoucherType.PROMOTION);
         voucher.setStatus(ACTIVE);
         voucher.setCreatedByUserId(createdByUserId);
@@ -104,6 +105,10 @@ public class VoucherService {
                     if (voucherDAO.countActiveUses(voucherId) > voucher.getUsageLimit()) {
                         throw new ValidationException(Map.of(
                                 "usageLimit", Messages.VOUCHER_USAGE_LIMIT_BELOW_USAGE));
+                    }
+                    if (voucherDAO.maxActiveUsesPerUser(voucherId) > voucher.getPerUserUsageLimit()) {
+                        throw new ValidationException(Map.of(
+                                "perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_BELOW_USAGE));
                     }
                     throw new ValidationException(Map.of("general", Messages.VOUCHER_NOT_FOUND));
                 }
@@ -218,6 +223,17 @@ public class VoucherService {
             }
         } catch (NumberFormatException e) {
             errors.put("usageLimit", Messages.VOUCHER_USAGE_LIMIT_INVALID);
+        }
+        try {
+            int perUserUsageLimit = Integer.parseInt(
+                    form.getPerUserUsageLimit() == null ? "" : form.getPerUserUsageLimit().trim());
+            if (perUserUsageLimit < 1) {
+                errors.put("perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_INVALID);
+            } else if (voucherId != null && voucherDAO.maxActiveUsesPerUser(voucherId) > perUserUsageLimit) {
+                errors.put("perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_BELOW_USAGE);
+            }
+        } catch (NumberFormatException e) {
+            errors.put("perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_INVALID);
         }
         return errors;
     }
