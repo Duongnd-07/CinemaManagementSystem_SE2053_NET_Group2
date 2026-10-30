@@ -353,9 +353,12 @@ public class CounterSaleService {
                 && bookingDAO.countActiveVoucherUses(conn, voucher.getVoucherId()) >= voucher.getUsageLimit()) {
             return false;
         }
-        // Voucher công khai: mỗi khách một lần. Voucher cá nhân: chỉ một lần
-        return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(),
-                owner == null ? Integer.valueOf(customer.getUserId()) : null, 0);
+        if (owner == null) {
+            int perUserLimit = voucher.getPerUserUsageLimit() == null ? 1 : voucher.getPerUserUsageLimit();
+            return bookingDAO.countActiveVoucherUsesByCustomer(conn, voucher.getVoucherId(),
+                    customer.getUserId()) < perUserLimit;
+        }
+        return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
     }
 
     // BR-LOYALTY-01: điểm chỉ trừ vào tiền vé, không làm tổng âm, không vượt số điểm còn dùng được

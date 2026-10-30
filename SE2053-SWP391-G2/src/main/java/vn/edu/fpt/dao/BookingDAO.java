@@ -388,7 +388,7 @@ public class BookingDAO {
 
     // Trạng thái hiệu lực giống VoucherDAO: Active nhưng quá hạn thì coi là Expired, chưa tới StartDate thì Scheduled
     private static final String VOUCHER_COLUMNS = "SELECT VoucherID, VoucherCode, DiscountValue, DiscountType, "
-            + "StartDate, ExpiryDate, UsageLimit, OwnerUserID, "
+            + "StartDate, ExpiryDate, UsageLimit, PerUserUsageLimit, OwnerUserID, "
             + "CASE WHEN Status = 'Active' AND ExpiryDate <= GETDATE() THEN 'Expired' "
             + "WHEN Status = 'Active' AND StartDate > GETDATE() THEN 'Scheduled' ELSE Status END AS Status, "
             + "VoucherType, MinOrderAmount, MovieID FROM Voucher ";
@@ -433,6 +433,7 @@ public class BookingDAO {
         Timestamp expiry = rs.getTimestamp("ExpiryDate");
         voucher.setExpiryDate(expiry == null ? null : expiry.toLocalDateTime());
         voucher.setUsageLimit(rs.getObject("UsageLimit", Integer.class));
+        voucher.setPerUserUsageLimit(rs.getObject("PerUserUsageLimit", Integer.class));
         voucher.setOwnerUserId(rs.getObject("OwnerUserID", Integer.class));
         voucher.setStatus(rs.getString("Status"));
         voucher.setVoucherType(rs.getString("VoucherType"));
@@ -471,6 +472,21 @@ public class BookingDAO {
             ps.setString(2, BookingStatus.PAID);
             ps.setString(3, BookingStatus.PENDING);
             ps.setString(4, BOOKING_HOLD_PREFIX);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    public int countActiveVoucherUsesByCustomer(Connection conn, int voucherId, int customerId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Booking b WHERE b.VoucherID = ? AND b.CustomerID = ? AND "
+                + ACTIVE_BOOKING;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, voucherId);
+            ps.setInt(2, customerId);
+            ps.setString(3, BookingStatus.PAID);
+            ps.setString(4, BookingStatus.PENDING);
+            ps.setString(5, BOOKING_HOLD_PREFIX);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : 0;
             }
