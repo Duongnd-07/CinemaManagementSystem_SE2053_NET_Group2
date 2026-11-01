@@ -141,7 +141,7 @@ public class EmailChangeService {
     }
 
     private void sendOtp(User user, String newEmail) throws SQLException {
-        int expiryMinutes = AppConfig.getInt("mail.otp.expiryMinutes", 10);
+        int expiryMinutes = AppConfig.getInt("mail.otp.expiryMinutes", 4);
         String otpCode = String.valueOf(100000 + RANDOM.nextInt(900000));
 
         emailVerificationDAO.invalidatePreviousOtps(newEmail);

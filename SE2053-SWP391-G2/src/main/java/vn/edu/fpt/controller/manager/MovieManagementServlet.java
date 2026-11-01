@@ -146,9 +146,11 @@ public class MovieManagementServlet extends HttpServlet {
             throws SQLException, IOException {
         try {
             int movieId = parseInt(request.getParameter("movieId"));
-            movieService.archive(movieId);
-            ActivityLogger.info(request, LogEventType.CATALOG, "Lưu trữ phim", "Movie", movieId, null);
-            flash(request, FLASH_SUCCESS, Messages.MOVIE_ARCHIVED);
+            int cancelled = movieService.archive(movieId);
+            ActivityLogger.info(request, LogEventType.CATALOG, "Lưu trữ phim", "Movie", movieId,
+                    "Hủy " + cancelled + " suất chiếu chưa có vé");
+            flash(request, FLASH_SUCCESS, cancelled > 0
+                    ? Messages.format(Messages.MOVIE_ARCHIVED_SHOWTIMES, cancelled) : Messages.MOVIE_ARCHIVED);
         } catch (ValidationException e) {
             flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());
         }

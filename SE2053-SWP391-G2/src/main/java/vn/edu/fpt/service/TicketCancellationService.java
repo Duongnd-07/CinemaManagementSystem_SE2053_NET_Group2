@@ -105,16 +105,13 @@ public class TicketCancellationService {
         if (remainingEarnedPoints == 0) {
             return 0;
         }
-        if (ticket.getUpcomingTicketCount() <= 1) {
-            return remainingEarnedPoints;
+        BigDecimal totalPrice = ticket.getBookingTotalPrice();
+        if (totalPrice == null || totalPrice.signum() <= 0) {
+            throw new SQLException("Booking total price must be positive to reverse earned loyalty points.");
         }
-
-        BigDecimal totalTicketPrice = ticket.getBookingTicketTotal();
-        if (totalTicketPrice == null || totalTicketPrice.signum() <= 0) {
-            throw new SQLException("Booking ticket total must be positive to reverse earned loyalty points.");
-        }
+        // D04b: chỉ thu hồi phần điểm của vé bị hủy; giữ lại điểm của bắp nước, kể cả vé cuối.
         int proportionalPoints = BigDecimal.valueOf(earnedPoints).multiply(ticket.getPrice())
-                .divide(totalTicketPrice, 0, RoundingMode.DOWN).intValueExact();
+                .divide(totalPrice, 0, RoundingMode.DOWN).intValueExact();
         return Math.min(proportionalPoints, remainingEarnedPoints);
     }
 

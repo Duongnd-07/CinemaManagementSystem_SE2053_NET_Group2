@@ -14,10 +14,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import vn.edu.fpt.model.BookingStatus;
 import vn.edu.fpt.model.Genre;
 import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.model.ShowtimeStatus;
+import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.util.DBContext;
 
 public class MovieDAO {
@@ -210,6 +212,37 @@ public class MovieDAO {
         }
     }
 
+    public boolean hasUnfinishedShowtimesBefore(int movieId, LocalDate releaseDate) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Showtime WHERE MovieID = ? AND EndTime > GETDATE() "
+                + "AND StartTime < ? AND (Status IS NULL OR Status <> ?)";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, movieId);
+            ps.setTimestamp(2, Timestamp.valueOf(releaseDate.atStartOfDay()));
+            ps.setString(3, ShowtimeStatus.CANCELLED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    public List<String> findUnfinishedShowtimeRoomFormats(int movieId) throws SQLException {
+        // Phòng chưa khai báo định dạng được UC-24 coi là 2D khi tạo suất
+        String sql = "SELECT DISTINCT COALESCE(NULLIF(LTRIM(RTRIM(r.Format)), ''), '2D') "
+                + "FROM Showtime s JOIN Room r ON r.RoomID = s.RoomID "
+                + "WHERE s.MovieID = ? AND s.EndTime > GETDATE() AND (s.Status IS NULL OR s.Status <> ?)";
+        List<String> formats = new ArrayList<>();
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, movieId);
+            ps.setString(2, ShowtimeStatus.CANCELLED);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    formats.add(rs.getString(1));
+                }
+            }
+        }
+        return formats;
+    }
+
     // JOB-03: phim Sắp chiếu đã tới ngày khởi chiếu -> Đang chiếu. Trả về tên các phim đã chuyển
     public List<String> promoteReleased(LocalDate today) throws SQLException {
         String sql = "UPDATE Movie SET Status = ? OUTPUT inserted.Title WHERE Status = ? AND ReleaseDate <= ?";
@@ -277,6 +310,69 @@ public class MovieDAO {
     public void updateStatus(int movieId, String status) throws SQLException {
         String sql = "UPDATE Movie SET Status = ? WHERE MovieID = ?";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, movieId);
+            ps.executeUpdate();
+        }
+    }
+
+    public String lockMovieStatus(Connection conn, int movieId) throws SQLException {
+        String sql = "SELECT Status FROM Movie WITH (UPDLOCK, HOLDLOCK) WHERE MovieID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, movieId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
+    }
+
+    public List<Integer> lockUnfinishedShowtimes(Connection conn, int movieId) throws SQLException {
+        String sql = "SELECT ShowtimeID FROM Showtime WITH (UPDLOCK, HOLDLOCK) "
+                + "WHERE MovieID = ? AND EndTime > GETDATE() AND (Status IS NULL OR Status <> ?) "
+                + "ORDER BY ShowtimeID";
+        List<Integer> ids = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, movieId);
+            ps.setString(2, ShowtimeStatus.CANCELLED);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ids.add(rs.getInt(1));
+                }
+            }
+        }
+        return ids;
+    }
+
+    public boolean hasActiveTickets(Connection conn, int showtimeId) throws SQLException {
+        String sql = "SELECT TOP 1 t.TicketID FROM Ticket t WITH (UPDLOCK, HOLDLOCK) "
+                + "JOIN Booking b ON b.BookingID = t.BookingID WHERE b.ShowtimeID = ? "
+                + "AND b.Status IN (?, ?) AND t.Status IN (?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, showtimeId);
+            ps.setString(2, BookingStatus.PAID);
+            ps.setString(3, BookingStatus.PENDING);
+            ps.setString(4, TicketStatus.UPCOMING);
+            ps.setString(5, TicketStatus.WATCHED);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public void cancelEmptyShowtime(Connection conn, int showtimeId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE Showtime SET Status = ? WHERE ShowtimeID = ?")) {
+            ps.setString(1, ShowtimeStatus.CANCELLED);
+            ps.setInt(2, showtimeId);
+            ps.executeUpdate();
+        }
+        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM Seat_Hold WHERE ShowtimeID = ?")) {
+            ps.setInt(1, showtimeId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void updateStatus(Connection conn, int movieId, String status) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE Movie SET Status = ? WHERE MovieID = ?")) {
             ps.setString(1, status);
             ps.setInt(2, movieId);
             ps.executeUpdate();

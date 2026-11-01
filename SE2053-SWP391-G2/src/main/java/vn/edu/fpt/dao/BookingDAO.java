@@ -37,6 +37,41 @@ import vn.edu.fpt.model.Voucher;
 public class BookingDAO {
     public static final String CHECKOUT_HOLD_PREFIX = "CHECKOUT-";
     public static final String BOOKING_HOLD_PREFIX = "BOOKING-";
+    private static final int SEAT_LOCK_ERROR_CODE = 51002;
+
+    // Online và quầy dùng chung khóa; SQL Server tự nhả khóa khi commit/rollback.
+    // Driver chạy autoCommit=false bằng IMPLICIT_TRANSACTIONS: transaction chỉ thật sự mở khi có câu lệnh đọc/ghi
+    // bảng, còn EXEC sp_getapplock thì không mở. Vì vậy đọc Showtime trước để có transaction rồi mới lấy khóa
+    // (không dùng BEGIN TRAN vì sẽ lồng thành @@TRANCOUNT = 2 và lệnh commit của driver không chốt hết).
+    public void lockShowtimeSeats(Connection conn, int showtimeId) throws SQLException {
+        if (conn.getAutoCommit()) {
+            throw new SQLException("Khóa ghế cần được lấy trong transaction.");
+        }
+        String sql = "SET NOCOUNT ON; DECLARE @result INT, @showtimeId INT; "
+                + "SELECT @showtimeId = ShowtimeID FROM Showtime WHERE ShowtimeID = ?; "
+                + "EXEC @result = sys.sp_getapplock @Resource = ?, "
+                + "@LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 5000; SELECT @result";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, showtimeId);
+            ps.setString(2, "showtime-seats:" + showtimeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                int result = rs.next() ? rs.getInt(1) : -999;
+                // -1 hết thời gian chờ, -2 bị hủy, -3 bị chọn làm nạn nhân deadlock: báo khách thử lại
+                if (result == -1 || result == -2 || result == -3) {
+                    throw new SQLException("Không lấy được khóa ghế của suất chiếu " + showtimeId,
+                            "HYT00", SEAT_LOCK_ERROR_CODE);
+                }
+                // -999: lỗi gọi thủ tục, là lỗi hệ thống chứ không phải ghế đang bận
+                if (result < 0) {
+                    throw new SQLException("sp_getapplock lỗi (" + result + ") khi khóa suất chiếu " + showtimeId);
+                }
+            }
+        }
+    }
+
+    public static boolean isSeatLockFailure(SQLException error) {
+        return error.getErrorCode() == SEAT_LOCK_ERROR_CODE;
+    }
 
     // Đơn Pending còn ghế đang giữ (chưa hết hạn) hoặc đơn đã thanh toán - dùng để chặn voucher/điểm dùng hai lần
     private static final String ACTIVE_BOOKING = "(b.Status = ? OR (b.Status = ? AND EXISTS ("
@@ -274,7 +309,7 @@ public class BookingDAO {
     }
 
     // GB-12: không xóa đơn, chỉ chuyển Cancelled; vé của đơn cũng Cancelled để ghế trở lại AVAILABLE.
-    // Bắp nước đã giữ kho lúc tạo đơn Pending nên trả lại kho (chỉ khi đơn thực sự chuyển từ Pending sang Cancelled).
+    // D03: đơn Pending chưa trừ kho nên hủy/hết hạn không cộng lại hàng.
     public int cancelPendingBooking(Connection conn, int bookingId) throws SQLException {
         String ticketSql = "UPDATE Ticket SET Status = ? WHERE BookingID = ? AND Status = ?";
         try (PreparedStatement ps = conn.prepareStatement(ticketSql)) {
@@ -290,9 +325,6 @@ public class BookingDAO {
             ps.setInt(2, bookingId);
             ps.setString(3, BookingStatus.PENDING);
             cancelled = ps.executeUpdate();
-        }
-        if (cancelled == 1) {
-            restoreStock(conn, bookingId);
         }
         return cancelled;
     }
@@ -539,32 +571,19 @@ public class BookingDAO {
         return concessions;
     }
 
-    // GB-10: trừ kho (đơn online: lúc tạo đơn Pending; tại quầy: lúc xác nhận); về 0 thì chuyển Out of Stock
+    // GB-10: trừ kho online lúc thanh toán, tại quầy lúc xác nhận; về 0 thì chuyển Out of Stock.
     public boolean decreaseStock(Connection conn, int concessionId, int quantity) throws SQLException {
         String sql = "UPDATE Concession SET StockQuantity = StockQuantity - ?, "
                 + "Status = CASE WHEN StockQuantity - ? = 0 THEN ? ELSE Status END "
-                + "WHERE ConcessionID = ? AND StockQuantity >= ?";
+                + "WHERE ConcessionID = ? AND StockQuantity >= ? AND Status = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, quantity);
             ps.setInt(2, quantity);
             ps.setString(3, ConcessionStatus.OUT_OF_STOCK);
             ps.setInt(4, concessionId);
             ps.setInt(5, quantity);
+            ps.setString(6, ConcessionStatus.ACTIVE);
             return ps.executeUpdate() == 1;
-        }
-    }
-
-    // Trả lại kho bắp nước của đơn bị hủy; món đang Out of Stock có hàng trở lại thì Active (món Hidden giữ nguyên)
-    private void restoreStock(Connection conn, int bookingId) throws SQLException {
-        String sql = "UPDATE c SET c.StockQuantity = c.StockQuantity + bc.Quantity, "
-                + "c.Status = CASE WHEN c.Status = ? THEN ? ELSE c.Status END "
-                + "FROM Concession c JOIN Booking_Concession bc ON bc.ConcessionID = c.ConcessionID "
-                + "WHERE bc.BookingID = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, ConcessionStatus.OUT_OF_STOCK);
-            ps.setString(2, ConcessionStatus.ACTIVE);
-            ps.setInt(3, bookingId);
-            ps.executeUpdate();
         }
     }
 

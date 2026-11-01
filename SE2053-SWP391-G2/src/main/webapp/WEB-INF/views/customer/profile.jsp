@@ -169,7 +169,7 @@
                             <div class="relative">
                                 <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">cake</span>
                                 <input type="date" id="dateOfBirth" name="dateOfBirth" value="<c:out value='${form.dateOfBirth}'/>"
-                                       min="1900-01-01" max="${today}" autocomplete="bday"
+                                       min="1900-01-01" max="${maxDateOfBirth}" autocomplete="bday"
                                        class="${inputBase} [color-scheme:dark] ${not empty errors.dateOfBirth ? 'border-red-500' : 'border-white/10'}"/>
                             </div>
                             <c:if test="${not empty errors.dateOfBirth}">

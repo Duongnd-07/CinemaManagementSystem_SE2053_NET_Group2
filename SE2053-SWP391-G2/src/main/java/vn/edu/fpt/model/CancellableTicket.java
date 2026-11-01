@@ -10,6 +10,7 @@ public class CancellableTicket {
     private int showtimeId;
     private BigDecimal price;
     private BigDecimal bookingTicketTotal;
+    private BigDecimal bookingTotalPrice;
     private int bookingPointsEarned;
     private int upcomingTicketCount;
     private String ticketStatus;
@@ -62,6 +63,14 @@ public class CancellableTicket {
 
     public BigDecimal getBookingTicketTotal() {
         return bookingTicketTotal;
+    }
+
+    public BigDecimal getBookingTotalPrice() {
+        return bookingTotalPrice;
+    }
+
+    public void setBookingTotalPrice(BigDecimal bookingTotalPrice) {
+        this.bookingTotalPrice = bookingTotalPrice;
     }
 
     public void setBookingTicketTotal(BigDecimal bookingTicketTotal) {

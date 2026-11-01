@@ -188,7 +188,7 @@
 
         <div class="max-w-7xl mx-auto px-6 sm:px-10 pb-10">
             <ui:review-panel movieId="${movie.movieId}" baseUrl="${ctx}/movies/detail?id=${movie.movieId}"
-                              summary="${reviewSummary}" myReview="${myReview}" reviewPage="${reviewPage}"
+                             summary="${reviewSummary}" myReview="${myReview}" draft="${reviewDraft}" reviewPage="${reviewPage}"
                               canReview="${canReview}" isCustomer="${isCustomer}" csrfToken="${csrfToken}"
                               star="${reviewStar}" sort="${reviewSort}"/>
         </div>

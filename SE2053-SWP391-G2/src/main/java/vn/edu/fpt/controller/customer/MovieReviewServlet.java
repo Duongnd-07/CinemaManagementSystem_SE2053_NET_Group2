@@ -32,6 +32,7 @@ public class MovieReviewServlet extends HttpServlet {
     private static final String VIEW = "/WEB-INF/views/customer/movie-review.jsp";
     private static final String FLASH_SUCCESS = "flashSuccess";
     private static final String FLASH_ERROR = "flashError";
+    private static final String SESSION_DRAFT = "reviewDraft";
 
     private final MovieService movieService = new MovieService();
     private final ReviewService reviewService = new ReviewService();
@@ -89,12 +90,14 @@ public class MovieReviewServlet extends HttpServlet {
         ReviewForm form = readForm(request);
         try {
             boolean created = reviewService.submit(form, user.getUserId());
+            request.getSession().removeAttribute(SESSION_DRAFT);
             ActivityLogger.info(request, LogEventType.BOOKING,
                     created ? "Gửi đánh giá phim" : "Cập nhật đánh giá phim", "Movie", form.getMovieId(),
                     "Rating=" + form.getRating());
             request.getSession().setAttribute(FLASH_SUCCESS,
                     created ? Messages.REVIEW_CREATED : Messages.REVIEW_UPDATED);
         } catch (ValidationException e) {
+            request.getSession().setAttribute(SESSION_DRAFT, form);
             request.getSession().setAttribute(FLASH_ERROR,
                     e.getErrors().getOrDefault("general", e.getErrors().values().iterator().next()));
         }
@@ -137,7 +140,10 @@ public class MovieReviewServlet extends HttpServlet {
         String sort = reviewService.normalizeSort(request.getParameter("sort"));
         request.setAttribute("movie", movie);
         request.setAttribute("reviewSummary", reviewService.summarize(movie.getMovieId()));
+        request.setAttribute("reviewRatingMessage", Messages.REVIEW_RATING_INVALID);
+        request.setAttribute("reviewCommentMessage", Messages.REVIEW_COMMENT_LENGTH_POLICY);
         request.setAttribute("myReview", reviewService.findMine(movie.getMovieId(), userId));
+        request.setAttribute("reviewDraft", consumeDraft(session, movie.getMovieId()));
         request.setAttribute("reviewPage",
                 reviewService.listOthers(movie.getMovieId(), userId, star, sort, parsePage(request)));
         request.setAttribute("reviewStar", star);
@@ -145,6 +151,17 @@ public class MovieReviewServlet extends HttpServlet {
         request.setAttribute("canReview", reviewService.canWriteReview(movie.getMovieId(), userId));
         request.setAttribute("csrfToken", CsrfToken.get(session));
         request.getRequestDispatcher(VIEW).forward(request, response);
+    }
+
+    static ReviewForm consumeDraft(HttpSession session, int movieId) {
+        if (session == null) {
+            return null;
+        }
+        synchronized (session) {
+            ReviewForm draft = (ReviewForm) session.getAttribute(SESSION_DRAFT);
+            session.removeAttribute(SESSION_DRAFT);
+            return draft != null && draft.getMovieId() == movieId ? draft : null;
+        }
     }
 
     private ReviewForm readForm(HttpServletRequest request) {
