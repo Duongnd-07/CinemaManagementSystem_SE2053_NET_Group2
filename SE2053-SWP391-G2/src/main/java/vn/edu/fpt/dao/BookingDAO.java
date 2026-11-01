@@ -40,18 +40,30 @@ public class BookingDAO {
     private static final int SEAT_LOCK_ERROR_CODE = 51002;
 
     // Online và quầy dùng chung khóa; SQL Server tự nhả khóa khi commit/rollback.
+    // Driver chạy autoCommit=false bằng IMPLICIT_TRANSACTIONS: transaction chỉ thật sự mở khi có câu lệnh đọc/ghi
+    // bảng, còn EXEC sp_getapplock thì không mở. Vì vậy đọc Showtime trước để có transaction rồi mới lấy khóa
+    // (không dùng BEGIN TRAN vì sẽ lồng thành @@TRANCOUNT = 2 và lệnh commit của driver không chốt hết).
     public void lockShowtimeSeats(Connection conn, int showtimeId) throws SQLException {
         if (conn.getAutoCommit()) {
             throw new SQLException("Khóa ghế cần được lấy trong transaction.");
         }
-        String sql = "SET NOCOUNT ON; DECLARE @result INT; EXEC @result = sys.sp_getapplock @Resource = ?, "
+        String sql = "SET NOCOUNT ON; DECLARE @result INT, @showtimeId INT; "
+                + "SELECT @showtimeId = ShowtimeID FROM Showtime WHERE ShowtimeID = ?; "
+                + "EXEC @result = sys.sp_getapplock @Resource = ?, "
                 + "@LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 5000; SELECT @result";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, "showtime-seats:" + showtimeId);
+            ps.setInt(1, showtimeId);
+            ps.setString(2, "showtime-seats:" + showtimeId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next() || rs.getInt(1) < 0) {
+                int result = rs.next() ? rs.getInt(1) : -999;
+                // -1 hết thời gian chờ, -2 bị hủy, -3 bị chọn làm nạn nhân deadlock: báo khách thử lại
+                if (result == -1 || result == -2 || result == -3) {
                     throw new SQLException("Không lấy được khóa ghế của suất chiếu " + showtimeId,
                             "HYT00", SEAT_LOCK_ERROR_CODE);
+                }
+                // -999: lỗi gọi thủ tục, là lỗi hệ thống chứ không phải ghế đang bận
+                if (result < 0) {
+                    throw new SQLException("sp_getapplock lỗi (" + result + ") khi khóa suất chiếu " + showtimeId);
                 }
             }
         }
