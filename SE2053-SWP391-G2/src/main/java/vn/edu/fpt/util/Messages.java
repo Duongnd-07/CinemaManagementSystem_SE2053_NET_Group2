@@ -33,6 +33,13 @@ public final class Messages {
     public static final String MOVIE_END_DATE_HAS_SHOWTIMES =
             "Phim còn suất chiếu sau ngày kết thúc chiếu mới. Vui lòng hủy các suất đó trước.";
     public static final String MOVIE_FORMAT_INVALID = "Định dạng chiếu không hợp lệ.";
+    public static final String MOVIE_HAS_SOLD_SHOWTIMES =
+            "Phim còn suất chiếu đã có vé, không thể ẩn. Hãy xử lý các suất đó trước.";
+    public static final String MOVIE_ARCHIVED_SHOWTIMES = "Đã ẩn phim và hủy {0} suất chiếu chưa có vé.";
+    public static final String MOVIE_RELEASE_DATE_HAS_SHOWTIMES =
+            "Còn suất chiếu trước ngày khởi chiếu mới. Hãy hủy hoặc đổi các suất đó trước.";
+    public static final String MOVIE_FORMAT_HAS_SHOWTIMES =
+            "Còn suất chiếu sử dụng định dạng {0}. Hãy hủy hoặc đổi các suất đó trước.";
     public static final String MOVIE_GENRE_INVALID = "Thể loại không hợp lệ.";
     public static final String MOVIE_POSTER_INVALID = "Poster không hợp lệ. Vui lòng chọn ảnh poster từ máy.";
     public static final String MOVIE_POSTER_FILE_INVALID = "Poster chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.";
@@ -254,11 +261,11 @@ public final class Messages {
     public static final String PROFILE_CURRENT_PASSWORD_WRONG = "Mật khẩu hiện tại không chính xác.";
     public static final String PROFILE_PASSWORD_SAME_AS_OLD = "Mật khẩu mới không được trùng với mật khẩu hiện tại.";
     public static final String PROFILE_NOT_FOUND = "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.";
-    public static final String PROFILE_SESSION_REVOKED =
-            "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
     public static final String FULLNAME_INVALID = "Họ và tên chỉ được chứa chữ cái và khoảng trắng.";
+    public static final String SESSION_REVOKED =
+            "Phiên đăng nhập đã hết hiệu lực do tài khoản hoặc thông tin bảo mật thay đổi. Vui lòng đăng nhập lại.";
     public static final String PROFILE_DOB_INVALID = "Ngày sinh không hợp lệ.";
-    public static final String PROFILE_DOB_OUT_OF_RANGE = "Ngày sinh phải từ {0} đến hôm nay.";
+    public static final String PROFILE_DOB_OUT_OF_RANGE = "Ngày sinh phải từ {0} và trước ngày hôm nay.";
     public static final String PROFILE_GENDER_INVALID = "Giới tính không hợp lệ.";
     public static final String EMAIL_CHANGE_SAME = "Email mới phải khác email hiện tại.";
     public static final String EMAIL_CHANGE_OTP_SENT = "Mã xác thực đã được gửi tới {0}. Vui lòng kiểm tra hộp thư.";
@@ -337,6 +344,9 @@ public final class Messages {
 
     // UC-17 Rate & Review Movie
     public static final String REVIEW_RATING_INVALID = "Số sao đánh giá phải từ 1 đến 5.";
+    public static final String REVIEW_COMMENT_TOO_SHORT = "Nhận xét phải có ít nhất 10 ký tự.";
+    public static final String REVIEW_COMMENT_LENGTH_POLICY = "Nhận xét phải có từ 10 đến 1.000 ký tự.";
+    public static final String BOOKING_SEATS_BUSY = "Hệ thống đang xử lý ghế của suất chiếu này. Vui lòng thử lại.";
     public static final String REVIEW_NOT_ELIGIBLE =
             "Bạn cần có vé đã thanh toán và suất chiếu đã kết thúc mới có thể đánh giá phim này.";
     public static final String REVIEW_MOVIE_UNAVAILABLE = "Phim hiện không khả dụng để đánh giá.";

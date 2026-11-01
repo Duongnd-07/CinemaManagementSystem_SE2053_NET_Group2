@@ -208,7 +208,7 @@
                                 <p class="booking-field-error"><c:out value="${errors['points']}"/></p>
                             </c:if>
                         </div>
-                        <p class="booking-hint mt-2">Điểm chỉ trừ vào tiền vé, không áp dụng cho bắp nước.</p>
+                        <p class="booking-hint mt-2">Điểm được trừ vào tổng tiền vé và bắp nước sau khi áp dụng voucher.</p>
                     </div>
                 </section>
             </div>

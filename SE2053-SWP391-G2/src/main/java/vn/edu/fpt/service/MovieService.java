@@ -8,6 +8,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -240,19 +241,36 @@ public class MovieService {
     }
 
     // GB-12: không xóa cứng phim, chỉ chuyển trạng thái Hidden
-    public void archive(int movieId) throws SQLException, ValidationException {
-        Movie movie = movieDAO.findById(movieId);
-        if (movie == null) {
-            throw new ValidationException(Map.of("general", Messages.MOVIE_NOT_FOUND));
+    public int archive(int movieId) throws SQLException, ValidationException {
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String status = movieDAO.lockMovieStatus(conn, movieId);
+                if (status == null) {
+                    throw new ValidationException(Map.of("general", Messages.MOVIE_NOT_FOUND));
+                }
+                if (MovieStatus.HIDDEN.equals(status)) {
+                    conn.commit();
+                    return 0;
+                }
+                List<Integer> showtimeIds = movieDAO.lockUnfinishedShowtimes(conn, movieId);
+                // Kiểm tra hết trước khi hủy bất kỳ suất nào để tránh hủy dở dang.
+                for (int showtimeId : showtimeIds) {
+                    if (movieDAO.hasActiveTickets(conn, showtimeId)) {
+                        throw new ValidationException(Map.of("general", Messages.MOVIE_HAS_SOLD_SHOWTIMES));
+                    }
+                }
+                for (int showtimeId : showtimeIds) {
+                    movieDAO.cancelEmptyShowtime(conn, showtimeId);
+                }
+                movieDAO.updateStatus(conn, movieId, MovieStatus.HIDDEN);
+                conn.commit();
+                return showtimeIds.size();
+            } catch (SQLException | ValidationException | RuntimeException e) {
+                conn.rollback();
+                throw e;
+            }
         }
-        if (MovieStatus.HIDDEN.equals(movie.getStatus())) {
-            return;
-        }
-        // BR-MOV-04
-        if (movieDAO.hasUnfinishedShowtimes(movieId)) {
-            throw new ValidationException(Map.of("general", Messages.MOVIE_HAS_ACTIVE_SHOWTIMES));
-        }
-        movieDAO.updateStatus(movieId, MovieStatus.HIDDEN);
     }
 
     // JOB-03: phim Sắp chiếu tới ngày khởi chiếu -> Đang chiếu. Trả về tên các phim đã chuyển
@@ -271,6 +289,10 @@ public class MovieService {
 
         // Cần năm khởi chiếu trước để kiểm tra trùng tên
         LocalDate releaseDate = validateReleaseDate(form, errors);
+        if (current != null && releaseDate != null
+                && movieDAO.hasUnfinishedShowtimesBefore(movieId, releaseDate)) {
+            errors.put("releaseDate", Messages.MOVIE_RELEASE_DATE_HAS_SHOWTIMES);
+        }
         String title = form.getTitle().trim();
         if (title.isEmpty()) {
             errors.put("title", Messages.format(Messages.MSG02, "Tên phim"));
@@ -320,13 +342,27 @@ public class MovieService {
             errors.put("trailer", Messages.MOVIE_TRAILER_URL_INVALID);
         }
 
+        form.setFormats(form.getFormats().stream().map(format -> format.trim().toUpperCase(Locale.ROOT))
+                .distinct().toList());
         for (String format : form.getFormats()) {
             if (!FORMATS.contains(format)) {
                 errors.put("formats", Messages.MOVIE_FORMAT_INVALID);
                 break;
             }
         }
-        if (!form.getGenreIds().isEmpty() && genreDAO.countExisting(form.getGenreIds()) != form.getGenreIds().size()) {
+        if (current != null && !errors.containsKey("formats")) {
+            List<String> missing = movieDAO.findUnfinishedShowtimeRoomFormats(movieId).stream()
+                    .map(format -> format.trim().toUpperCase(Locale.ROOT))
+                    .filter(format -> !format.isEmpty() && !form.getFormats().contains(format))
+                    .distinct().toList();
+            if (!missing.isEmpty()) {
+                errors.put("formats", Messages.format(Messages.MOVIE_FORMAT_HAS_SHOWTIMES,
+                        String.join(", ", missing)));
+            }
+        }
+        if (form.getGenreIds().isEmpty()) {
+            errors.put("genres", Messages.format(Messages.MSG02, "Thể loại"));
+        } else if (genreDAO.countExisting(form.getGenreIds()) != form.getGenreIds().size()) {
             errors.put("genres", Messages.MOVIE_GENRE_INVALID);
         }
         return errors;

@@ -28,6 +28,7 @@ public class ReviewService {
     public static final List<String> SORTS = List.of(SORT_NEWEST, SORT_HIGHEST, SORT_LOWEST);
     private static final int RATING_MIN = 1;
     private static final int RATING_MAX = 5;
+    private static final int MIN_COMMENT = 10;
     private static final int MAX_COMMENT = 1000;
     private static final int MAX_REASON = 255;
     private static final int SQL_UNIQUE_VIOLATION = 2627;
@@ -148,7 +149,11 @@ public class ReviewService {
             errors.put("rating", Messages.REVIEW_RATING_INVALID);
         }
         String comment = form.getComment() == null ? "" : form.getComment().trim();
-        if (comment.length() > MAX_COMMENT) {
+        if (comment.isEmpty()) {
+            errors.put("comment", Messages.format(Messages.MSG02, "Nhận xét"));
+        } else if (comment.length() < MIN_COMMENT) {
+            errors.put("comment", Messages.REVIEW_COMMENT_TOO_SHORT);
+        } else if (comment.length() > MAX_COMMENT) {
             errors.put("comment", Messages.format(Messages.MSG08, MAX_COMMENT));
         }
         return errors;

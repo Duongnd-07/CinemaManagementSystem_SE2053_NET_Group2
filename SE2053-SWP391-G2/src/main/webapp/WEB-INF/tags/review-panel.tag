@@ -7,6 +7,7 @@
 <%@ attribute name="baseUrl" required="true" description="URL trang hiện tại (chưa có tham số page), dùng cho phân trang và gửi form" %>
 <%@ attribute name="summary" required="true" type="vn.edu.fpt.model.ReviewSummary" %>
 <%@ attribute name="myReview" required="false" type="vn.edu.fpt.model.Review" %>
+<%@ attribute name="draft" required="false" type="vn.edu.fpt.service.ReviewForm" %>
 <%@ attribute name="reviewPage" required="true" type="vn.edu.fpt.util.Page" %>
 <%@ attribute name="canReview" required="true" type="java.lang.Boolean" %>
 <%@ attribute name="isCustomer" required="true" type="java.lang.Boolean" %>
@@ -14,6 +15,8 @@
 <%@ attribute name="star" required="false" type="java.lang.Integer" description="Số sao đang lọc (null = tất cả)" %>
 <%@ attribute name="sort" required="true" description="newest | highest | lowest (đã chuẩn hóa ở Service)" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<c:set var="formRating" value="${not empty draft ? draft.rating : (not empty myReview ? myReview.rating : 0)}"/>
+<c:set var="formComment" value="${not empty draft ? draft.comment : myReview.comment}"/>
 <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&' : '?'}"/>
 <%-- filterBase giữ cách sắp xếp khi đổi số sao; listUrl giữ cả bộ lọc khi chuyển trang --%>
 <c:set var="starParam" value=""/>
@@ -68,19 +71,20 @@
                     <p class="text-sm text-[#ffb4ab]">Đánh giá của bạn đang bị ẩn do vi phạm. Lý do: <c:out value="${myReview.hiddenReason}"/></p>
                 </c:if>
                 <c:if test="${myReview.status != 'Hidden'}">
-                    <form method="post" action="${ctx}/customer/reviews" novalidate class="space-y-3" data-review-form>
+                    <form method="post" action="${ctx}/customer/reviews" novalidate class="space-y-3" data-review-form
+                          data-rating-message="${fn:escapeXml(reviewRatingMessage)}" data-comment-message="${fn:escapeXml(reviewCommentMessage)}">
                         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                         <input type="hidden" name="movieId" value="${movieId}"/>
                         <div class="flex items-center gap-1" data-star-picker>
                             <c:forEach begin="1" end="5" var="i">
                                 <label class="cursor-pointer">
-                                    <input type="radio" name="rating" value="${i}" class="sr-only" ${myReview.rating == i ? 'checked' : ''}/>
-                                    <span class="material-symbols-outlined text-2xl ${i <= myReview.rating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}" data-star="${i}">star</span>
+                                    <input type="radio" name="rating" value="${i}" class="sr-only" ${formRating == i ? 'checked' : ''}/>
+                                    <span class="material-symbols-outlined text-2xl ${i <= formRating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}" data-star="${i}">star</span>
                                 </label>
                             </c:forEach>
                         </div>
-                        <textarea name="comment" rows="3" maxlength="1000" placeholder="Chia sẻ cảm nhận của bạn (không bắt buộc)..."
-                                  class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"><c:out value="${myReview.comment}"/></textarea>
+                        <textarea name="comment" rows="3" minlength="10" maxlength="1000" required placeholder="Chia sẻ cảm nhận của bạn (10–1000 ký tự)..."
+                                  class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"><c:out value="${formComment}"/></textarea>
                         <div class="flex items-center justify-end gap-3">
                             <button type="submit" class="h-10 px-5 rounded-xl bg-[#e50914] hover:bg-[#b80710] text-white text-sm font-bold transition">Cập nhật đánh giá</button>
                         </div>
@@ -96,20 +100,21 @@
             </div>
         </c:when>
         <c:when test="${canReview}">
-            <form method="post" action="${ctx}/customer/reviews" novalidate class="p-5 rounded-2xl bg-[#171b26] border border-white/10 space-y-3" data-review-form>
+            <form method="post" action="${ctx}/customer/reviews" novalidate class="p-5 rounded-2xl bg-[#171b26] border border-white/10 space-y-3" data-review-form
+                  data-rating-message="${fn:escapeXml(reviewRatingMessage)}" data-comment-message="${fn:escapeXml(reviewCommentMessage)}">
                 <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                 <input type="hidden" name="movieId" value="${movieId}"/>
                 <span class="text-sm font-bold text-white">Viết đánh giá của bạn</span>
                 <div class="flex items-center gap-1" data-star-picker>
                     <c:forEach begin="1" end="5" var="i">
                         <label class="cursor-pointer">
-                            <input type="radio" name="rating" value="${i}" class="sr-only" required/>
-                            <span class="material-symbols-outlined text-2xl text-[#4a4e5c]" data-star="${i}">star</span>
+                            <input type="radio" name="rating" value="${i}" class="sr-only" required ${formRating == i ? 'checked' : ''}/>
+                            <span class="material-symbols-outlined text-2xl ${i <= formRating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}" data-star="${i}">star</span>
                         </label>
                     </c:forEach>
                 </div>
-                <textarea name="comment" rows="3" maxlength="1000" placeholder="Chia sẻ cảm nhận của bạn (không bắt buộc)..."
-                          class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"></textarea>
+                <textarea name="comment" rows="3" minlength="10" maxlength="1000" required placeholder="Chia sẻ cảm nhận của bạn (10–1000 ký tự)..."
+                          class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"><c:out value="${formComment}"/></textarea>
                 <div class="flex items-center justify-end">
                     <button type="submit" class="h-10 px-5 rounded-xl bg-[#e50914] hover:bg-[#b80710] text-white text-sm font-bold transition">Gửi đánh giá</button>
                 </div>

@@ -116,7 +116,7 @@ public class RegisterService {
             throw new ValidationException(errors);
         }
 
-        int expiryMinutes = AppConfig.getInt("mail.otp.expiryMinutes", 10);
+        int expiryMinutes = AppConfig.getInt("mail.otp.expiryMinutes", 4);
         String otpCode = generateOtpCode();
 
         // Vô hiệu hóa các mã OTP trước đó của email này
@@ -141,7 +141,7 @@ public class RegisterService {
      * Gửi lại mã OTP mới khi mã cũ hết hạn hoặc người dùng yêu cầu gửi lại.
      */
     public String resendOtp(RegisterForm form) throws SQLException {
-        int expiryMinutes = AppConfig.getInt("mail.otp.expiryMinutes", 10);
+        int expiryMinutes = AppConfig.getInt("mail.otp.expiryMinutes", 4);
         String otpCode = generateOtpCode();
 
         emailVerificationDAO.invalidatePreviousOtps(form.getEmail());

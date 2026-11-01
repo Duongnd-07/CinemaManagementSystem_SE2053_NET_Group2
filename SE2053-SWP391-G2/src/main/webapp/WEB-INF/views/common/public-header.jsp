@@ -38,11 +38,17 @@
                 </div>
 
                 <!-- Nút tắt theo quyền -->
-                <c:if test="${sessionScope.user.role == 'Admin' || sessionScope.user.role == 'Manager'}">
+                <c:if test="${sessionScope.user.role == 'Manager'}">
                     <a href="${ctx}/manager/movies"
                        class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                         <span class="material-symbols-outlined text-sm">settings</span>
                         Quản lý
+                    </a>
+                </c:if>
+                <c:if test="${sessionScope.user.role == 'Admin'}">
+                    <a href="${ctx}/admin/users"
+                       class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition">
+                        Quản trị
                     </a>
                 </c:if>
                 <c:if test="${sessionScope.user.role == 'Staff'}">

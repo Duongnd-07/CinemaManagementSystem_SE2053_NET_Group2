@@ -108,7 +108,7 @@ public class CounterSaleService {
 
     // Sơ đồ ghế và giá từng loại ghế dùng chung với UC-09/UC-13
     public BookingSeatView loadSeats(int showtimeId) throws SQLException, ValidationException {
-        return bookingService.loadSeatSelection(showtimeId);
+        return bookingService.loadCounterSeatSelection(showtimeId);
     }
 
     // Món đang bán và còn hàng khi mới mở màn hình bán (chưa chọn số lượng)
@@ -147,6 +147,7 @@ public class CounterSaleService {
                 if (shiftService.isExpired(shift, shiftService.shiftHours())) {
                     throw error(ERROR_SHIFT, SHIFT_EXPIRED);
                 }
+                bookingDAO.lockShowtimeSeats(conn, form.getShowtimeId());
                 CounterQuote quote = price(conn, form, true);
                 checkPayment(conn, form, quote, true);
                 if (!quote.isValid()) {
@@ -157,6 +158,9 @@ public class CounterSaleService {
                 return quote;
             } catch (SQLException | ValidationException | RuntimeException e) {
                 conn.rollback();
+                if (e instanceof SQLException sql && BookingDAO.isSeatLockFailure(sql)) {
+                    throw error(ERROR_SEATS, Messages.BOOKING_SEATS_BUSY);
+                }
                 // Hai quầy nhập cùng một mã chuyển khoản cùng lúc: UX_Booking_TransferReference chặn đơn đến sau
                 if (e instanceof SQLException sql && isDuplicateKey(sql)
                         && String.valueOf(sql.getMessage()).contains(TRANSFER_REFERENCE_INDEX)) {
@@ -361,7 +365,7 @@ public class CounterSaleService {
         return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
     }
 
-    // BR-LOYALTY-01: điểm chỉ trừ vào tiền vé, không làm tổng âm, không vượt số điểm còn dùng được
+    // D05: điểm trừ vào cả bill sau voucher, không làm tổng âm, không vượt số điểm còn dùng được.
     private void pricePoints(Connection conn, CounterSaleForm form, CounterQuote quote, boolean lock)
             throws SQLException {
         quote.pointRate = Math.max(1, configDAO.getInt(conn, CONFIG_POINT_RATE, DEFAULT_POINT_RATE));
@@ -377,7 +381,7 @@ public class CounterSaleService {
         Integer balance = bookingDAO.findPointBalance(conn, quote.customer.getUserId(), lock);
         int reserved = bookingDAO.sumReservedPoints(conn, quote.customer.getUserId(), 0);
         quote.availablePoints = Math.max(0, (balance == null ? 0 : balance) - reserved);
-        BigDecimal cap = quote.ticketTotal.min(quote.getGrossTotal().subtract(quote.voucherDiscount)).max(BigDecimal.ZERO);
+        BigDecimal cap = quote.getGrossTotal().subtract(quote.voucherDiscount).max(BigDecimal.ZERO);
         int maxByAmount = cap.divide(BigDecimal.valueOf(quote.pointRate), 0, RoundingMode.DOWN).intValue();
         quote.maxPoints = Math.min(quote.availablePoints, maxByAmount);
         if (points < 0) {
@@ -533,9 +537,9 @@ public class CounterSaleService {
         return bookingId;
     }
 
-    // Cùng công thức UC-14: (tiền vé - giảm giá) x POINT_EARN_PERCENT% / tỷ lệ quy đổi, làm tròn xuống
+    // Cùng công thức UC-14: (tổng bill - giảm giá) x POINT_EARN_PERCENT% / tỷ lệ quy đổi, làm tròn xuống
     private int earnedPoints(Connection conn, CounterQuote quote) throws SQLException {
-        BigDecimal eligible = quote.ticketTotal.subtract(quote.getDiscountTotal()).max(BigDecimal.ZERO);
+        BigDecimal eligible = quote.getGrossTotal().subtract(quote.getDiscountTotal()).max(BigDecimal.ZERO);
         BigDecimal percent = configDAO.getDecimal(conn, CONFIG_POINT_EARN_PERCENT, BigDecimal.ONE);
         if (percent.signum() < 0 || percent.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new SQLException("POINT_EARN_PERCENT must be between 0 and 100.");

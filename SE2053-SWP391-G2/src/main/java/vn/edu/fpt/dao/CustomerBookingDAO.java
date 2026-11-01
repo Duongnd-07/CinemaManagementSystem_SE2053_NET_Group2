@@ -72,6 +72,7 @@ public class CustomerBookingDAO {
     public CancellableTicket findCancellationCandidate(Connection conn, int ticketId, int customerId)
             throws SQLException {
         String sql = "SELECT t.TicketID, b.BookingID, t.SeatID, b.ShowtimeID, t.Price, b.PointsEarned, "
+                + "b.TotalPrice AS BookingTotalPrice, "
                 + "(SELECT SUM(allTicket.Price) FROM Ticket allTicket WHERE allTicket.BookingID = b.BookingID) "
                 + "AS BookingTicketTotal, "
                 + "(SELECT COUNT(*) FROM Ticket upcoming WHERE upcoming.BookingID = b.BookingID "
@@ -95,6 +96,7 @@ public class CustomerBookingDAO {
                 ticket.setShowtimeId(rs.getInt("ShowtimeID"));
                 ticket.setPrice(rs.getBigDecimal("Price"));
                 ticket.setBookingTicketTotal(rs.getBigDecimal("BookingTicketTotal"));
+                ticket.setBookingTotalPrice(rs.getBigDecimal("BookingTotalPrice"));
                 ticket.setBookingPointsEarned(rs.getInt("PointsEarned"));
                 ticket.setUpcomingTicketCount(rs.getInt("UpcomingTicketCount"));
                 ticket.setTicketStatus(rs.getString("TicketStatus"));

@@ -98,9 +98,20 @@ public class BookingService {
     // ===== Bước 1-4: chọn ghế =====
 
     public BookingSeatView loadSeatSelection(int showtimeId) throws SQLException, ValidationException {
+        return loadSeatSelection(showtimeId, true);
+    }
+
+    public BookingSeatView loadCounterSeatSelection(int showtimeId) throws SQLException, ValidationException {
+        return loadSeatSelection(showtimeId, false);
+    }
+
+    private BookingSeatView loadSeatSelection(int showtimeId, boolean online)
+            throws SQLException, ValidationException {
         SeatMapView seatMap = seatMapService.load(showtimeId);
         try (Connection conn = DBContext.getConnection()) {
-            requireOnlineSaleOpen(conn, seatMap.getShowtime(), LocalDateTime.now());
+            if (online) {
+                requireOnlineSaleOpen(conn, seatMap.getShowtime(), LocalDateTime.now());
+            }
             return new BookingSeatView(seatMap, seatPrices(conn, seatMap.getShowtime().getBasePrice()),
                     maxSeats(conn), isAgeRestricted(seatMap.getMovie()));
         }
@@ -121,6 +132,7 @@ public class BookingService {
         String holdSessionId = BookingDAO.CHECKOUT_HOLD_PREFIX + UUID.randomUUID();
         try {
             inTransaction(conn -> {
+                bookingDAO.lockShowtimeSeats(conn, showtimeId);
                 int maxSeats = maxSeats(conn);
                 if (seatIds.size() > maxSeats) {
                     throw error(ERROR_GENERAL, Messages.format(Messages.BOOKING_SEAT_LIMIT, maxSeats));
@@ -157,6 +169,9 @@ public class BookingService {
                 return null;
             });
         } catch (SQLException e) {
+            if (BookingDAO.isSeatLockFailure(e)) {
+                throw error(ERROR_GENERAL, Messages.BOOKING_SEATS_BUSY);
+            }
             // GB-01 mutual exclusion: hai phiên chèn cùng (ShowtimeID, SeatID) cùng lúc, UNIQUE chặn phiên đến sau
             if (isDuplicateKey(e)) {
                 throw error(ERROR_GENERAL, Messages.BOOKING_SEAT_TAKEN);
@@ -201,7 +216,7 @@ public class BookingService {
         try (Connection conn = DBContext.getConnection()) {
             CheckoutContext context = loadContext(conn, checkout, false);
             Applied applied = apply(conn, customer, checkout, context, form);
-            return checkoutView(conn, customer, context, applied.forSale, checkout.getConcessions(), applied.quote,
+            return checkoutView(conn, customer, context, applied.forSale, applied.picked, applied.quote,
                     applied.errors);
         }
     }
@@ -249,13 +264,8 @@ public class BookingService {
                 bookingDAO.insertTickets(conn, tickets);
 
                 List<BookingConcession> items = new ArrayList<>();
-                for (Map.Entry<Integer, Integer> entry : checkout.getConcessions().entrySet()) {
-                    // GB-10: giữ kho ngay khi tạo đơn Pending (hủy/hết hạn thì cancelPendingBooking trả lại kho).
-                    // Hai khách cùng mua món cuối: người đến sau bị chặn ở đây, không bị trừ tiền VNPay rồi mới báo hết.
-                    if (!bookingDAO.decreaseStock(conn, entry.getKey(), entry.getValue())) {
-                        throw error(ERROR_CONCESSION, Messages.format(Messages.BOOKING_CONCESSION_UNAVAILABLE,
-                                applied.forSale.get(entry.getKey()).getName()));
-                    }
+                for (Map.Entry<Integer, Integer> entry : applied.picked.entrySet()) {
+                    // D03: đơn Pending chỉ ghi món đã kiểm tra tồn kho, chưa trừ hàng.
                     BookingConcession item = new BookingConcession();
                     item.setBookingId(id);
                     item.setConcessionId(entry.getKey());
@@ -363,6 +373,7 @@ public class BookingService {
                 if (booking.getFinalAmount() == null || booking.getFinalAmount().signum() <= 0) {
                     throw error(ERROR_GENERAL, Messages.BOOKING_VNPAY_AMOUNT_INVALID);
                 }
+                checkBookingConcessions(conn, bookingId, false);
 
                 String transactionReference = bookingId + "-" + UUID.randomUUID().toString().replace("-", "");
                 PaymentRequest paymentRequest = new PaymentRequest();
@@ -561,7 +572,7 @@ public class BookingService {
 
     // paymentMethod = null khi đơn 0đ: không có giao dịch tiền nên không ghi phương thức thanh toán.
     // paidAt: thời điểm khách trả tiền (VNPay: vnp_PayDate; đơn 0đ: lúc bấm xác nhận) để so với giờ đóng bán online.
-    // Bắp nước đã trừ kho từ lúc tạo đơn Pending (confirm) nên không trừ lại ở đây.
+    // D03: chỉ trừ kho khi chốt thanh toán, cùng transaction với điểm, voucher và trạng thái Paid.
     private void completeBookingPayment(Connection conn, Booking booking, int customerId, String paymentMethod,
                                         LocalDateTime paidAt) throws SQLException, ValidationException {
         int bookingId = booking.getBookingId();
@@ -587,7 +598,8 @@ public class BookingService {
             bookingDAO.insertLoyaltyTransaction(conn, customerId, bookingId, "Redeemed",
                     -booking.getPointsRedeemed(), "Điểm sử dụng cho đơn vé đã thanh toán");
         }
-        int pointsEarned = calculateEarnedPoints(conn, booking, tickets);
+        checkBookingConcessions(conn, bookingId, true);
+        int pointsEarned = calculateEarnedPoints(conn, booking);
         if (pointsEarned > 0) {
             if (!bookingDAO.addPoints(conn, customerId, pointsEarned)) {
                 throw new SQLException("Customer loyalty balance exceeds the supported range.");
@@ -605,12 +617,33 @@ public class BookingService {
         bookingDAO.deleteHoldsBySession(conn, bookingHoldSession(bookingId));
     }
 
-    private int calculateEarnedPoints(Connection conn, Booking booking, List<Ticket> tickets) throws SQLException {
-        BigDecimal ticketTotal = tickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+    private void checkBookingConcessions(Connection conn, int bookingId, boolean deduct)
+            throws SQLException, ValidationException {
+        List<BookingConcession> items = bookingDAO.findBookingConcessions(conn, bookingId);
+        if (items.isEmpty()) {
+            return;
+        }
+        Map<Integer, Concession> forSale = concessionsForSale(conn);
+        Map<Integer, String> names = bookingDAO.findConcessionNames(conn, bookingId);
+        for (BookingConcession item : items) {
+            Concession concession = forSale.get(item.getConcessionId());
+            if (concession == null || concession.getStockQuantity() < item.getQuantity()
+                    || (deduct && !bookingDAO.decreaseStock(conn, item.getConcessionId(), item.getQuantity()))) {
+                throw error(ERROR_GENERAL, Messages.format(Messages.BOOKING_CONCESSION_UNAVAILABLE,
+                        names.getOrDefault(item.getConcessionId(), "#" + item.getConcessionId())));
+            }
+        }
+    }
+
+    private int calculateEarnedPoints(Connection conn, Booking booking) throws SQLException {
+        if (booking.getTotalPrice() == null) {
+            throw new SQLException("Booking total price is required to calculate earned loyalty points.");
+        }
         int exchangeRate = pointRate(conn);
         BigDecimal totalDiscount = booking.getDiscountAmount() == null
                 ? BigDecimal.ZERO : booking.getDiscountAmount();
-        BigDecimal eligibleAmount = ticketTotal.subtract(totalDiscount).max(BigDecimal.ZERO);
+        // D04: tích điểm trên cả vé và bắp nước, sau voucher và điểm đã đổi.
+        BigDecimal eligibleAmount = booking.getTotalPrice().subtract(totalDiscount).max(BigDecimal.ZERO);
         BigDecimal earnPercent = configDAO.getDecimal(conn, CONFIG_POINT_EARN_PERCENT, BigDecimal.ONE);
         if (earnPercent.signum() < 0 || earnPercent.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new SQLException("POINT_EARN_PERCENT must be between 0 and 100.");
@@ -863,7 +896,7 @@ public class BookingService {
         BookingQuote quote = quote(conn, customer, context.ticketTotal, picked, forSale, voucherCode, points,
                 context.movie.getMovieId(), errors);
         remember(checkout, picked, quote);
-        return new Applied(quote, forSale, errors);
+        return new Applied(quote, forSale, picked, errors);
     }
 
     // Bước 8. Voucher (GB-05) không hợp lệ -> bỏ voucher (E3); điểm vượt số dư -> bỏ điểm (E4)
@@ -891,8 +924,8 @@ public class BookingService {
         }
 
         int rate = pointRate(conn);
-        // BR-LOYALTY-01: điểm chỉ trừ vào tiền vé và không làm tổng tiền âm
-        BigDecimal pointCap = ticketTotal.min(gross.subtract(voucherDiscount));
+        // D05: điểm trừ vào cả bill sau voucher, không làm tổng tiền âm.
+        BigDecimal pointCap = gross.subtract(voucherDiscount).max(BigDecimal.ZERO);
         int maxByAmount = pointCap.divide(BigDecimal.valueOf(rate), 0, RoundingMode.DOWN).intValue();
         int available = availablePoints(conn, customer.getUserId());
         if (points > available) {
@@ -1112,11 +1145,14 @@ public class BookingService {
     private static final class Applied {
         private final BookingQuote quote;
         private final Map<Integer, Concession> forSale;
+        private final Map<Integer, Integer> picked;
         private final Map<String, String> errors;
 
-        private Applied(BookingQuote quote, Map<Integer, Concession> forSale, Map<String, String> errors) {
+        private Applied(BookingQuote quote, Map<Integer, Concession> forSale, Map<Integer, Integer> picked,
+                        Map<String, String> errors) {
             this.quote = quote;
             this.forSale = forSale;
+            this.picked = Map.copyOf(picked);
             this.errors = errors;
         }
     }

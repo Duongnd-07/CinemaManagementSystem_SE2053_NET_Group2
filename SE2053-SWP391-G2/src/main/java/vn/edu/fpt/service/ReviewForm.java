@@ -1,7 +1,11 @@
 package vn.edu.fpt.service;
 
-// UC-17: dữ liệu form gửi/sửa đánh giá phim
-public class ReviewForm {
+import java.io.Serializable;
+
+// UC-17: dữ liệu form gửi/sửa đánh giá phim (lưu tạm trong session làm bản nháp khi gửi lỗi)
+public class ReviewForm implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private int movieId;
     private int rating;
     private String comment = "";

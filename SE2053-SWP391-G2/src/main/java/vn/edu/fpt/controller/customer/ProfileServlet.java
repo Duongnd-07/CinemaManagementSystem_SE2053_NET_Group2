@@ -16,6 +16,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.filter.AuthFilter;
 import vn.edu.fpt.model.User;
+import vn.edu.fpt.model.LogEventType;
+import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ChangePasswordForm;
 import vn.edu.fpt.service.EmailChangeService;
 import vn.edu.fpt.service.PendingEmailChange;
@@ -84,7 +86,7 @@ public class ProfileServlet extends HttpServlet {
                 case ACTION_EMAIL_RESEND -> resendEmailOtp(session, userId);
                 case ACTION_EMAIL_VERIFY -> verifyEmailChange(request, session, userId);
                 case ACTION_EMAIL_CANCEL -> cancelEmailChange(session);
-                default -> updateProfile(session, userId, profileForm);
+                default -> updateProfile(request, session, userId, profileForm);
             };
             session.setAttribute(FLASH_SUCCESS, message);
             String anchor = emailAction ? ANCHOR_EMAIL : ACTION_PASSWORD.equals(action) ? ANCHOR_PASSWORD : "";
@@ -119,11 +121,12 @@ public class ProfileServlet extends HttpServlet {
         }
     }
 
-    private String updateProfile(HttpSession session, int userId, ProfileForm form)
+    private String updateProfile(HttpServletRequest request, HttpSession session, int userId, ProfileForm form)
             throws SQLException, ValidationException {
         User updated = profileService.updateProfile(userId, form);
         // Làm mới user trong session để header hiển thị đúng họ tên mới
         session.setAttribute(AuthFilter.SESSION_USER, updated);
+        ActivityLogger.info(request, LogEventType.ACCOUNT, "Cập nhật hồ sơ cá nhân", "User", userId, null);
         return Messages.PROFILE_UPDATED;
     }
 
@@ -134,6 +137,7 @@ public class ProfileServlet extends HttpServlet {
         // vì mật khẩu băm của chúng không còn khớp với DB
         request.changeSessionId();
         session.setAttribute(AuthFilter.SESSION_USER, updated);
+        ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi mật khẩu", "User", userId, null);
         return Messages.PROFILE_PASSWORD_CHANGED;
     }
 
@@ -156,6 +160,7 @@ public class ProfileServlet extends HttpServlet {
         User updated = emailChangeService.confirmChange(userId, pendingEmail(session), request.getParameter("otp"));
         session.removeAttribute(SESSION_PENDING_EMAIL);
         session.setAttribute(AuthFilter.SESSION_USER, updated);
+        ActivityLogger.info(request, LogEventType.ACCOUNT, "Đổi email", "User", userId, updated.getEmail());
         return Messages.EMAIL_CHANGED;
     }
 
@@ -194,7 +199,7 @@ public class ProfileServlet extends HttpServlet {
         request.setAttribute("newEmail", errors.newEmail);
         request.setAttribute("pendingEmail",
                 pending != null && pending.getUserId() == user.getUserId() ? pending.getNewEmail() : null);
-        request.setAttribute("today", LocalDate.now().toString());
+        request.setAttribute("maxDateOfBirth", LocalDate.now().minusDays(1).toString());
         request.setAttribute("csrfToken", CsrfToken.get(session));
         request.getRequestDispatcher(VIEW).forward(request, response);
     }

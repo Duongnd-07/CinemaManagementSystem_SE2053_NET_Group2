@@ -40,7 +40,7 @@
         </div>
 
         <ui:review-panel movieId="${movie.movieId}" baseUrl="${ctx}/customer/reviews?movieId=${movie.movieId}"
-                          summary="${reviewSummary}" myReview="${myReview}" reviewPage="${reviewPage}"
+                          summary="${reviewSummary}" myReview="${myReview}" draft="${reviewDraft}" reviewPage="${reviewPage}"
                           canReview="${canReview}" isCustomer="${true}" csrfToken="${csrfToken}"
                           star="${reviewStar}" sort="${reviewSort}"/>
     </main>
