@@ -269,7 +269,7 @@
                             </div>
 
                             <div>
-                                <label class="block text-label-md text-on-surface-variant mb-1" for="voucherCode">Voucher</label>
+                                <label class="block text-label-md text-on-surface-variant mb-1" for="voucherCode">Voucher (chỉ áp dụng cho vé)</label>
                                 <select class="${inputClass} h-11" id="voucherCode" name="voucherCode">
                                     <option value="">-- Không dùng voucher trong ví --</option>
                                     <c:forEach var="v" items="${quote.vouchers}">
@@ -319,7 +319,7 @@
                                 <div class="flex justify-between"><dt>Bắp nước</dt>
                                     <dd><fmt:formatNumber value="${quote.concessionTotal}" maxFractionDigits="0"/>đ</dd></div>
                                 <c:if test="${quote.voucherDiscount > 0}">
-                                    <div class="flex justify-between text-emerald-300"><dt>Voucher <c:out value="${quote.voucherCode}"/></dt>
+                                    <div class="flex justify-between text-emerald-300"><dt>Voucher <c:out value="${quote.voucherCode}"/> (vé)</dt>
                                         <dd>-<fmt:formatNumber value="${quote.voucherDiscount}" maxFractionDigits="0"/>đ</dd></div>
                                 </c:if>
                                 <c:if test="${quote.pointsRedeemed > 0}">

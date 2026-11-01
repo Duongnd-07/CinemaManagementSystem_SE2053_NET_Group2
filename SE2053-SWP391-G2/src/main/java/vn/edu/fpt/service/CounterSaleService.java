@@ -301,7 +301,8 @@ public class CounterSaleService {
     // GB-05 giống UC-13: còn hiệu lực, công khai hoặc thuộc chính khách, đạt đơn tối thiểu, chưa hết lượt
     private void priceVoucher(Connection conn, CounterSaleForm form, CounterQuote quote, int movieId)
             throws SQLException {
-        // Phim chỉ giới hạn điều kiện áp dụng; giá trị giảm vẫn tính trên toàn đơn gồm vé và bắp nước.
+        // Voucher chỉ áp dụng cho tiền vé, không giảm giá bắp nước.
+        BigDecimal ticketTotal = quote.getTicketTotal();
         BigDecimal gross = quote.getGrossTotal();
         if (quote.customer != null) {
             for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, quote.customer.getUserId(), movieId)) {
@@ -326,9 +327,9 @@ public class CounterSaleService {
             return;
         }
         BigDecimal discount = VoucherService.PERCENT.equals(voucher.getDiscountType())
-                ? gross.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                ? ticketTotal.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
                 : voucher.getDiscountValue();
-        quote.voucherDiscount = discount.min(gross).setScale(0, RoundingMode.HALF_UP);
+        quote.voucherDiscount = discount.min(ticketTotal).setScale(0, RoundingMode.HALF_UP);
         quote.voucherId = voucher.getVoucherId();
         quote.voucherCode = voucher.getVoucherCode();
     }

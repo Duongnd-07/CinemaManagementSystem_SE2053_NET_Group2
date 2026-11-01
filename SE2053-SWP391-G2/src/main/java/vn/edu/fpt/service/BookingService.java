@@ -910,13 +910,13 @@ public class BookingService {
         }
         BigDecimal gross = ticketTotal.add(concessionTotal);
 
-        // Voucher giới hạn phim được xác thực theo suất chiếu, nhưng giảm trên toàn đơn gồm cả bắp nước.
+        // Voucher giới hạn theo phim và chỉ được tính trên tiền vé; bắp nước không tham gia giảm giá.
         Voucher voucher = null;
         BigDecimal voucherDiscount = BigDecimal.ZERO;
         if (voucherCode != null && !voucherCode.isEmpty()) {
             voucher = bookingDAO.findVoucherByCode(conn, voucherCode);
             if (isVoucherUsable(conn, customer, voucher, gross, movieId)) {
-                voucherDiscount = discountOf(voucher, gross);
+                voucherDiscount = discountOf(voucher, ticketTotal);
             } else {
                 errors.put(ERROR_VOUCHER, Messages.BOOKING_VOUCHER_INVALID);
                 voucher = null;
@@ -975,11 +975,11 @@ public class BookingService {
         return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
     }
 
-    private BigDecimal discountOf(Voucher voucher, BigDecimal gross) {
+    private BigDecimal discountOf(Voucher voucher, BigDecimal ticketTotal) {
         BigDecimal discount = VoucherService.PERCENT.equals(voucher.getDiscountType())
-                ? gross.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                ? ticketTotal.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
                 : voucher.getDiscountValue();
-        return discount.min(gross).setScale(0, RoundingMode.HALF_UP);
+        return discount.min(ticketTotal).setScale(0, RoundingMode.HALF_UP);
     }
 
     // Điểm có thể dùng = số dư - điểm đã đặt vào các đơn Pending khác còn hiệu lực
