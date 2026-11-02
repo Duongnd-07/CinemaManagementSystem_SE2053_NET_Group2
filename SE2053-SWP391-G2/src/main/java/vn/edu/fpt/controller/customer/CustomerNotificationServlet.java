@@ -39,9 +39,11 @@ public class CustomerNotificationServlet extends HttpServlet {
             return;
         }
         try {
-            Page<CustomerNotification> notifications = notificationService.findForUser(
+            Page<CustomerNotification> notifications = notificationService.openForUser(
                     user.getUserId(), parsePage(request));
             request.setAttribute("notifications", notifications);
+            // Filter đã đếm trước khi đánh dấu đã xem; đếm lại để chuông trên chính trang này đúng
+            request.setAttribute("unreadNotificationCount", notificationService.countUnread(user.getUserId()));
             request.setAttribute("csrfToken", CsrfToken.get(session));
             request.setAttribute("activeNav", "notifications");
             request.setAttribute("emptyMessage", Messages.NOTIFICATION_EMPTY);

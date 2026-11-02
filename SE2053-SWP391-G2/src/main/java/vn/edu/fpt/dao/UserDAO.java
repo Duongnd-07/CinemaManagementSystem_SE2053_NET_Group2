@@ -19,6 +19,24 @@ import vn.edu.fpt.util.DBContext;
 // DAO quản lý bảng [User] - Truy vấn SQL thuần qua PreparedStatement
 public class UserDAO {
 
+    public User findByPhone(String phone) throws SQLException {
+        String sql = "SELECT UserID, FullName, Email, Phone, Role, Status FROM [User] WHERE Phone = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, phone);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                User user = new User();
+                user.setUserId(rs.getInt("UserID"));
+                user.setFullName(rs.getString("FullName"));
+                user.setEmail(rs.getString("Email"));
+                user.setPhone(rs.getString("Phone"));
+                user.setRole(rs.getString("Role"));
+                user.setStatus(rs.getString("Status"));
+                return user;
+            }
+        }
+    }
+
     /**
      * Kiểm tra Email đã được đăng ký trong hệ thống chưa (không phân biệt hoa thường).
      */

@@ -35,6 +35,9 @@
         </nav>
     </div>
     <div class="flex items-center gap-space-lg">
+        <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
+            <jsp:param name="href" value="${ctx}/staff/notifications"/>
+        </jsp:include>
         <div class="flex items-center gap-space-sm">
             <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                 <span class="material-symbols-outlined text-on-primary text-[18px]">person</span>

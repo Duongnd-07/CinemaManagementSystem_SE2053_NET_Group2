@@ -43,6 +43,9 @@
         <a class="${itemBase} ${active == 'reviews' ? itemActive : itemIdle}" href="${ctx}/manager/reviews">
             <span class="material-symbols-outlined mr-space-md">reviews</span>Đánh giá phim
         </a>
+        <a class="${itemBase} min-h-11 ${active == 'notifications' ? itemActive : itemIdle}" href="${ctx}/manager/notifications">
+            <span class="material-symbols-outlined mr-space-md" aria-hidden="true">campaign</span>Thông báo
+        </a>
         <a class="${itemBase} ${active == 'shifts' ? itemActive : itemIdle}" href="${ctx}/manager/shifts">
             <span class="material-symbols-outlined mr-space-md">schedule</span>Báo cáo ca
         </a>
@@ -58,6 +61,9 @@
 <header class="fixed top-0 left-64 right-0 h-16 bg-surface/75 backdrop-blur-xl z-40 flex items-center justify-between px-space-xl">
     <span class="text-on-surface-variant font-label-lg">Hệ thống Quản lý Rạp</span>
     <div class="flex items-center gap-space-lg">
+        <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
+            <jsp:param name="href" value="${ctx}/manager/inbox"/>
+        </jsp:include>
         <div class="flex items-center gap-space-sm">
             <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                 <span class="material-symbols-outlined text-on-primary text-[18px]">person</span>
