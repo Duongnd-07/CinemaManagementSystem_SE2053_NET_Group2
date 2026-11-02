@@ -15,7 +15,7 @@ import vn.edu.fpt.service.CustomerNotificationService;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
 
-@WebServlet({"/staff/notifications", "/manager/inbox", "/admin/notifications"})
+@WebServlet({"/staff/notifications", "/manager/notifications", "/admin/notifications"})
 public class NotificationInboxServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(NotificationInboxServlet.class.getName());
     private final CustomerNotificationService notificationService = new CustomerNotificationService();
@@ -45,7 +45,7 @@ public class NotificationInboxServlet extends HttpServlet {
             request.setAttribute("activeMenu", "inbox");
             request.setAttribute("inboxUrl", request.getContextPath() + request.getServletPath());
             String view = switch (request.getServletPath()) {
-                case "/manager/inbox" -> "/WEB-INF/views/manager/inbox.jsp";
+                case "/manager/notifications" -> "/WEB-INF/views/manager/notifications.jsp";
                 case "/admin/notifications" -> "/WEB-INF/views/admin/notifications.jsp";
                 default -> "/WEB-INF/views/staff/notifications.jsp";
             };

@@ -29,11 +29,11 @@ import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
 
-@WebServlet("/manager/notifications")
+@WebServlet("/manager/announcements")
 public class NotificationManagementServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(NotificationManagementServlet.class.getName());
-    private static final String VIEW = "/WEB-INF/views/manager/notifications.jsp";
-    private static final String PATH = "/manager/notifications";
+    private static final String VIEW = "/WEB-INF/views/manager/announcements.jsp";
+    private static final String PATH = "/manager/announcements";
     private final AnnouncementService announcementService = new AnnouncementService();
     private final CustomerNotificationService notificationService = new CustomerNotificationService();
 
@@ -151,7 +151,7 @@ public class NotificationManagementServlet extends HttpServlet {
             }
         }
         request.setAttribute("csrfToken", CsrfToken.get(session));
-        request.setAttribute("activeMenu", "notifications");
+        request.setAttribute("activeMenu", "announcements");
         request.getRequestDispatcher(VIEW).forward(request, response);
     }
 

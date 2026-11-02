@@ -16,7 +16,7 @@
         <span class="font-headline-sm text-on-surface tracking-tight">CINEADMIN</span>
     </div>
     <nav class="flex-1 px-space-md space-y-space-xs overflow-y-auto">
-        <a class="${itemBase} ${active == 'dashboard' ? itemActive : itemIdle}" href="${ctx}/manager/dashboard">
+        <a class="${itemBase} ${active == 'dashboard' ? itemActive : itemIdle}" href="${ctx}/manager/movies">
             <span class="material-symbols-outlined mr-space-md">dashboard</span>Trang chủ
         </a>
         <a class="${itemBase} ${active == 'movies' ? itemActive : itemIdle}" href="${ctx}/manager/movies">
@@ -43,8 +43,8 @@
         <a class="${itemBase} ${active == 'reviews' ? itemActive : itemIdle}" href="${ctx}/manager/reviews">
             <span class="material-symbols-outlined mr-space-md">reviews</span>Đánh giá phim
         </a>
-        <a class="${itemBase} min-h-11 ${active == 'notifications' ? itemActive : itemIdle}" href="${ctx}/manager/notifications">
-            <span class="material-symbols-outlined mr-space-md" aria-hidden="true">campaign</span>Thông báo
+        <a class="${itemBase} min-h-11 ${active == 'announcements' ? itemActive : itemIdle}" href="${ctx}/manager/announcements">
+            <span class="material-symbols-outlined mr-space-md" aria-hidden="true">campaign</span>Gửi thông báo
         </a>
         <a class="${itemBase} ${active == 'shifts' ? itemActive : itemIdle}" href="${ctx}/manager/shifts">
             <span class="material-symbols-outlined mr-space-md">schedule</span>Báo cáo ca
@@ -62,7 +62,7 @@
     <span class="text-on-surface-variant font-label-lg">Hệ thống Quản lý Rạp</span>
     <div class="flex items-center gap-space-lg">
         <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
-            <jsp:param name="href" value="${ctx}/manager/inbox"/>
+            <jsp:param name="href" value="${ctx}/manager/notifications"/>
         </jsp:include>
         <div class="flex items-center gap-space-sm">
             <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
