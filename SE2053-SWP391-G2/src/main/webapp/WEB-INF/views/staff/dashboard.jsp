@@ -28,6 +28,9 @@
             </div>
         </div>
         <div class="flex items-center gap-4">
+            <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
+                <jsp:param name="href" value="${pageContext.request.contextPath}/staff/notifications"/>
+            </jsp:include>
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-full bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-sm">
                     NV

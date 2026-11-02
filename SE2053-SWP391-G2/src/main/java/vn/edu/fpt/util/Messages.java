@@ -379,6 +379,26 @@ public final class Messages {
     public static final String LOG_LOAD_FAILED = "Không thể tải nhật ký hệ thống. Vui lòng thử lại sau.";
 
 
+    // UC-09: Manage Notifications
+    public static final String ANNOUNCEMENT_TARGET_INVALID = "Vui lòng chọn đối tượng nhận hợp lệ.";
+    public static final String ANNOUNCEMENT_TYPE_INVALID = "Loại thông báo không hợp lệ với đối tượng đã chọn.";
+    public static final String ANNOUNCEMENT_PHONE_REQUIRED = "Vui lòng nhập số điện thoại khách hàng.";
+    public static final String ANNOUNCEMENT_PHONE_INVALID = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0.";
+    public static final String ANNOUNCEMENT_PHONE_NOT_FOUND = "Không tìm thấy tài khoản có số điện thoại này.";
+    public static final String ANNOUNCEMENT_PHONE_NOT_CUSTOMER = "Số điện thoại này không thuộc tài khoản khách hàng.";
+    public static final String ANNOUNCEMENT_CUSTOMER_INACTIVE = "Tài khoản khách hàng không hoạt động.";
+    public static final String ANNOUNCEMENT_TITLE_INVALID = "Tiêu đề phải có từ 1 đến 150 ký tự.";
+    public static final String ANNOUNCEMENT_MESSAGE_INVALID = "Nội dung phải có từ 1 đến 1.000 ký tự.";
+    public static final String ANNOUNCEMENT_NO_RECIPIENTS = "Không có tài khoản hoạt động phù hợp để nhận thông báo.";
+    public static final String ANNOUNCEMENT_DUPLICATE = "Thông báo này đã được gửi trong 60 giây gần nhất. Vui lòng không gửi lại.";
+    public static final String ANNOUNCEMENT_NOT_FOUND = "Thông báo không tồn tại hoặc đã được thu hồi.";
+    public static final String ANNOUNCEMENT_SENT = "Đã gửi thông báo đến {0} tài khoản.";
+    public static final String ANNOUNCEMENT_RECALLED = "Đã thu hồi thông báo.";
+    public static final String ANNOUNCEMENT_MANAGER_REQUIRED = "Chỉ quản lý đang hoạt động được gửi hoặc thu hồi thông báo.";
+    public static final String ANNOUNCEMENT_SEND_ACTION = "Gửi thông báo";
+    public static final String ANNOUNCEMENT_RECALL_ACTION = "Thu hồi thông báo";
+    public static final String ANNOUNCEMENT_LOG_DESCRIPTION = "Đối tượng: {0}; loại: {1}; số người nhận: {2}.";
+
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
     private Messages() {

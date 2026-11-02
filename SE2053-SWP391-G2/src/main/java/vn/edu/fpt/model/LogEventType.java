@@ -11,9 +11,10 @@ public final class LogEventType {
     public static final String CATALOG = "CATALOG";
     public static final String BOOKING = "BOOKING";
     public static final String COUNTER = "COUNTER";
+    public static final String NOTIFICATION = "NOTIFICATION";
     public static final String SYSTEM = "SYSTEM";
 
-    public static final List<String> ALL = List.of(AUTH, ACCOUNT, CONFIG, CATALOG, BOOKING, COUNTER, SYSTEM);
+    public static final List<String> ALL = List.of(AUTH, ACCOUNT, CONFIG, CATALOG, BOOKING, COUNTER, NOTIFICATION, SYSTEM);
 
     private static final Map<String, String> LABELS = Map.of(
             AUTH, "Đăng nhập & xác thực",
@@ -22,6 +23,7 @@ public final class LogEventType {
             CATALOG, "Quản lý dữ liệu",
             BOOKING, "Đặt vé & thanh toán",
             COUNTER, "Bán tại quầy",
+            NOTIFICATION, "Thông báo",
             SYSTEM, "Lỗi hệ thống");
 
     private LogEventType() {
