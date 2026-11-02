@@ -6,7 +6,7 @@
 ## 0. Bắt buộc trước khi code
 
 1. **Đọc và tuân thủ skill dự án** `.agents/skills/jakarta-servlet-mvc/SKILL.md` (kèm `references/controller-guide.md`, `dao-guide.md`, `jsp-rules.md`). Đây là chuẩn kiến trúc: `jakarta.*`, `DBContext.getConnection()`, try-with-resources, PreparedStatement, PRG, CSRF, `<c:out>`.
-2. **Dùng skill `ui-ux-pro-max`** (ở `~/.agents/skills/ui-ux-pro-max/SKILL.md`) cho **mọi phần giao diện**: trang `manager/notifications.jsp`, các hộp thư, tag danh sách thông báo và icon chuông có huy hiệu.
+2. **Dùng skill `ui-ux-pro-max`** (ở `~/.agents/skills/ui-ux-pro-max/SKILL.md`) cho **mọi phần giao diện**: trang `manager/announcements.jsp`, các hộp thư, tag danh sách thông báo và icon chuông có huy hiệu.
    - Script tìm kiếm thực tế nằm ở `~/.agents/skills/ui-ux-pro-max/scripts/search.py`. Đường dẫn `~/.gemini/...` ghi trong SKILL.md là sai, đừng dùng.
    - Gợi ý truy vấn: `"notification badge unread" --domain ux`, `"form validation error near field" --domain ux`, `"icon button accessible label" --domain icons`, `"confirm destructive action" --domain ux`, `"data table filter pagination" --domain ux`.
    - **Giữ phong cách sẵn có của từng khu vực**: manager và staff dùng token Tailwind (`bg-surface-container-*`, `text-on-surface*`, `primary-container`, `font-label-lg`…), customer và admin dùng nền tối với màu đỏ `#e50914`. Skill chỉ dùng để nâng chất lượng UX (accessibility, trạng thái lỗi, focus, kích thước nút ≥ 44px, aria-label cho nút chỉ có icon), **không đổi design system**.
@@ -144,16 +144,16 @@ GO
 - `CustomerNotificationService`: thêm `countUnread(int userId)`.
 
 ### 4.4 Controller
-- `controller/manager/NotificationManagementServlet` tại `@WebServlet("/manager/notifications")`:
-  - **GET:** lấy flash, đọc bộ lọc `target`, `type`, `keyword`, `page` rồi gọi `search`. Set các attribute `history`, `targets`, `categories` (map target → các loại hợp lệ, để JS lọc dropdown), `csrfToken`, `activeMenu = "notifications"`. Forward tới `/WEB-INF/views/manager/notifications.jsp`.
+- `controller/manager/NotificationManagementServlet` tại `@WebServlet("/manager/announcements")`:
+  - **GET:** lấy flash, đọc bộ lọc `target`, `type`, `keyword`, `page` rồi gọi `search`. Set các attribute `history`, `targets`, `categories` (map target → các loại hợp lệ, để JS lọc dropdown), `csrfToken`, `activeMenu = "notifications"`. Forward tới `/WEB-INF/views/manager/announcements.jsp`.
   - **POST:** kiểm tra CSRF trước (sai thì 403), sau đó xử lý theo `action`:
     - `preview`: gọi `preview`. Thành công thì forward lại view với `preview` + `form` (không redirect). Lỗi thì forward kèm `errors` + `form`.
-    - `send`: gọi `send`. Thành công thì set flash "Đã gửi thông báo đến N tài khoản.", ghi log rồi redirect về `/manager/notifications`. Lỗi validation thì forward lại form kèm lỗi.
+    - `send`: gọi `send`. Thành công thì set flash "Đã gửi thông báo đến N tài khoản.", ghi log rồi redirect về `/manager/announcements`. Lỗi validation thì forward lại form kèm lỗi.
     - `recall`: parse `id`, gọi `recall`, set flash, ghi log rồi redirect (giữ query của bộ lọc nếu có).
     - `action` lạ thì trả 400.
   - Bắt `SQLException`: ghi log SEVERE rồi `sendError(500, Messages.SYSTEM_ERROR)`, theo mẫu servlet sẵn có. Khi forward lại view vẫn phải nạp danh sách lịch sử.
-- `controller/NotificationInboxServlet` tại `@WebServlet({"/staff/notifications", "/manager/inbox", "/admin/notifications"})`:
-  - View theo servletPath: `staff/notifications.jsp`, `manager/inbox.jsp`, `admin/notifications.jsp`.
+- `controller/NotificationInboxServlet` tại `@WebServlet({"/staff/notifications", "/manager/notifications", "/admin/notifications"})`:
+  - View theo servletPath: `staff/notifications.jsp`, `manager/notifications.jsp`, `admin/notifications.jsp`.
   - GET: phân trang qua `CustomerNotificationService.findForUser`. POST (kiểm tra CSRF): `markAllRead` rồi redirect về đúng servletPath. Logic giống `CustomerNotificationServlet`.
 - `filter/UnreadNotificationFilter` tại `@WebFilter("/*")`:
   - Chỉ chạy khi method là GET, path không bắt đầu bằng `/assets/` và session có `user`.
@@ -166,11 +166,11 @@ GO
 - Gắn chuông vào:
   - `public-header.jsp`: thay link chuông hiện tại của Customer, giữ href `/customer/notifications`.
   - `staff-header.jsp`: `/staff/notifications`.
-  - Header trong `manager-sidebar.jsp`: `/manager/inbox`.
+  - Header trong `manager-sidebar.jsp`: `/manager/notifications`.
   - Header inline của 3 trang admin (`users.jsp`, `system-config.jsp`, `system-logs.jsp`) và trang admin mới: `/admin/notifications`.
 - `manager-sidebar.jsp`: thêm mục "Thông báo" (icon `campaign`, `activeMenu == 'notifications'`) đặt sau "Đánh giá phim".
 - `WEB-INF/tags/notification-list.tag`: danh sách thông báo dùng chung cho 3 hộp thư mới. Attribute: `pageData`, `baseUrl`, `markReadUrl`, `csrfToken`, `emptyMessage`. Mỗi thông báo hiện tiêu đề, nhãn loại (`NotificationCategory.labelOf`), thời gian, nội dung `whitespace-pre-line`, và đánh dấu chưa đọc. Có nút "Đánh dấu tất cả đã đọc" và dùng lại `pagination.tag`. Chỉ dùng class trung tính chạy được trên mọi nền tối (`bg-white/5`, `text-white`, `text-gray-300`, `border-white/10`). **Không sửa** `customer/notifications.jsp`, ngoài việc trang đó tự có chuông qua header.
-- `manager/notifications.jsp` (theo layout manager hiện có, include `manager-head.jsp` và `manager-sidebar.jsp`):
+- `manager/announcements.jsp` (theo layout manager hiện có, include `manager-head.jsp` và `manager-sidebar.jsp`):
   1. **Form soạn:**
      - Radio chọn đối tượng; ô SĐT chỉ hiện khi chọn `SingleCustomer`.
      - Dropdown loại, lọc bằng JS theo đối tượng.
@@ -191,7 +191,7 @@ Thêm hằng số vào `util/Messages.java` (tiếng Việt), không hardcode ch
 
 ## 5. Danh sách file
 
-**Tạo mới:** `sql/UC09_manage_notifications.sql`, `model/Announcement.java`, `model/NotificationTarget.java`, `model/NotificationCategory.java`, `dao/AnnouncementDAO.java`, `service/AnnouncementForm.java`, `service/AnnouncementPreview.java`, `service/AnnouncementService.java`, `controller/manager/NotificationManagementServlet.java`, `controller/NotificationInboxServlet.java`, `filter/UnreadNotificationFilter.java`, `views/manager/notifications.jsp`, `views/manager/inbox.jsp`, `views/staff/notifications.jsp`, `views/admin/notifications.jsp`, `views/common/notification-bell.jsp`, `tags/notification-list.tag`.
+**Tạo mới:** `sql/UC09_manage_notifications.sql`, `model/Announcement.java`, `model/NotificationTarget.java`, `model/NotificationCategory.java`, `dao/AnnouncementDAO.java`, `service/AnnouncementForm.java`, `service/AnnouncementPreview.java`, `service/AnnouncementService.java`, `controller/manager/NotificationManagementServlet.java`, `controller/NotificationInboxServlet.java`, `filter/UnreadNotificationFilter.java`, `views/manager/announcements.jsp`, `views/manager/notifications.jsp`, `views/staff/notifications.jsp`, `views/admin/notifications.jsp`, `views/common/notification-bell.jsp`, `tags/notification-list.tag`.
 
 **Sửa:** `model/LogEventType.java`, `dao/UserDAO.java`, `dao/CustomerNotificationDAO.java`, `service/CustomerNotificationService.java`, `util/Messages.java`, `views/common/public-header.jsp`, `views/common/staff-header.jsp`, `views/common/manager-sidebar.jsp`, `views/admin/users.jsp`, `views/admin/system-config.jsp`, `views/admin/system-logs.jsp`.
 
@@ -201,7 +201,7 @@ Thêm hằng số vào `util/Messages.java` (tiếng Việt), không hardcode ch
 
 1. SQL script, sau đó chạy thử 2 lần trên DB local để chắc chắn chạy lại được.
 2. Model → DAO → Service.
-3. Servlet quản lý → `manager/notifications.jsp` + mục trong sidebar.
+3. Servlet quản lý → `manager/announcements.jsp` + mục trong sidebar.
 4. Servlet hộp thư + tag + 3 view hộp thư.
 5. Filter + include chuông + gắn vào các header.
 6. `mvn -q compile` (hoặc build của dự án) không được có lỗi. Sau đó tự chạy checklist ở mục 7.
@@ -217,7 +217,7 @@ Thêm hằng số vào `util/Messages.java` (tiếng Việt), không hardcode ch
 - [ ] Bước xem trước hiện 5 người nhận, nhưng trước khi xác nhận có 1 tài khoản bị khóa: kết quả gửi được 4 và flash ghi đúng 4.
 - [ ] Thu hồi: thông báo biến mất khỏi hộp thư người nhận, huy hiệu giảm, lịch sử hiện "Đã thu hồi". Thu hồi lần 2 bị từ chối.
 - [ ] Huy hiệu: hiện đúng số ở cả 4 khu vực, quá 9 thì hiện "9+", bấm "Đánh dấu tất cả đã đọc" thì về 0. Trang công khai khi chưa đăng nhập vẫn chạy bình thường. Lỗi DB trong filter không làm hỏng trang.
-- [ ] Phân quyền: Staff/Customer/Admin vào `/manager/notifications` bị chặn. Customer vào `/staff/notifications` bị chặn. POST không có CSRF trả 403.
+- [ ] Phân quyền: Staff/Customer/Admin vào `/manager/announcements` bị chặn. Customer vào `/staff/notifications` bị chặn. POST không có CSRF trả 403.
 - [ ] Thông báo hệ thống cũ (Review/Refund/Voucher) vẫn tạo và hiển thị bình thường.
 - [ ] Mỗi lần gửi/thu hồi có đúng 1 dòng ActivityLog với `EventType = 'NOTIFICATION'`. Trang Nhật ký của Admin lọc được theo nhóm "Thông báo". Các nhóm log cũ vẫn ghi bình thường.
 - [ ] Chạy `UC09_manage_notifications.sql` lần 2 không lỗi, và constraint `CK_ActivityLog_EventType` vẫn có đủ 8 giá trị.
