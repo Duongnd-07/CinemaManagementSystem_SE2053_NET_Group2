@@ -68,10 +68,9 @@
                        class="p-2 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition">
                         <span class="material-symbols-outlined text-lg">confirmation_number</span>
                     </a>
-                    <a href="${ctx}/customer/notifications" aria-label="Thông báo"
-                       class="p-2 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition">
-                        <span class="material-symbols-outlined text-lg">notifications</span>
-                    </a>
+                    <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
+                        <jsp:param name="href" value="${ctx}/customer/notifications"/>
+                    </jsp:include>
                 </c:if>
 
                 <!-- Đăng xuất -->

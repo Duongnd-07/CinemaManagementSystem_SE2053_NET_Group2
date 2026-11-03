@@ -6,11 +6,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import vn.edu.fpt.model.CustomerNotification;
 import vn.edu.fpt.util.DBContext;
 
 public class CustomerNotificationDAO {
+    public int countUnread(int userId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM CustomerNotification WHERE UserID = ? AND ReadAt IS NULL";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
     public int countForUser(int userId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM CustomerNotification WHERE UserID = ?";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -52,6 +63,21 @@ public class CustomerNotificationDAO {
         String sql = "UPDATE CustomerNotification SET ReadAt = GETDATE() WHERE UserID = ? AND ReadAt IS NULL";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
+            return ps.executeUpdate();
+        }
+    }
+
+    public int markRead(int userId, List<Integer> notificationIds) throws SQLException {
+        if (notificationIds.isEmpty()) {
+            return 0;
+        }
+        String sql = "UPDATE CustomerNotification SET ReadAt = GETDATE() WHERE UserID = ? AND ReadAt IS NULL "
+                + "AND NotificationID IN (" + String.join(",", Collections.nCopies(notificationIds.size(), "?")) + ")";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            for (int i = 0; i < notificationIds.size(); i++) {
+                ps.setInt(i + 2, notificationIds.get(i));
+            }
             return ps.executeUpdate();
         }
     }
