@@ -102,6 +102,7 @@
             </c:if>
 
             <!-- 2. Soát vé vào rạp (UC-36: quét vé điện tử, in vé giấy; cần mở ca) -->
+            <c:if test="${allowedPermissions.contains('TICKET_PRINT')}">
             <a href="${pageContext.request.contextPath}/staff/ticket-print" class="block">
             <div class="bg-[#171b26] border border-white/10 hover:border-emerald-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
                 <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
@@ -114,6 +115,7 @@
                 </span>
             </div>
             </a>
+            </c:if>
 
             <!-- 3. Bán bắp nước -->
             <div class="bg-[#171b26] border border-white/10 hover:border-amber-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
@@ -143,6 +145,7 @@
             </c:if>
 
             <!-- 5. Kiểm tra & dọn phòng chiếu (UC-35) -->
+            <c:if test="${allowedPermissions.contains('ROOM_INSPECTION')}">
             <a href="${pageContext.request.contextPath}/staff/room-inspections"
                class="block bg-[#171b26] border ${uncheckedRooms > 0 ? 'border-amber-500/50' : 'border-white/10'} hover:border-cyan-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
                 <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
@@ -159,6 +162,7 @@
                     Kiểm tra phòng <span class="material-symbols-outlined text-xs">arrow_forward</span>
                 </span>
             </a>
+            </c:if>
 
             <c:if test="${allowedPermissions.contains('OWN_COUNTER_HISTORY')}">
             <a href="${pageContext.request.contextPath}/staff/counter-history"

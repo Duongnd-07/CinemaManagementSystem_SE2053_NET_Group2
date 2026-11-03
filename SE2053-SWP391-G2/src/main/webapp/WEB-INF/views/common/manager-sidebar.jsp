@@ -61,17 +61,21 @@
             <span class="material-symbols-outlined mr-space-md">build</span>Sự cố thiết bị
         </a>
         </c:if>
+        <c:if test="${allowedPermissions.contains('VIEW_ROOM_INSPECTIONS')}">
         <a class="${itemBase} ${active == 'room-inspections' ? itemActive : itemIdle}" href="${ctx}/manager/room-inspections">
             <span class="material-symbols-outlined mr-space-md">cleaning_services</span>Kiểm tra phòng chiếu
         </a>
+        </c:if>
         <c:if test="${allowedPermissions.contains('MANAGE_REVIEWS')}">
         <a class="${itemBase} ${active == 'reviews' ? itemActive : itemIdle}" href="${ctx}/manager/reviews">
             <span class="material-symbols-outlined mr-space-md">reviews</span>Đánh giá phim
         </a>
         </c:if>
+        <c:if test="${allowedPermissions.contains('SEND_ANNOUNCEMENTS')}">
         <a class="${itemBase} min-h-11 ${active == 'announcements' ? itemActive : itemIdle}" href="${ctx}/manager/announcements">
             <span class="material-symbols-outlined mr-space-md" aria-hidden="true">campaign</span>Gửi thông báo
         </a>
+        </c:if>
         <c:if test="${allowedPermissions.contains('VIEW_SHIFT_REPORTS')}">
         <a class="${itemBase} ${active == 'shifts' ? itemActive : itemIdle}" href="${ctx}/manager/shifts">
             <span class="material-symbols-outlined mr-space-md">schedule</span>Báo cáo ca
@@ -94,7 +98,7 @@
     <span class="text-on-surface-variant font-label-lg">Hệ thống Quản lý Rạp</span>
     <div class="flex items-center gap-space-lg">
         <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
-            <jsp:param name="href" value="${ctx}/manager/notifications"/>
+            <jsp:param name="href" value="${ctx}${sessionScope.user.role == 'Staff' ? '/staff/notifications' : '/manager/notifications'}"/>
         </jsp:include>
         <div class="flex items-center gap-space-sm">
             <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">

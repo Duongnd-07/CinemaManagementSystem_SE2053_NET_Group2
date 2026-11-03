@@ -11,10 +11,13 @@ public enum Permission {
     MANAGE_GENRES(Group.MANAGEMENT, "Quản lý thể loại phim", "Thêm, sửa và ẩn thể loại phim.", "/manager/genres"),
     MANAGE_SHOWTIMES(Group.MANAGEMENT, "Quản lý suất chiếu", "Tạo, sửa và hủy suất chiếu.", "/manager/showtimes"),
     MANAGE_ROOMS(Group.MANAGEMENT, "Quản lý phòng chiếu", "Quản lý phòng, sơ đồ ghế và thiết bị.", "/manager/rooms"),
+    MANAGE_ROOM_TEMPLATES(Group.MANAGEMENT, "Quản lý phòng mẫu", "Tạo và sửa sơ đồ phòng mẫu.", "/manager/room-templates"),
     MANAGE_CONCESSIONS(Group.MANAGEMENT, "Quản lý đồ ăn & thức uống", "Quản lý danh mục và giá bắp nước.", "/manager/concessions"),
     MANAGE_VOUCHERS(Group.MANAGEMENT, "Quản lý voucher & khuyến mãi", "Tạo và quản lý voucher.", "/manager/vouchers"),
     MANAGE_EQUIPMENT_REPORTS(Group.MANAGEMENT, "Xử lý sự cố thiết bị", "Tiếp nhận và cập nhật sự cố do nhân viên báo.", "/manager/equipment-reports"),
+    VIEW_ROOM_INSPECTIONS(Group.MANAGEMENT, "Xem lịch sử kiểm tra phòng", "Xem kết quả kiểm tra và dọn phòng theo ngày.", "/manager/room-inspections"),
     MANAGE_REVIEWS(Group.MANAGEMENT, "Kiểm duyệt đánh giá phim", "Duyệt hoặc ẩn đánh giá của khách.", "/manager/reviews"),
+    SEND_ANNOUNCEMENTS(Group.MANAGEMENT, "Gửi thông báo", "Soạn, gửi và thu hồi thông báo.", "/manager/announcements"),
     VIEW_SHIFT_REPORTS(Group.MANAGEMENT, "Xem báo cáo ca", "Xem báo cáo của mọi ca bán hàng.", "/manager/shifts"),
     VIEW_COUNTER_HISTORY(Group.MANAGEMENT, "Xem lịch sử bán tại quầy", "Xem đơn bán tại quầy của mọi nhân viên.", "/manager/counter-history"),
     VIEW_REPORTS(Group.MANAGEMENT, "Xem báo cáo thống kê", "Xem doanh thu và thống kê phim.", "/manager/reports"),
@@ -23,7 +26,9 @@ public enum Permission {
     OWN_COUNTER_HISTORY(Group.OPERATION, "Lịch sử bán vé của mình", "Xem các đơn do chính nhân viên đã bán.", "/staff/counter-history"),
     OWN_SHIFTS(Group.OPERATION, "Ca làm việc", "Xem báo cáo và đóng ca của chính nhân viên.", "/staff/shifts"),
     SEAT_EXCHANGE(Group.OPERATION, "Đổi ghế hỏng", "Đổi ghế hoặc đền bù voucher khi ghế hỏng.", "/staff/seat-exchange"),
-    REPORT_EQUIPMENT(Group.OPERATION, "Báo sự cố thiết bị", "Ghi nhận sự cố thiết bị trong phòng chiếu.", "/staff/equipment-reports");
+    REPORT_EQUIPMENT(Group.OPERATION, "Báo sự cố thiết bị", "Ghi nhận sự cố thiết bị trong phòng chiếu.", "/staff/equipment-reports"),
+    ROOM_INSPECTION(Group.OPERATION, "Kiểm tra và dọn phòng chiếu", "Kiểm tra và dọn phòng trước mỗi suất chiếu.", "/staff/room-inspections"),
+    TICKET_PRINT(Group.OPERATION, "Soát và in vé", "Quét vé điện tử và in vé giấy.", "/staff/ticket-print");
 
     // Thứ tự cột trên trang phân quyền
     public static final List<String> CONFIGURABLE_ROLES = List.of(Role.MANAGER, Role.STAFF);

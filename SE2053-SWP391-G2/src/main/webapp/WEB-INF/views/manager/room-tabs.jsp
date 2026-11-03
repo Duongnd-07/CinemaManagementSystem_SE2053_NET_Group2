@@ -8,8 +8,10 @@
        href="${ctx}/manager/rooms" ${param.active == 'rooms' ? 'aria-current="page"' : ''}>
         <span class="material-symbols-outlined text-[18px]">meeting_room</span>Phòng chiếu
     </a>
+    <c:if test="${allowedPermissions.contains('MANAGE_ROOM_TEMPLATES')}">
     <a class="${tabBase} ${param.active == 'templates' ? 'border-primary text-on-surface' : 'border-transparent text-on-surface-variant hover:text-on-surface'}"
        href="${ctx}/manager/room-templates" ${param.active == 'templates' ? 'aria-current="page"' : ''}>
         <span class="material-symbols-outlined text-[18px]">bookmarks</span>Phòng mẫu
     </a>
+    </c:if>
 </nav>
