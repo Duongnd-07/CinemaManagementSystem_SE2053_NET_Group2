@@ -11,7 +11,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -39,7 +38,7 @@ public class AnalyticsServlet extends HttpServlet {
         LocalDate start = analyticsService.periodStart(period, anchor);
         LocalDate end = analyticsService.periodEnd(period, start);
         try {
-            Map<String, BigDecimal> revenueSeries = analyticsService.revenueSeries(period, start, end);
+            Map<String, BigDecimal[]> revenueSeries = analyticsService.revenueSeries(period, start, end);
             List<OccupancyStat> rooms = analyticsService.occupancyByRoom(start, end);
 
             request.setAttribute("period", period);
@@ -49,7 +48,8 @@ public class AnalyticsServlet extends HttpServlet {
                     + end.minusDays(1).format(DISPLAY_DATE));
             request.setAttribute("summary", analyticsService.summarize(start, end));
             request.setAttribute("revenueSeries", revenueSeries);
-            request.setAttribute("revenueMax", Collections.max(revenueSeries.values()));
+            request.setAttribute("revenueMax", revenueSeries.values().stream()
+                    .map(p -> p[0].add(p[1])).max(BigDecimal::compareTo).orElse(BigDecimal.ZERO));
             request.setAttribute("rooms", rooms);
             request.setAttribute("movies", analyticsService.moviePerformance(start, end));
             request.setAttribute("topThreshold", analyticsService.topThreshold());

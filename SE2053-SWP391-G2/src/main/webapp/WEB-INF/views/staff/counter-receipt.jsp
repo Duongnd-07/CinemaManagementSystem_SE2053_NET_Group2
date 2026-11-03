@@ -53,8 +53,9 @@
             <table class="w-full mt-space-sm text-body-md">
                 <c:forEach var="t" items="${r.tickets}">
                     <tr>
-                        <td>Ghế <b><c:out value="${t.name}"/></b> <span class="text-body-sm text-on-surface-variant">· <c:out value="${t.code}"/></span></td>
-                        <td class="text-right"><fmt:formatNumber value="${t.amount}" maxFractionDigits="0"/>đ</td>
+                        <td>Ghế <b><c:out value="${t.name}"/></b> <span class="text-body-sm text-on-surface-variant">· <c:out value="${t.code}"/></span>
+                            <c:if test="${not empty t.note}"><span class="block text-body-sm text-amber-300"><c:out value="${t.note}"/></span></c:if></td>
+                        <td class="text-right align-top"><fmt:formatNumber value="${t.amount}" maxFractionDigits="0"/>đ</td>
                     </tr>
                 </c:forEach>
                 <c:forEach var="item" items="${r.concessions}">
@@ -64,6 +65,10 @@
                     </tr>
                 </c:forEach>
             </table>
+            <c:if test="${r.adjusted}">
+                <p class="mt-space-sm text-body-sm">Vé dùng được:
+                    <b><c:out value="${empty r.usableSeats ? 'không còn vé nào' : fn:join(r.usableSeats.toArray(), ', ')}"/></b></p>
+            </c:if>
         </section>
 
         <section class="border-t border-dashed border-white/20 pt-space-md space-y-1 text-body-md">
@@ -80,7 +85,7 @@
             </div>
             <c:if test="${not empty r.paymentReference}">
                 <div class="flex justify-between text-body-sm text-on-surface-variant">
-                    <span>${r.paymentMethod == 'Card' ? 'Mã chuẩn chi' : 'Mã giao dịch'}</span><span><c:out value="${r.paymentReference}"/></span>
+                    <span>Mã giao dịch</span><span><c:out value="${r.paymentReference}"/></span>
                 </div>
             </c:if>
             <c:if test="${not empty r.customerName}">

@@ -18,8 +18,6 @@ public class CounterSaleForm {
     private String points = "";
     private String paymentMethod = "";
     private String cashReceived = "";
-    // Thẻ: mã chuẩn chi trên hóa đơn POS; chuyển khoản: mã giao dịch ngân hàng
-    private String paymentReference = "";
     // Nội dung khách ghi khi chuyển khoản để nhân viên tìm đúng giao dịch trên app ngân hàng; giữ nguyên qua các lần
     // Tính tiền của cùng một đơn nhờ ô ẩn trên form
     private String transferNote = newTransferNote();
@@ -98,14 +96,6 @@ public class CounterSaleForm {
 
     public void setCashReceived(String cashReceived) {
         this.cashReceived = cashReceived;
-    }
-
-    public String getPaymentReference() {
-        return paymentReference;
-    }
-
-    public void setPaymentReference(String paymentReference) {
-        this.paymentReference = paymentReference;
     }
 
     public String getTransferNote() {

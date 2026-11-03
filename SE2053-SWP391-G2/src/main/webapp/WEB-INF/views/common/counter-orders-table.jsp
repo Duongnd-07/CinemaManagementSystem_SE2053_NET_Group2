@@ -10,24 +10,37 @@
 <c:set var="ticketLabels" value="${{'Watched':'Đã xem','Exchanged':'Đã đổi','Cancelled':'Đã hủy'}}"/>
 <c:set var="showStaff" value="${param.showStaff == '1'}"/>
 
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-lg">
+<%-- Khách luôn được hoàn bằng tiền mặt: tiền hoàn trừ vào tiền mặt, chuyển khoản giữ nguyên --%>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-sm">
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Số đơn</div>
         <div class="text-headline-sm">${result.orderCount}</div>
+        <div class="text-body-sm text-on-surface-variant mt-1">${result.cashOrders} tiền mặt · ${result.transferOrders} chuyển khoản</div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Đã thu của khách</div>
         <div class="text-headline-sm"><fmt:formatNumber value="${result.collected}" maxFractionDigits="0"/>đ</div>
+        <div class="text-body-sm mt-1 flex justify-between gap-space-sm"><span class="text-on-surface-variant">Tiền mặt</span>
+            <span><fmt:formatNumber value="${result.cashCollected}" maxFractionDigits="0"/>đ</span></div>
+        <div class="text-body-sm flex justify-between gap-space-sm"><span class="text-on-surface-variant">Chuyển khoản</span>
+            <span><fmt:formatNumber value="${result.transferCollected}" maxFractionDigits="0"/>đ</span></div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Đã hoàn trả khách</div>
         <div class="text-headline-sm text-amber-300"><fmt:formatNumber value="${result.refunded}" maxFractionDigits="0"/>đ</div>
+        <div class="text-body-sm text-on-surface-variant mt-1">Tiền mặt · ${result.refundedTickets} vé</div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Thực thu sau hoàn</div>
         <div class="text-headline-sm text-emerald-300"><fmt:formatNumber value="${result.net}" maxFractionDigits="0"/>đ</div>
+        <div class="text-body-sm mt-1 flex justify-between gap-space-sm"><span class="text-on-surface-variant">Tiền mặt</span>
+            <span><fmt:formatNumber value="${result.cashNet}" maxFractionDigits="0"/>đ</span></div>
+        <div class="text-body-sm flex justify-between gap-space-sm"><span class="text-on-surface-variant">Chuyển khoản</span>
+            <span><fmt:formatNumber value="${result.transferCollected}" maxFractionDigits="0"/>đ</span></div>
     </div>
 </div>
+<p class="text-body-sm text-on-surface-variant mb-space-lg">Tiền hoàn tính theo đơn được bán trong danh sách này, kể cả khi hoàn vào ngày khác.
+    Đối chiếu tiền mặt trong két theo từng ca ở Báo cáo ca.</p>
 
 <c:choose>
     <c:when test="${empty result.page.items}">
@@ -118,6 +131,7 @@
                             <c:choose>
                                 <c:when test="${o.refundTotal > 0}">
                                     <span class="text-amber-300 font-label-lg"><fmt:formatNumber value="${o.refundTotal}" maxFractionDigits="0"/>đ</span>
+                                    <span class="block text-body-sm text-on-surface-variant">tiền mặt</span>
                                 </c:when>
                                 <c:otherwise><span class="text-on-surface-variant">-</span></c:otherwise>
                             </c:choose>

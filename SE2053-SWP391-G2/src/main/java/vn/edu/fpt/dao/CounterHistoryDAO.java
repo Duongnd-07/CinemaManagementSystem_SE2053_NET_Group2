@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import vn.edu.fpt.model.BookingChannel;
+import vn.edu.fpt.model.PaymentMethod;
 import vn.edu.fpt.service.CounterOrder;
 import vn.edu.fpt.util.DBContext;
 
@@ -24,7 +25,8 @@ public class CounterHistoryDAO {
             + "JOIN Movie m ON m.MovieID = s.MovieID JOIN Room r ON r.RoomID = s.RoomID "
             + "LEFT JOIN [User] c ON c.UserID = b.CustomerID LEFT JOIN [User] st ON st.UserID = b.StaffID "
             + "LEFT JOIN Voucher v ON v.VoucherID = b.VoucherID LEFT JOIN Shift sh ON sh.ShiftID = b.ShiftID "
-            + "OUTER APPLY (SELECT SUM(ISNULL(t.RefundAmount, 0)) AS Refund FROM Ticket t "
+            + "OUTER APPLY (SELECT SUM(ISNULL(t.RefundAmount, 0)) AS Refund, "
+            + "SUM(CASE WHEN t.RefundAmount > 0 THEN 1 ELSE 0 END) AS Refunded FROM Ticket t "
             + "WHERE t.BookingID = b.BookingID) rf ";
 
     // Bộ lọc; trường null / rỗng thì bỏ qua
@@ -57,16 +59,29 @@ public class CounterHistoryDAO {
         }
     }
 
-    // Tổng của mọi đơn khớp bộ lọc: {số đơn, thực thu, tiền đã hoàn}
+    // Tổng của mọi đơn khớp bộ lọc: {số đơn, đã thu, tiền đã hoàn, thu tiền mặt, thu chuyển khoản,
+    // số đơn tiền mặt, số đơn chuyển khoản, số vé đã hoàn}
     public BigDecimal[] summarize(Filter filter) throws SQLException {
         List<Object> params = new ArrayList<>();
-        String sql = "SELECT COUNT(*), ISNULL(SUM(b.FinalAmount), 0), ISNULL(SUM(rf.Refund), 0) " + FROM
-                + where(filter, params);
+        params.add(PaymentMethod.CASH);
+        params.add(PaymentMethod.TRANSFER);
+        params.add(PaymentMethod.CASH);
+        params.add(PaymentMethod.TRANSFER);
+        String sql = "SELECT COUNT(*), ISNULL(SUM(b.FinalAmount), 0), ISNULL(SUM(rf.Refund), 0), "
+                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN b.FinalAmount ELSE 0 END), 0), "
+                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN b.FinalAmount ELSE 0 END), 0), "
+                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
+                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
+                + "ISNULL(SUM(rf.Refunded), 0) " + FROM + where(filter, params);
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             bind(ps, params);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
-                return new BigDecimal[]{BigDecimal.valueOf(rs.getInt(1)), rs.getBigDecimal(2), rs.getBigDecimal(3)};
+                BigDecimal[] totals = new BigDecimal[8];
+                for (int i = 0; i < totals.length; i++) {
+                    totals[i] = rs.getBigDecimal(i + 1);
+                }
+                return totals;
             }
         }
     }

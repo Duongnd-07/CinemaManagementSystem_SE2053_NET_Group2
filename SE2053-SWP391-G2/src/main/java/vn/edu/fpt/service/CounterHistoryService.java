@@ -22,12 +22,47 @@ public class CounterHistoryService {
         private final int orderCount;
         private final BigDecimal collected;
         private final BigDecimal refunded;
+        private final BigDecimal cashCollected;
+        private final BigDecimal transferCollected;
+        private final int cashOrders;
+        private final int transferOrders;
+        private final int refundedTickets;
 
         Result(Page<CounterOrder> page, BigDecimal[] totals) {
             this.page = page;
             this.orderCount = totals[0].intValue();
             this.collected = totals[1];
             this.refunded = totals[2];
+            this.cashCollected = totals[3];
+            this.transferCollected = totals[4];
+            this.cashOrders = totals[5].intValue();
+            this.transferOrders = totals[6].intValue();
+            this.refundedTickets = totals[7].intValue();
+        }
+
+        public BigDecimal getCashCollected() {
+            return cashCollected;
+        }
+
+        public BigDecimal getTransferCollected() {
+            return transferCollected;
+        }
+
+        public int getCashOrders() {
+            return cashOrders;
+        }
+
+        public int getTransferOrders() {
+            return transferOrders;
+        }
+
+        public int getRefundedTickets() {
+            return refundedTickets;
+        }
+
+        // Khách luôn được hoàn bằng tiền mặt nên tiền hoàn trừ vào tiền mặt, chuyển khoản giữ nguyên
+        public BigDecimal getCashNet() {
+            return cashCollected.subtract(refunded);
         }
 
         public Page<CounterOrder> getPage() {

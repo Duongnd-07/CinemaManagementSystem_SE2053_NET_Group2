@@ -66,14 +66,23 @@
             <dl class="space-y-2 text-body-md">
                 <div class="flex justify-between"><dt>Tiền mặt</dt><dd><fmt:formatNumber value="${r.cashTotal}" maxFractionDigits="0"/>đ</dd></div>
                 <div class="flex justify-between"><dt>Chuyển khoản / QR</dt><dd><fmt:formatNumber value="${r.transferTotal}" maxFractionDigits="0"/>đ</dd></div>
-                <div class="flex justify-between"><dt>Thẻ (POS)</dt><dd><fmt:formatNumber value="${r.cardTotal}" maxFractionDigits="0"/>đ</dd></div>
-                <div class="flex justify-between text-on-surface-variant"><dt>Hoàn tiền tại quầy</dt><dd><fmt:formatNumber value="${r.refundTotal}" maxFractionDigits="0"/>đ</dd></div>
+                <%-- Quầy không còn nhận thẻ; chỉ hiện cho ca cũ đã có đơn thẻ --%>
+                <c:if test="${r.cardTotal > 0}">
+                    <div class="flex justify-between"><dt>Thẻ (POS)</dt><dd><fmt:formatNumber value="${r.cardTotal}" maxFractionDigits="0"/>đ</dd></div>
+                </c:if>
             </dl>
             <p class="mt-space-md text-body-sm ${r.reconciled ? 'text-emerald-300' : 'text-amber-300'} flex items-center gap-space-sm">
                 <span class="material-symbols-outlined text-[18px]">${r.reconciled ? 'check_circle' : 'warning'}</span>
-                ${r.reconciled ? 'Khớp: vé + bắp nước - giảm giá = tiền mặt + chuyển khoản + thẻ.'
+                ${r.reconciled ? 'Khớp: vé + bắp nước - giảm giá = tiền thu theo hình thức thanh toán.'
                                : 'Lệch: tổng theo hình thức thanh toán không khớp doanh thu, cần kiểm tra lại các đơn.'}
             </p>
+            <%-- Đổi ghế / hoàn tiền không làm đổi doanh thu lúc bán; tiền hoàn tính cho ca đã chi, trừ ở két bên cạnh --%>
+            <h3 class="mt-space-lg mb-2 text-label-lg text-on-surface-variant">Đổi ghế / hoàn trả trong ca</h3>
+            <dl class="space-y-2 text-body-md">
+                <div class="flex justify-between"><dt>Vé đã đổi ghế</dt><dd>${r.exchangedTickets}</dd></div>
+                <div class="flex justify-between"><dt>Vé hoàn tiền mặt</dt><dd>${r.refundedTickets}</dd></div>
+                <div class="flex justify-between"><dt>Tiền mặt đã hoàn cho khách</dt><dd><fmt:formatNumber value="${r.refundTotal}" maxFractionDigits="0"/>đ</dd></div>
+            </dl>
         </section>
 
         <%-- Đối chiếu két tiền --%>
@@ -161,7 +170,8 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-body-md">
                         <thead class="text-label-md text-on-surface-variant border-b border-white/10">
-                        <tr><th class="py-2">Đơn</th><th>Giờ</th><th>Ghế</th><th>Khách</th><th>Hình thức</th><th class="text-right">Thực thu</th></tr>
+                        <tr><th class="py-2">Đơn</th><th>Giờ</th><th>Ghế lúc bán</th><th>Đổi ghế</th><th>Hoàn tiền</th>
+                            <th>Khách</th><th>Hình thức</th><th class="text-right">Thực thu</th></tr>
                         </thead>
                         <tbody class="divide-y divide-white/5">
                         <c:forEach var="o" items="${r.orders}">
@@ -174,6 +184,8 @@
                                 </td>
                                 <td>${fn:substring(o.bookingTime, 11, 16)}</td>
                                 <td><c:out value="${o.seats}"/></td>
+                                <td class="text-amber-300"><c:out value="${empty o.exchanges ? '-' : o.exchanges}"/></td>
+                                <td class="text-amber-300"><c:out value="${empty o.refunds ? '-' : o.refunds}"/></td>
                                 <td><c:out value="${empty o.customerName ? 'Khách vãng lai' : o.customerName}"/></td>
                                 <td>${paymentLabels[o.paymentMethod]}<c:if test="${not empty o.paymentReference}">
                                     <span class="block text-body-sm text-on-surface-variant">Mã GD: <c:out value="${o.paymentReference}"/></span></c:if></td>

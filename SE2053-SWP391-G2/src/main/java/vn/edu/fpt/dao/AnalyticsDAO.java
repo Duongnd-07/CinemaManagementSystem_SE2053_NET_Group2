@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import vn.edu.fpt.model.BookingChannel;
 import vn.edu.fpt.model.BookingStatus;
 import vn.edu.fpt.model.OccupancyStat;
 import vn.edu.fpt.model.SalesSummary;
@@ -49,9 +50,15 @@ public class AnalyticsDAO {
     private static final String SHOWTIME_TOTALS = "COUNT(*) AS Showtimes, ISNULL(SUM(tk.Sold), 0) AS Sold, "
             + "SUM(COALESCE(NULLIF(sc.Seats, 0), r.TotalSeats)) AS Capacity, ISNULL(SUM(tk.Revenue), 0) AS Revenue ";
 
+    // Doanh thu thực của một đơn; đơn online đổi / hoàn tại quầy vẫn tính cho kênh online
+    private static final String NET_AMOUNT = "b.FinalAmount - ISNULL(tk.Refund, 0)";
+    private static final String IS_ONLINE = "b.Channel = '" + BookingChannel.ONLINE + "'";
+
     public SalesSummary summarize(LocalDateTime from, LocalDateTime to) throws SQLException {
         String sql = "SELECT COUNT(*) AS Orders, ISNULL(SUM(tk.Tickets), 0) AS Tickets, "
-                + "ISNULL(SUM(b.FinalAmount - ISNULL(tk.Refund, 0)), 0) AS Revenue, "
+                + "ISNULL(SUM(" + NET_AMOUNT + "), 0) AS Revenue, "
+                + "ISNULL(SUM(CASE WHEN " + IS_ONLINE + " THEN 1 ELSE 0 END), 0) AS OnlineOrders, "
+                + "ISNULL(SUM(CASE WHEN " + IS_ONLINE + " THEN " + NET_AMOUNT + " ELSE 0 END), 0) AS OnlineRevenue, "
                 + "ISNULL(SUM(cs.Concession), 0) AS Concession " + PAID_BOOKINGS;
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             bindPaidBookings(ps, from, to);
@@ -61,6 +68,8 @@ public class AnalyticsDAO {
                     summary.setOrderCount(rs.getInt("Orders"));
                     summary.setTicketCount(rs.getInt("Tickets"));
                     summary.setRevenue(rs.getBigDecimal("Revenue"));
+                    summary.setOnlineOrderCount(rs.getInt("OnlineOrders"));
+                    summary.setOnlineRevenue(rs.getBigDecimal("OnlineRevenue"));
                     summary.setConcessionRevenue(rs.getBigDecimal("Concession"));
                 }
                 return summary;
@@ -68,20 +77,24 @@ public class AnalyticsDAO {
         }
     }
 
-    // Doanh thu theo ngày; byMonth = true thì gộp theo ngày đầu tháng. Ngày không có đơn sẽ không có trong map
-    public Map<LocalDate, BigDecimal> revenueByDate(LocalDateTime from, LocalDateTime to, boolean byMonth)
+    // Doanh thu theo ngày, mỗi mốc là {online, tại quầy}; byMonth = true thì gộp theo ngày đầu tháng.
+    // Ngày không có đơn sẽ không có trong map
+    public Map<LocalDate, BigDecimal[]> revenueByDate(LocalDateTime from, LocalDateTime to, boolean byMonth)
             throws SQLException {
         String bucket = byMonth
                 ? "DATEFROMPARTS(YEAR(b.BookingTime), MONTH(b.BookingTime), 1)"
                 : "CAST(b.BookingTime AS DATE)";
-        String sql = "SELECT " + bucket + " AS Bucket, SUM(b.FinalAmount - ISNULL(tk.Refund, 0)) AS Revenue "
+        String sql = "SELECT " + bucket + " AS Bucket, "
+                + "SUM(CASE WHEN " + IS_ONLINE + " THEN " + NET_AMOUNT + " ELSE 0 END) AS Online, "
+                + "SUM(CASE WHEN " + IS_ONLINE + " THEN 0 ELSE " + NET_AMOUNT + " END) AS Counter "
                 + PAID_BOOKINGS + "GROUP BY " + bucket;
-        Map<LocalDate, BigDecimal> result = new HashMap<>();
+        Map<LocalDate, BigDecimal[]> result = new HashMap<>();
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             bindPaidBookings(ps, from, to);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    result.put(rs.getDate("Bucket").toLocalDate(), rs.getBigDecimal("Revenue"));
+                    result.put(rs.getDate("Bucket").toLocalDate(),
+                            new BigDecimal[] {rs.getBigDecimal("Online"), rs.getBigDecimal("Counter")});
                 }
             }
         }
