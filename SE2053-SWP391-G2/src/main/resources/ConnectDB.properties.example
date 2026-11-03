@@ -1,0 +1,8 @@
+db.url=jdbc:sqlserver://localhost:1433;databaseName=cinemaDB;encrypt=true;trustServerCertificate=true
+db.user=YOUR_DB_USER
+db.password=CHANGE_ME
+
+# HikariCP (tùy chọn, bỏ trống sẽ dùng giá trị mặc định)
+db.pool.maxSize=10
+db.pool.minIdle=2
+db.pool.connectionTimeoutMs=30000
