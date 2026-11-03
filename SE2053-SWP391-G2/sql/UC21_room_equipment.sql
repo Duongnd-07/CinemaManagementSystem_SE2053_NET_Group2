@@ -55,3 +55,22 @@ CROSS JOIN (VALUES
 ) v (Category, Name)
 WHERE NOT EXISTS (SELECT 1 FROM RoomEquipment e WHERE e.RoomID = r.RoomID AND e.Name = v.Name);
 GO
+
+-- Phòng tạo mới (UC-25) luôn có sẵn 2 máy chiếu, 2 loa, 2 điều hòa; ghế vẫn cấu hình theo sơ đồ.
+-- Trigger chạy trong cùng transaction tạo phòng, không ảnh hưởng SCOPE_IDENTITY mà RoomLayoutDAO dùng lấy RoomID
+CREATE OR ALTER TRIGGER TR_Room_DefaultEquipment ON Room AFTER INSERT AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO RoomEquipment (RoomID, Category, Name)
+    SELECT i.RoomID, v.Category, v.Name
+    FROM inserted i
+    CROSS JOIN (VALUES
+        ('Projector', N'Máy chiếu 1'),
+        ('Projector', N'Máy chiếu 2'),
+        ('Sound System', N'Loa 1'),
+        ('Sound System', N'Loa 2'),
+        ('Air Conditioning', N'Điều hòa 1'),
+        ('Air Conditioning', N'Điều hòa 2')
+    ) v (Category, Name);
+END
+GO
