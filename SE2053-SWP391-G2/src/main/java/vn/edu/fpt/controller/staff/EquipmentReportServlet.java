@@ -52,6 +52,9 @@ public class EquipmentReportServlet extends HttpServlet {
         }
         try {
             EquipmentReportForm form = "1".equals(request.getParameter("add")) ? new EquipmentReportForm() : null;
+            if (form != null) {
+                prefill(request, form);
+            }
             render(request, response, form, new LinkedHashMap<>());
         } catch (SQLException e) {
             handleSystemError(response, e);
@@ -118,6 +121,19 @@ public class EquipmentReportServlet extends HttpServlet {
             request.setAttribute("openReports", reportService.listOpenReports());
         }
         request.getRequestDispatcher(VIEW).forward(request, response);
+    }
+
+    // UC-35 A1: mở form từ bảng kiểm tra phòng với phòng và loại thiết bị chọn sẵn (?add=1&roomId=..&category=Seat).
+    // Không có tham số thì form trống như cũ; giá trị lạ bị bỏ qua, khi gửi vẫn validate đầy đủ ở EquipmentReportService.
+    private void prefill(HttpServletRequest request, EquipmentReportForm form) {
+        String category = trim(request.getParameter("category"));
+        if (EquipmentCategory.ALL.contains(category)) {
+            form.setCategory(category);
+        }
+        int roomId = parseInt(request.getParameter("roomId"));
+        if (roomId > 0) {
+            form.setRoomId(String.valueOf(roomId));
+        }
     }
 
     private EquipmentReportForm readForm(HttpServletRequest request) {

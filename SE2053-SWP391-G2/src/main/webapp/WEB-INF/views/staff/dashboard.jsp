@@ -92,17 +92,19 @@
             </div>
             </a>
 
-            <!-- 2. Soát vé vào phòng chiếu -->
+            <!-- 2. Soát vé vào rạp (UC-36: quét vé điện tử, in vé giấy; cần mở ca) -->
+            <a href="${pageContext.request.contextPath}/staff/ticket-print" class="block">
             <div class="bg-[#171b26] border border-white/10 hover:border-emerald-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
                 <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
                     <span class="material-symbols-outlined text-2xl">qr_code_scanner</span>
                 </div>
                 <h3 class="font-bold text-white text-base mb-1">Soát vé vào rạp</h3>
-                <p class="text-xs text-[#8e919f] mb-4">Quét mã QR trên vé giấy hoặc ứng dụng của khách trước giờ chiếu.</p>
+                <p class="text-xs text-[#8e919f] mb-4">Quét mã QR trên vé điện tử của khách (email) để in vé giấy. Cần mở ca trước.</p>
                 <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1 group-hover:underline">
                     Quét mã vé <span class="material-symbols-outlined text-xs">arrow_forward</span>
                 </span>
             </div>
+            </a>
 
             <!-- 3. Bán bắp nước -->
             <div class="bg-[#171b26] border border-white/10 hover:border-amber-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
@@ -126,6 +128,24 @@
                 <p class="text-xs text-[#8e919f] mb-4">Ghi nhận ghế hỏng, đèn chiếu, âm thanh để kỹ thuật viên xử lý.</p>
                 <span class="text-xs font-semibold text-purple-400 flex items-center gap-1 group-hover:underline">
                     Báo sự cố <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+            </a>
+
+            <!-- 5. Kiểm tra & dọn phòng chiếu (UC-35) -->
+            <a href="${pageContext.request.contextPath}/staff/room-inspections"
+               class="block bg-[#171b26] border ${uncheckedRooms > 0 ? 'border-amber-500/50' : 'border-white/10'} hover:border-cyan-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                    <span class="material-symbols-outlined text-2xl">cleaning_services</span>
+                </div>
+                <h3 class="font-bold text-white text-base mb-1">Kiểm tra phòng chiếu</h3>
+                <p class="text-xs text-[#8e919f] mb-4">Kiểm tra ghế và dọn phòng trước mỗi suất chiếu.</p>
+                <c:if test="${uncheckedRooms > 0}">
+                    <p class="text-xs font-semibold text-amber-300 mb-3 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">warning</span><c:out value="${uncheckedMessage}"/>
+                    </p>
+                </c:if>
+                <span class="text-xs font-semibold text-cyan-400 flex items-center gap-1 group-hover:underline">
+                    Kiểm tra phòng <span class="material-symbols-outlined text-xs">arrow_forward</span>
                 </span>
             </a>
         </div>
