@@ -38,6 +38,10 @@
         </a>
     </div>
 
+    <jsp:include page="/WEB-INF/views/manager/room-tabs.jsp">
+        <jsp:param name="active" value="rooms"/>
+    </jsp:include>
+
     <div class="bg-surface-container-low rounded-xl overflow-hidden shadow-xl border border-white/5">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">

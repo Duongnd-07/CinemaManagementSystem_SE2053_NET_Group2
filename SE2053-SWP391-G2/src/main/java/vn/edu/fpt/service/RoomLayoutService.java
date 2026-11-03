@@ -176,20 +176,7 @@ public class RoomLayoutService {
         if (current == null && !MANAGER_STATUSES.contains(status)) {
             errors.put("status", Messages.ROOM_STATUS_INVALID);
         }
-        int rows = parseInt(form.getRows());
-        int cols = parseInt(form.getCols());
-        Map<String, Seat> layout = null;
-        if (rows < 1 || rows > MAX_ROWS || cols < 1 || cols > MAX_COLS) {
-            errors.put("size", Messages.format(Messages.ROOM_SIZE_INVALID, MAX_ROWS, MAX_COLS));
-        } else {
-            // E1: sai kích thước/ký tự, hoặc ghế đôi không chiếm đủ 2 ô liền nhau (ghế chồng nhau) thì không dựng được lưới
-            layout = parseLayout(form.getLayout(), rows, cols);
-            if (layout == null) {
-                errors.put("layout", Messages.ROOM_LAYOUT_INVALID);
-            } else if (layout.values().stream().noneMatch(s -> RoomStatus.ACTIVE.equals(s.getStatus()))) {
-                errors.put("layout", Messages.ROOM_LAYOUT_EMPTY);
-            }
-        }
+        Map<String, Seat> layout = validateLayout(form.getRows(), form.getCols(), form.getLayout(), errors);
         Map<String, Seat> existing = new LinkedHashMap<>();
         if (current != null) {
             for (Seat seat : roomDAO.findSeats(current.getRoomId())) {
@@ -227,6 +214,47 @@ public class RoomLayoutService {
                 throw translate(e);
             }
         }
+    }
+
+    // Kích thước lưới và chuỗi layout (dùng chung cho phòng và phòng mẫu); trả về ghế theo vị trí,
+    // null nếu không dựng được lưới. Lỗi ghi vào errors với khóa "size" / "layout".
+    Map<String, Seat> validateLayout(String rowsRaw, String colsRaw, String layoutRaw, Map<String, String> errors) {
+        int rows = parseInt(rowsRaw);
+        int cols = parseInt(colsRaw);
+        if (rows < 1 || rows > MAX_ROWS || cols < 1 || cols > MAX_COLS) {
+            errors.put("size", Messages.format(Messages.ROOM_SIZE_INVALID, MAX_ROWS, MAX_COLS));
+            return null;
+        }
+        // E1: sai kích thước/ký tự, hoặc ghế đôi không chiếm đủ 2 ô liền nhau (ghế chồng nhau) thì không dựng được lưới
+        Map<String, Seat> layout = parseLayout(layoutRaw, rows, cols);
+        if (layout == null) {
+            errors.put("layout", Messages.ROOM_LAYOUT_INVALID);
+        } else if (layout.values().stream().noneMatch(s -> RoomStatus.ACTIVE.equals(s.getStatus()))) {
+            errors.put("layout", Messages.ROOM_LAYOUT_EMPTY);
+        }
+        return layout;
+    }
+
+    // Sơ đồ ghế hiện tại của phòng để lưu thành phòng mẫu (A4). Ghế chỉ bị khóa vì báo cáo sự cố đang mở
+    // được chép thành ghế dùng được cùng loại, vì khóa đó là tình trạng tạm thời của phòng, không phải cấu trúc.
+    public RoomLayoutForm loadTemplateSource(int roomId) throws SQLException, ValidationException {
+        RoomLayoutForm form = loadForm(roomId);
+        Set<Integer> reports = roomDAO.findSeatIdsWithOpenReports(roomId);
+        if (reports.isEmpty()) {
+            return form;
+        }
+        String[] lines = form.getLayout().split(ROW_SEPARATOR, -1);
+        for (Seat seat : roomDAO.findSeats(roomId)) {
+            int row = rowIndex(seat.getRowName());
+            int col = seat.getColNumber() - 1;
+            if (reports.contains(seat.getSeatId()) && row >= 0 && row < lines.length && col < lines[row].length()) {
+                char[] line = lines[row].toCharArray();
+                line[col] = Character.toUpperCase(line[col]);
+                lines[row] = new String(line);
+            }
+        }
+        form.setLayout(String.join(ROW_SEPARATOR, lines));
+        return form;
     }
 
     // Form Sửa: tên, định dạng, trạng thái của phòng có sẵn (không đụng sơ đồ ghế).
