@@ -71,6 +71,11 @@
             <span class="material-symbols-outlined mr-space-md">receipt_long</span>Lịch sử bán tại quầy
         </a>
         </c:if>
+        <c:if test="${allowedPermissions.contains('VIEW_ROOM_CONDITIONS')}">
+            <a class="${itemBase} ${active == 'room-conditions' ? itemActive : itemIdle}" href="${ctx}/manager/room-conditions">
+                <span class="material-symbols-outlined mr-space-md">fact_check</span>Tình trạng phòng
+            </a>
+        </c:if>
         <c:if test="${allowedPermissions.contains('VIEW_REPORTS')}">
         <a class="${itemBase} ${active == 'reports' ? itemActive : itemIdle}" href="${ctx}/manager/reports">
             <span class="material-symbols-outlined mr-space-md">bar_chart</span>Báo cáo

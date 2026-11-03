@@ -17,6 +17,11 @@
             <a class="${navBase} ${activeMenu == 'dashboard' ? navActive : navIdle}" href="${ctx}/staff/dashboard">
                 <span class="material-symbols-outlined text-[20px]">home</span>Bàn làm việc
             </a>
+            <c:if test="${allowedPermissions.contains('ROOM_CONDITION_CHECK')}">
+                <a class="${navBase} ${activeMenu == 'room-conditions' ? navActive : navIdle}" href="${ctx}/staff/room-conditions">
+                    <span class="material-symbols-outlined text-[20px]">fact_check</span>Kiểm tra phòng
+                </a>
+            </c:if>
             <c:if test="${allowedPermissions.contains('COUNTER_SALE')}">
             <a class="${navBase} ${activeMenu == 'counter' ? navActive : navIdle}" href="${ctx}/staff/counter">
                 <span class="material-symbols-outlined text-[20px]">point_of_sale</span>Bán vé tại quầy

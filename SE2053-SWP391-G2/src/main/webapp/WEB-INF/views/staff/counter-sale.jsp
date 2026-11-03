@@ -64,6 +64,12 @@
     <c:choose>
         <%-- ===== Chưa mở ca ===== --%>
         <c:when test="${empty shift}">
+            <c:if test="${uncheckedRooms > 0 and allowedPermissions.contains('ROOM_CONDITION_CHECK')}">
+                <div class="max-w-md mx-auto mb-space-md rounded-xl border border-amber-500/40 bg-amber-500/10 px-space-md py-space-sm text-amber-300 text-body-sm">
+                    Hôm nay còn ${uncheckedRooms} phòng chưa được kiểm tra.
+                    <a class="underline font-label-lg" href="${ctx}/staff/room-conditions">Kiểm tra phòng trước khi mở ca</a>
+                </div>
+            </c:if>
             <form method="post" action="${ctx}/staff/counter" class="${cardClass} max-w-md mx-auto space-y-space-md">
                 <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                 <input type="hidden" name="action" value="openShift"/>
