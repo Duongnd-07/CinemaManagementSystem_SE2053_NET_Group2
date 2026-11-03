@@ -94,7 +94,19 @@
                                 <span class="text-on-surface-variant"> • ${not empty report.seatId ? 'Ghế ' : ''}<c:out value="${report.seatLabel}"/></span>
                             </c:if>
                         </td>
-                        <td class="py-4 px-5 text-on-surface-variant max-w-xs"><p class="line-clamp-2"><c:out value="${report.description}"/></p></td>
+                        <%-- Mô tả dài: hiện 2 dòng, bấm "Xem thêm" để xem đủ ngay trong bảng --%>
+                        <td class="py-4 px-5 text-on-surface-variant max-w-xs"><c:choose>
+                            <c:when test="${fn:length(report.description) > 60}">
+                                <details class="group">
+                                    <summary class="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                                        <span class="block line-clamp-2 group-open:line-clamp-none whitespace-pre-line"><c:out value="${report.description}"/></span>
+                                        <span class="text-body-sm text-primary hover:underline group-open:hidden">Xem thêm</span>
+                                        <span class="text-body-sm text-primary hover:underline hidden group-open:inline">Thu gọn</span>
+                                    </summary>
+                                </details>
+                            </c:when>
+                            <c:otherwise><p class="whitespace-pre-line"><c:out value="${report.description}"/></p></c:otherwise>
+                        </c:choose></td>
                         <td class="py-4 px-5"><span class="cl-pill ${urgencyPills[report.urgencyLevel]}"><c:out value="${urgencyLabels[report.urgencyLevel]}"/></span></td>
                         <td class="py-4 px-5"><span class="cl-pill ${statusPills[report.status]}"><c:out value="${statusLabels[report.status]}"/></span></td>
                         <td class="py-4 px-5 text-on-surface-variant whitespace-nowrap">
