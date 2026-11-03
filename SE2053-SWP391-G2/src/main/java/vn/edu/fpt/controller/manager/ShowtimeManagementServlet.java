@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -256,6 +257,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
         request.setAttribute("timeFormat", DateTimeFormatter.ofPattern("HH:mm"));
         request.setAttribute("dateFormat", DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         request.setAttribute("fullFormat", DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy"));
+        request.setAttribute("today", java.time.LocalDate.now().toString()); // yyyy-MM-dd cho HTML min attribute
 
         request.getRequestDispatcher(VIEW).forward(request, response);
     }
