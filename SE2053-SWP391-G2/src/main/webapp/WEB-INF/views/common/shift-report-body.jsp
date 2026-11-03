@@ -168,7 +168,7 @@
                             <tr>
                                 <td class="py-2">
                                     <c:choose>
-                                        <c:when test="${not empty receiptBase}"><a class="text-primary hover:underline" href="${receiptBase}${o.bookingId}">#${o.bookingId}</a></c:when>
+                                        <c:when test="${not empty receiptBase and allowedPermissions.contains('COUNTER_SALE')}"><a class="text-primary hover:underline" href="${receiptBase}${o.bookingId}">#${o.bookingId}</a></c:when>
                                         <c:otherwise>#${o.bookingId}</c:otherwise>
                                     </c:choose>
                                 </td>

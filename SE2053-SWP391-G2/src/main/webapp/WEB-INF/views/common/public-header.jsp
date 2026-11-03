@@ -39,7 +39,7 @@
 
                 <!-- Nút tắt theo quyền -->
                 <c:if test="${sessionScope.user.role == 'Admin' || sessionScope.user.role == 'Manager'}">
-                    <a href="${ctx}/manager/movies"
+                    <a href="${ctx}${sessionScope.user.role == 'Admin' ? '/admin/users' : '/manager/movies'}"
                        class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                         <span class="material-symbols-outlined text-sm">settings</span>
                         Quản lý

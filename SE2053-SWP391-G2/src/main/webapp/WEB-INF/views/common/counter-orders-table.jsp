@@ -62,7 +62,10 @@
                             <td class="py-3">
                                 <div><c:out value="${o.staffName}"/></div>
                                 <c:if test="${not empty o.shiftId}">
-                                    <a class="text-body-sm text-primary hover:underline" href="${pageContext.request.contextPath}/manager/shifts?id=${o.shiftId}">Ca #${o.shiftId}</a>
+                                    <c:choose>
+                                        <c:when test="${allowedPermissions.contains('VIEW_SHIFT_REPORTS')}"><a class="text-body-sm text-primary hover:underline" href="${pageContext.request.contextPath}/manager/shifts?id=${o.shiftId}">Ca #${o.shiftId}</a></c:when>
+                                        <c:otherwise><span class="text-body-sm text-on-surface-variant">Ca #${o.shiftId}</span></c:otherwise>
+                                    </c:choose>
                                     <span class="text-body-sm text-on-surface-variant">· Quầy ${fn:substring(o.counterNo, 1, 2)}</span>
                                 </c:if>
                             </td>

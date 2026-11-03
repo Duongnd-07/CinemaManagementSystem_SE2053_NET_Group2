@@ -11,16 +11,21 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import vn.edu.fpt.model.Permission;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.service.ProfileService;
+import vn.edu.fpt.service.RolePermissionService;
 import vn.edu.fpt.util.AppConfig;
 import vn.edu.fpt.util.Messages;
 
-// RBAC theo tiền tố URL: /admin/* cho Admin, /manager/* cho Manager, /staff/* cho Staff, /customer/* cho Customer
+// RBAC theo tiền tố URL: /admin/* cho Admin, /manager/* cho Manager, /staff/* cho Staff, /customer/* cho Customer.
+// Các chức năng của Manager và Staff nằm trong enum Permission được kiểm tra theo cấu hình của Admin (UC-31).
 @WebFilter({"/admin/*", "/staff/*", "/manager/*", "/customer/*"})
 public class AuthFilter implements Filter {
     public static final String SESSION_USER = "user";
@@ -31,7 +36,11 @@ public class AuthFilter implements Filter {
     private static final List<String> CUSTOMER_ROLES = List.of(Role.CUSTOMER);
     private static final Logger LOGGER = Logger.getLogger(AuthFilter.class.getName());
 
+    // Tên các quyền của người dùng hiện tại, JSP dùng để ẩn menu không được phép
+    private static final String ALLOWED_PERMISSIONS = "allowedPermissions";
+
     private final ProfileService profileService = new ProfileService();
+    private final RolePermissionService permissionService = new RolePermissionService();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -57,12 +66,34 @@ public class AuthFilter implements Filter {
             if (!allowed) {
                 req.getSession().setAttribute(SESSION_USER, devUser(staffArea));
             }
+            if (managerArea || staffArea) {
+                req.setAttribute(ALLOWED_PERMISSIONS, EnumSet.allOf(Permission.class).stream()
+                        .map(Permission::name).collect(Collectors.toSet()));
+            }
             chain.doFilter(request, response);
             return;
         }
         if (user == null) {
             redirectToLogin(req, resp);
             return;
+        }
+        if (managerArea || staffArea) {
+            // UC-31: chức năng trong danh mục do Admin phân quyền; URL ngoài danh mục giữ quy tắc theo tiền tố
+            try {
+                Permission permission = Permission.fromPath(req.getServletPath());
+                if (permission != null) {
+                    allowed = ACTIVE.equals(user.getStatus()) && permissionService.isAllowed(user.getRole(), permission);
+                }
+                if (allowed) {
+                    req.setAttribute(ALLOWED_PERMISSIONS, permissionService.allowedFor(user.getRole()).stream()
+                            .map(Permission::name).collect(Collectors.toSet()));
+                    req.setAttribute("managementHome", permissionService.firstManagementPath(user.getRole()));
+                }
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi kiểm tra quyền truy cập", e);
+                resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, Messages.SYSTEM_ERROR);
+                return;
+            }
         }
         if (!allowed) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập vào khu vực này.");

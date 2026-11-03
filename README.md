@@ -116,7 +116,7 @@ Ràng buộc duy nhất: email, SĐT (user), tiêu đề phim, tên thể loại
 
 ## 6. Bảo mật & phân quyền (RBAC)
 
-- Vai trò: **Guest, Customer, Staff, Manager, Admin**. Áp quyền bằng `filter/` theo tiền tố URL (`/customer/*`, `/staff/*`, `/manager/*`, `/admin/*`); URL công khai chỉ gồm duyệt phim, suất chiếu, sơ đồ ghế, đăng nhập/đăng ký.
+- Vai trò: **Guest, Customer, Staff, Manager, Admin**. Áp quyền bằng `filter/` theo tiền tố URL (`/customer/*`, `/staff/*`, `/manager/*`, `/admin/*`); riêng các chức năng của Manager và Staff do Admin phân quyền tại `/admin/permissions` (UC-31); URL công khai chỉ gồm duyệt phim, suất chiếu, sơ đồ ghế, đăng nhập/đăng ký.
 - Mật khẩu **chỉ lưu hash** (BCrypt/PBKDF2 + salt); không bao giờ log hoặc trả mật khẩu/hash ra giao diện.
 - Chống SQL Injection (PreparedStatement), XSS (`<c:out>` / `fn:escapeXml`, không in thẳng `${param.x}` vào HTML), CSRF (token cho form POST).
 - Webhook thanh toán phải xác thực chữ ký (VNPay: **HMAC-SHA512**, SePay: HMAC) và xử lý idempotent (nhận lặp không tạo trùng giao dịch/vé).

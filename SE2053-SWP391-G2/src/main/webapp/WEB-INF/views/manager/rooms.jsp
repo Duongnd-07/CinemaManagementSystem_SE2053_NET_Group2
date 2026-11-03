@@ -165,7 +165,7 @@
                             </select>
                             <p class="mt-1 text-body-sm text-secondary">
                                 Phòng đang bảo trì do sự cố thiết bị. Trạng thái tự trở lại khi sự cố được xử lý ở mục
-                                <a class="underline" href="${ctx}/manager/equipment-reports">Sự cố thiết bị</a>.
+                                <c:choose><c:when test="${allowedPermissions.contains('MANAGE_EQUIPMENT_REPORTS')}"><a class="underline" href="${ctx}/manager/equipment-reports">Sự cố thiết bị</a></c:when><c:otherwise>Sự cố thiết bị</c:otherwise></c:choose>.
                             </p>
                         </c:when>
                         <c:otherwise>

@@ -37,6 +37,13 @@
                     <div class="text-[11px] text-[#8e919f]">Nhân viên quầy / soát vé</div>
                 </div>
             </div>
+            <c:if test="${not empty managementHome}">
+                <a href="${pageContext.request.contextPath}${managementHome}"
+                   class="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                    <span class="material-symbols-outlined text-sm">manage_accounts</span>
+                    Quản lý
+                </a>
+            </c:if>
             <a href="${pageContext.request.contextPath}/logout"
                class="px-3.5 py-1.5 bg-white/5 hover:bg-red-500/20 hover:text-red-300 text-gray-300 border border-white/10 hover:border-red-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
                 <span class="material-symbols-outlined text-sm">logout</span>
@@ -76,6 +83,7 @@
         <!-- Chức năng nghiệp vụ Staff -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- 1. Bán vé tại quầy -->
+            <c:if test="${allowedPermissions.contains('COUNTER_SALE')}">
             <a href="${pageContext.request.contextPath}/staff/counter" class="block">
             <div class="bg-[#171b26] border border-white/10 hover:border-blue-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
                 <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
@@ -88,6 +96,7 @@
                 </span>
             </div>
             </a>
+            </c:if>
 
             <!-- 2. Soát vé vào phòng chiếu -->
             <div class="bg-[#171b26] border border-white/10 hover:border-emerald-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
@@ -114,6 +123,7 @@
             </div>
 
             <!-- 4. Báo cáo sự cố thiết bị -->
+            <c:if test="${allowedPermissions.contains('REPORT_EQUIPMENT')}">
             <a href="${pageContext.request.contextPath}/staff/equipment-reports"
                class="block bg-[#171b26] border border-white/10 hover:border-purple-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
                 <div class="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
@@ -125,6 +135,49 @@
                     Báo sự cố <span class="material-symbols-outlined text-xs">arrow_forward</span>
                 </span>
             </a>
+            </c:if>
+
+            <c:if test="${allowedPermissions.contains('OWN_COUNTER_HISTORY')}">
+            <a href="${pageContext.request.contextPath}/staff/counter-history"
+               class="block bg-[#171b26] border border-white/10 hover:border-cyan-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                    <span class="material-symbols-outlined text-2xl">receipt_long</span>
+                </div>
+                <h3 class="font-bold text-white text-base mb-1">Lịch sử bán vé</h3>
+                <p class="text-xs text-[#8e919f] mb-4">Xem lại các đơn bạn đã bán tại quầy theo từng ca.</p>
+                <span class="text-xs font-semibold text-cyan-400 flex items-center gap-1 group-hover:underline">
+                    Xem lịch sử <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+            </a>
+            </c:if>
+
+            <c:if test="${allowedPermissions.contains('OWN_SHIFTS')}">
+            <a href="${pageContext.request.contextPath}/staff/shifts"
+               class="block bg-[#171b26] border border-white/10 hover:border-rose-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
+                <div class="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                    <span class="material-symbols-outlined text-2xl">schedule</span>
+                </div>
+                <h3 class="font-bold text-white text-base mb-1">Ca làm việc</h3>
+                <p class="text-xs text-[#8e919f] mb-4">Xem báo cáo ca, đếm két và kết ca làm việc.</p>
+                <span class="text-xs font-semibold text-rose-400 flex items-center gap-1 group-hover:underline">
+                    Xem ca <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+            </a>
+            </c:if>
+
+            <c:if test="${allowedPermissions.contains('SEAT_EXCHANGE')}">
+            <a href="${pageContext.request.contextPath}/staff/seat-exchange"
+               class="block bg-[#171b26] border border-white/10 hover:border-teal-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
+                <div class="w-12 h-12 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                    <span class="material-symbols-outlined text-2xl">event_seat</span>
+                </div>
+                <h3 class="font-bold text-white text-base mb-1">Đổi ghế hỏng</h3>
+                <p class="text-xs text-[#8e919f] mb-4">Đổi ghế hoặc đền bù voucher khi ghế của khách bị hỏng.</p>
+                <span class="text-xs font-semibold text-teal-400 flex items-center gap-1 group-hover:underline">
+                    Đổi ghế <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+            </a>
+            </c:if>
         </div>
     </main>
 

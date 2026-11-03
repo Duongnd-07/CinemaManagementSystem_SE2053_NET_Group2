@@ -346,6 +346,11 @@ public final class Messages {
     public static final String REVIEW_NOTIFICATION_HIDDEN_MESSAGE =
             "Đánh giá của bạn cho phim \"{0}\" đã bị ẩn do vi phạm. Lý do: {1}";
 
+    // UC-31: Manage Roles & Permissions
+    public static final String PERMISSION_SAVED = "Lưu phân quyền thành công ({0} quyền được cập nhật).";
+    public static final String PERMISSION_NO_CHANGES = "Không có thay đổi nào để lưu.";
+    public static final String PERMISSION_INVALID = "Phân quyền chưa được lưu do dữ liệu gửi lên không hợp lệ. Vui lòng tải lại trang và thử lại.";
+
     // UC-33: Manage System Configurations
     public static final String CONFIG_SAVED = "Lưu cấu hình thành công ({0} tham số được cập nhật).";
     public static final String CONFIG_NO_CHANGES = "Không có thay đổi nào để lưu.";

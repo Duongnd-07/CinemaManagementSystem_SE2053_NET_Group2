@@ -34,6 +34,10 @@
                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[#8e919f] hover:text-white hover:bg-white/5 transition">
                     <span class="material-symbols-outlined text-lg">group</span>Tài khoản
                 </a>
+                <a href="${ctx}/admin/permissions"
+                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[#8e919f] hover:text-white hover:bg-white/5 transition">
+                    <span class="material-symbols-outlined text-lg">key</span>Phân quyền
+                </a>
                 <a href="${ctx}/admin/configurations" aria-current="page"
                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white bg-white/10 border border-white/10">
                     <span class="material-symbols-outlined text-lg">tune</span>Cấu hình hệ thống
@@ -65,6 +69,7 @@
         <%-- Menu cho màn hình nhỏ --%>
         <nav class="flex sm:hidden gap-2 text-sm">
             <a href="${ctx}/admin/users" class="flex-1 text-center px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#8e919f]">Tài khoản</a>
+            <a href="${ctx}/admin/permissions" class="flex-1 text-center px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#8e919f]">Phân quyền</a>
             <span class="flex-1 text-center px-3 py-2 rounded-xl bg-white/10 border border-white/10 text-white">Cấu hình</span>
             <a href="${ctx}/admin/logs" class="flex-1 text-center px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#8e919f]">Nhật ký</a>
         </nav>
