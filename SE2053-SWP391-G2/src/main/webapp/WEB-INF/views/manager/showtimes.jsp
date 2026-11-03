@@ -610,13 +610,13 @@
                                     <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="startDate">
                                         Từ ngày <span class="text-primary">*</span>
                                     </label>
-                                    <input type="date" id="startDate" name="startDate" class="${inputClass}" required onchange="onBatchParamsChange()"/>
+                                    <input type="date" id="startDate" name="startDate" class="${inputClass}" required onchange="onBatchParamsChange()" min="${today}"/>
                                 </div>
                                 <div>
                                     <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="endDate">
                                         Đến ngày <span class="text-primary">*</span>
                                     </label>
-                                    <input type="date" id="endDate" name="endDate" class="${inputClass}" required onchange="onBatchParamsChange()"/>
+                                    <input type="date" id="endDate" name="endDate" class="${inputClass}" required onchange="onBatchParamsChange()" min="${today}"/>
                                 </div>
                             </div>
 
@@ -787,7 +787,7 @@
 
                             <div>
                                 <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalStartTime">Thời gian bắt đầu <span class="text-primary">*</span></label>
-                                <input id="modalStartTime" name="startTime" class="${inputClass}" type="datetime-local" required/>
+                                <input id="modalStartTime" name="startTime" class="${inputClass}" type="datetime-local" required min="${today}T00:00"/>
                             </div>
 
                             <%-- Khung preview tính toán thời gian và giá vé --%>
@@ -850,13 +850,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var startDateInput = document.getElementById('startDate');
     var endDateInput = document.getElementById('endDate');
-    if (startDateInput && !startDateInput.value) {
-        startDateInput.value = todayStr;
+    if (startDateInput) {
         startDateInput.min = todayStr;
+        if (!startDateInput.value) startDateInput.value = todayStr;
     }
-    if (endDateInput && !endDateInput.value) {
-        endDateInput.value = nextWeekStr;
+    if (endDateInput) {
         endDateInput.min = todayStr;
+        if (!endDateInput.value) endDateInput.value = nextWeekStr;
     }
 
     // Khởi tạo các mốc giờ mẫu cho Batch
@@ -868,6 +868,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Khởi tạo logic tính toán cho form đơn
     initSingleCalculations();
+
+    // Dat min cho input datetime-local trong form don le = ngay hom nay 00:00
+    var singleStartTime = document.getElementById('modalStartTime');
+    if (singleStartTime && !singleStartTime.value) {
+        singleStartTime.min = todayStr + 'T00:00';
+    }
 });
 
 // Chuyển đổi giữa 2 tab: Batch và Single

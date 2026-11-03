@@ -26,10 +26,12 @@
         <c:when test="${empty shift}">
             <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-lg flex flex-wrap items-center justify-between gap-space-md">
                 <span class="text-on-surface-variant">Bạn chưa có ca bán vé nào.</span>
+                <c:if test="${allowedPermissions.contains('COUNTER_SALE')}">
                 <a href="${ctx}/staff/counter"
                    class="flex items-center gap-space-sm bg-primary-container text-on-primary-container px-space-lg py-2 rounded-full font-label-lg">
                     <span class="material-symbols-outlined text-[20px]">play_arrow</span>Mở ca để bán vé
                 </a>
+                </c:if>
             </div>
         </c:when>
         <c:otherwise>

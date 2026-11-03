@@ -450,10 +450,13 @@ public class ShowtimeService {
         // Validate Dates
         LocalDate startDate = parseDate(form.getStartDate());
         LocalDate endDate = parseDate(form.getEndDate());
+        LocalDate today = LocalDate.now();
         if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
             errors.put("dates", Messages.SHOWTIME_BATCH_DATE_INVALID);
+        } else if (startDate.isBefore(today)) {
+            errors.put("dates", "Ng\u00e0y b\u1eaft \u0111\u1ea7u kh\u00f4ng \u0111\u01b0\u1ee3c l\u00e0 ng\u00e0y trong qu\u00e1 kh\u1ee9. Vui l\u00f2ng ch\u1ecdn t\u1eeb ng\u00e0y h\u00f4m nay tr\u1edf \u0111i.");
         } else if (startDate.plusDays(31).isBefore(endDate)) {
-            errors.put("dates", "Khoảng thời gian tạo hàng loạt tối đa là 31 ngày.");
+            errors.put("dates", "Khoang thoi gian tao hang loat toi da la 31 ngay.");
         }
 
         // Validate Days of week
