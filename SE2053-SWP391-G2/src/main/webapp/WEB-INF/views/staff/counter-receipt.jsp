@@ -45,11 +45,16 @@
         </header>
 
         <section class="border-t border-dashed border-white/20 pt-space-md">
-            <div class="font-label-lg"><c:out value="${r.movieTitle}"/></div>
-            <div class="text-body-sm text-on-surface-variant">
-                <c:out value="${r.roomName}"/> · ${fn:substring(r.startTime, 11, 16)} ngày
-                ${fn:substring(r.startTime, 8, 10)}/${fn:substring(r.startTime, 5, 7)}/${fn:substring(r.startTime, 0, 4)}
-            </div>
+            <c:choose>
+                <c:when test="${empty r.movieTitle}"><div class="font-label-lg">Bắp nước &amp; combo</div></c:when>
+                <c:otherwise>
+                    <div class="font-label-lg"><c:out value="${r.movieTitle}"/></div>
+                    <div class="text-body-sm text-on-surface-variant">
+                        <c:out value="${r.roomName}"/> · ${fn:substring(r.startTime, 11, 16)} ngày
+                        ${fn:substring(r.startTime, 8, 10)}/${fn:substring(r.startTime, 5, 7)}/${fn:substring(r.startTime, 0, 4)}
+                    </div>
+                </c:otherwise>
+            </c:choose>
             <table class="w-full mt-space-sm text-body-md">
                 <c:forEach var="t" items="${r.tickets}">
                     <tr>
@@ -99,9 +104,9 @@
     <div class="no-print flex gap-space-md mt-space-lg">
         <button type="button" onclick="window.print()"
                 class="flex-1 flex items-center justify-center gap-space-sm py-3 rounded-full bg-primary-container text-on-primary-container font-label-lg">
-            <span class="material-symbols-outlined">print</span>In vé & hóa đơn
+            <span class="material-symbols-outlined">print</span>${empty r.movieTitle ? 'In hóa đơn' : 'In vé & hóa đơn'}
         </button>
-        <a href="${ctx}/staff/counter"
+        <a href="${ctx}/staff/counter${empty r.movieTitle ? '?mode=concession' : ''}"
            class="flex-1 flex items-center justify-center gap-space-sm py-3 rounded-full bg-surface-container-highest font-label-lg">
             <span class="material-symbols-outlined">add_shopping_cart</span>Bán đơn mới
         </a>

@@ -31,6 +31,8 @@ public class CounterOrder {
     private BigDecimal cashReceived;
     private BigDecimal refundTotal = BigDecimal.ZERO;
     private final List<Ticket> tickets = new ArrayList<>();
+    // Món bắp nước dạng "Tên × số lượng"
+    private final List<String> concessions = new ArrayList<>();
 
     // Một vé của đơn: ghế, mã vé, trạng thái, tiền đã hoàn (hủy vé / đổi xuống ghế thường)
     public static final class Ticket {
@@ -254,6 +256,10 @@ public class CounterOrder {
 
     public void setRefundTotal(BigDecimal refundTotal) {
         this.refundTotal = refundTotal;
+    }
+
+    public List<String> getConcessions() {
+        return concessions;
     }
 
     public List<Ticket> getTickets() {

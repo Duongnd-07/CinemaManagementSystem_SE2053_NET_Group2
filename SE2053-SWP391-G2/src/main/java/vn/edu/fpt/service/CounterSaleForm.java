@@ -22,6 +22,8 @@ public class CounterSaleForm {
     // Tính tiền của cùng một đơn nhờ ô ẩn trên form
     private String transferNote = newTransferNote();
     private boolean ageConfirmed;
+    // Bán riêng bắp nước, không kèm vé (showtimeId = 0)
+    private boolean concessionOnly;
 
     private static final String NOTE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -115,5 +117,13 @@ public class CounterSaleForm {
 
     public void setAgeConfirmed(boolean ageConfirmed) {
         this.ageConfirmed = ageConfirmed;
+    }
+
+    public boolean isConcessionOnly() {
+        return concessionOnly;
+    }
+
+    public void setConcessionOnly(boolean concessionOnly) {
+        this.concessionOnly = concessionOnly;
     }
 }

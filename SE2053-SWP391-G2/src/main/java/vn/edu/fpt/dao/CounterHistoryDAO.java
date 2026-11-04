@@ -21,8 +21,9 @@ import vn.edu.fpt.util.DBContext;
 // Staff chỉ truyền ca của mình (kiểm tra ở Service); Manager lọc theo ngày
 public class CounterHistoryDAO {
 
-    private static final String FROM = "FROM Booking b JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
-            + "JOIN Movie m ON m.MovieID = s.MovieID JOIN Room r ON r.RoomID = s.RoomID "
+    // LEFT JOIN suất chiếu: đơn chỉ bắp nước không có suất
+    private static final String FROM = "FROM Booking b LEFT JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
+            + "LEFT JOIN Movie m ON m.MovieID = s.MovieID LEFT JOIN Room r ON r.RoomID = s.RoomID "
             + "LEFT JOIN [User] c ON c.UserID = b.CustomerID LEFT JOIN [User] st ON st.UserID = b.StaffID "
             + "LEFT JOIN Voucher v ON v.VoucherID = b.VoucherID LEFT JOIN Shift sh ON sh.ShiftID = b.ShiftID "
             + "OUTER APPLY (SELECT SUM(ISNULL(t.RefundAmount, 0)) AS Refund, "
@@ -110,6 +111,7 @@ public class CounterHistoryDAO {
             }
             if (!orders.isEmpty()) {
                 loadTickets(conn, orders);
+                loadConcessions(conn, orders);
             }
         }
         return new ArrayList<>(orders.values());
@@ -131,6 +133,26 @@ public class CounterHistoryDAO {
                     orders.get(rs.getInt("BookingID")).getTickets().add(new CounterOrder.Ticket(
                             rs.getString("RowName") + rs.getInt("ColNumber"), rs.getString("TicketCode"),
                             rs.getString("Status"), rs.getBigDecimal("RefundAmount")));
+                }
+            }
+        }
+    }
+
+    // Món bắp nước của các đơn trong trang, dạng "Tên × số lượng"
+    private void loadConcessions(Connection conn, Map<Integer, CounterOrder> orders) throws SQLException {
+        String placeholders = String.join(", ", Collections.nCopies(orders.size(), "?"));
+        String sql = "SELECT bc.BookingID, c.Name, bc.Quantity FROM Booking_Concession bc "
+                + "JOIN Concession c ON c.ConcessionID = bc.ConcessionID WHERE bc.BookingID IN (" + placeholders + ") "
+                + "ORDER BY bc.BookingID, c.Name";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            int idx = 1;
+            for (Integer bookingId : orders.keySet()) {
+                ps.setInt(idx++, bookingId);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    orders.get(rs.getInt("BookingID")).getConcessions()
+                            .add(rs.getString("Name") + " × " + rs.getInt("Quantity"));
                 }
             }
         }
@@ -187,7 +209,8 @@ public class CounterHistoryDAO {
         order.setCustomerEmail(rs.getString("Email"));
         order.setMovieTitle(rs.getString("Title"));
         order.setRoomName(rs.getString("RoomName"));
-        order.setStartTime(rs.getTimestamp("StartTime").toLocalDateTime());
+        Timestamp start = rs.getTimestamp("StartTime");
+        order.setStartTime(start == null ? null : start.toLocalDateTime());
         order.setTotalPrice(rs.getBigDecimal("TotalPrice"));
         order.setDiscountAmount(rs.getBigDecimal("DiscountAmount"));
         order.setVoucherCode(rs.getString("VoucherCode"));

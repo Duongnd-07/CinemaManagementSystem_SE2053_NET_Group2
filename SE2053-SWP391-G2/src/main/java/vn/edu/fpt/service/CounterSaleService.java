@@ -63,6 +63,7 @@ public class CounterSaleService {
     private static final String SHIFT_REQUIRED = "Bạn cần mở ca trước khi bán vé.";
     private static final String SHIFT_EXPIRED = "Ca của bạn đã hết giờ, đơn chưa được bán. Vui lòng mở ca mới.";
     private static final String SEAT_REQUIRED = "Vui lòng chọn ít nhất một ghế.";
+    private static final String ITEM_REQUIRED = "Vui lòng chọn ít nhất một món.";
     private static final String SEAT_UNAVAILABLE = "Ghế {0} vừa được bán hoặc đang được giữ, vui lòng chọn ghế khác.";
     private static final String CUSTOMER_NOT_FOUND = "Không tìm thấy khách thành viên với số điện thoại/email này.";
     private static final String MEMBER_ONLY = "Chỉ khách thành viên mới được dùng voucher hoặc điểm.";
@@ -143,7 +144,9 @@ public class CounterSaleService {
                 if (shiftService.isExpired(shift, shiftService.shiftHours())) {
                     throw error(ERROR_SHIFT, SHIFT_EXPIRED);
                 }
-                bookingDAO.lockShowtimeSeats(conn, form.getShowtimeId());
+                if (!form.isConcessionOnly()) {
+                    bookingDAO.lockShowtimeSeats(conn, form.getShowtimeId());
+                }
                 CounterQuote quote = price(conn, form, true);
                 checkPayment(form, quote, true);
                 if (!quote.isValid()) {
@@ -181,6 +184,16 @@ public class CounterSaleService {
     private CounterQuote price(Connection conn, CounterSaleForm form, boolean lock)
             throws SQLException, ValidationException {
         CounterQuote quote = new CounterQuote();
+        // Đơn chỉ bắp nước: không gắn khách nên không dùng voucher, không đổi điểm, không tích điểm (bỏ qua mọi
+        // trường khách / voucher / điểm gửi lên)
+        if (form.isConcessionOnly()) {
+            priceConcessions(conn, form, quote);
+            if (!quote.errors.containsKey(ERROR_CONCESSION)
+                    && quote.concessions.stream().allMatch(line -> line.getQuantity() == 0)) {
+                quote.errors.put(ERROR_CONCESSION, ITEM_REQUIRED);
+            }
+            return quote;
+        }
         Showtime showtime = loadSellableShowtime(conn, form.getShowtimeId());
         Movie movie = showtime.getMovie();
         if (AGE_RESTRICTED.contains(movie.getAgeRating()) && !form.isAgeConfirmed()) {
@@ -450,24 +463,27 @@ public class CounterSaleService {
         BigDecimal cashReceived = cash && quote.changeDue != null ? quote.getFinalAmount().add(quote.changeDue) : null;
         int bookingId = counterDAO.insertBooking(conn, booking, reference, cashReceived);
 
-        List<Ticket> tickets = new ArrayList<>();
-        for (BookingSeatLine seat : quote.seats) {
-            Ticket ticket = new Ticket();
-            ticket.setBookingId(bookingId);
-            ticket.setSeatId(seat.getSeatId());
-            ticket.setPrice(seat.getPrice());
-            ticket.setTicketCode(newTicketCode());
-            ticket.setStatus(TicketStatus.UPCOMING);
-            ticket.setShowtimeId(form.getShowtimeId());
-            tickets.add(ticket);
+        // Đơn chỉ bắp nước không có vé
+        if (!quote.seats.isEmpty()) {
+            List<Ticket> tickets = new ArrayList<>();
+            for (BookingSeatLine seat : quote.seats) {
+                Ticket ticket = new Ticket();
+                ticket.setBookingId(bookingId);
+                ticket.setSeatId(seat.getSeatId());
+                ticket.setPrice(seat.getPrice());
+                ticket.setTicketCode(newTicketCode());
+                ticket.setStatus(TicketStatus.UPCOMING);
+                ticket.setShowtimeId(form.getShowtimeId());
+                tickets.add(ticket);
+            }
+            bookingDAO.insertTickets(conn, tickets);
+            // Mã QR để soát vé, giống vé online sau khi thanh toán (UC-14)
+            List<Ticket> saved = bookingDAO.findTickets(conn, bookingId);
+            for (Ticket ticket : saved) {
+                ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
+            }
+            bookingDAO.updateTicketQrCodes(conn, saved);
         }
-        bookingDAO.insertTickets(conn, tickets);
-        // Mã QR để soát vé, giống vé online sau khi thanh toán (UC-14)
-        List<Ticket> saved = bookingDAO.findTickets(conn, bookingId);
-        for (Ticket ticket : saved) {
-            ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
-        }
-        bookingDAO.updateTicketQrCodes(conn, saved);
 
         List<BookingConcession> items = new ArrayList<>();
         for (BookingConcessionLine line : quote.concessions) {

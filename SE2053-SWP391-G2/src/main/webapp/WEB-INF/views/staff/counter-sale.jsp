@@ -101,6 +101,10 @@
                 <c:if test="${date ne today}">
                     <a class="text-primary hover:underline font-label-lg pb-3" href="${ctx}/staff/counter">Về hôm nay</a>
                 </c:if>
+                <a class="ml-auto flex items-center gap-space-sm h-11 px-space-md rounded-full bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-label-lg"
+                   href="${ctx}/staff/counter?mode=concession">
+                    <span class="material-symbols-outlined text-[20px]">fastfood</span>Chỉ bán bắp nước
+                </a>
             </form>
             <c:choose>
                 <c:when test="${empty showtimes}">

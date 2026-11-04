@@ -82,7 +82,8 @@ public class CounterSaleDAO {
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             setNullableInt(ps, 1, booking.getCustomerId());
             ps.setInt(2, booking.getStaffId());
-            ps.setInt(3, booking.getShowtimeId());
+            // Đơn chỉ bắp nước không có suất chiếu (Booking.ShowtimeID cho phép NULL)
+            setNullableInt(ps, 3, booking.getShowtimeId() == 0 ? null : booking.getShowtimeId());
             setNullableInt(ps, 4, booking.getVoucherId());
             ps.setBigDecimal(5, booking.getTotalPrice());
             ps.setBigDecimal(6, booking.getDiscountAmount());
@@ -111,8 +112,8 @@ public class CounterSaleDAO {
         String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.PaymentReference, b.TotalPrice, b.DiscountAmount, "
                 + "b.FinalAmount, b.PointsRedeemed, b.PointsEarned, m.Title, r.RoomName, s.StartTime, "
                 + "st.FullName AS StaffName, c.FullName AS CustomerName, v.VoucherCode, sh.CounterNo "
-                + "FROM Booking b JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
-                + "JOIN Movie m ON m.MovieID = s.MovieID JOIN Room r ON r.RoomID = s.RoomID "
+                + "FROM Booking b LEFT JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
+                + "LEFT JOIN Movie m ON m.MovieID = s.MovieID LEFT JOIN Room r ON r.RoomID = s.RoomID "
                 + "LEFT JOIN [User] st ON st.UserID = b.StaffID LEFT JOIN [User] c ON c.UserID = b.CustomerID "
                 + "LEFT JOIN Voucher v ON v.VoucherID = b.VoucherID LEFT JOIN Shift sh ON sh.ShiftID = b.ShiftID "
                 + "WHERE b.BookingID = ? AND b.Channel = ?";
@@ -137,7 +138,8 @@ public class CounterSaleDAO {
                     receipt.setPointsEarned(rs.getInt("PointsEarned"));
                     receipt.setMovieTitle(rs.getString("Title"));
                     receipt.setRoomName(rs.getString("RoomName"));
-                    receipt.setStartTime(rs.getTimestamp("StartTime").toLocalDateTime());
+                    Timestamp start = rs.getTimestamp("StartTime");
+                    receipt.setStartTime(start == null ? null : start.toLocalDateTime());
                     receipt.setStaffName(rs.getString("StaffName"));
                     receipt.setCustomerName(rs.getString("CustomerName"));
                     receipt.setVoucherCode(rs.getString("VoucherCode"));

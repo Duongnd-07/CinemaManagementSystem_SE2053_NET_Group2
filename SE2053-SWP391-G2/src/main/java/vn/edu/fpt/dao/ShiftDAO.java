@@ -170,6 +170,18 @@ public class ShiftDAO {
                 }
             }
         }
+        Map<Integer, StringBuilder> concessions = new LinkedHashMap<>();
+        String itemSql = "SELECT bc.BookingID, c.Name, bc.Quantity FROM Booking_Concession bc "
+                + "JOIN Concession c ON c.ConcessionID = bc.ConcessionID JOIN Booking b ON b.BookingID = bc.BookingID "
+                + "WHERE b.ShiftID = ? ORDER BY bc.BookingID, c.Name";
+        try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
+            ps.setInt(1, shiftId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    append(concessions, rs.getInt("BookingID"), rs.getString("Name") + " × " + rs.getInt("Quantity"));
+                }
+            }
+        }
         String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.PaymentReference, b.FinalAmount, "
                 + "c.FullName AS CustomerName "
                 + "FROM Booking b LEFT JOIN [User] c ON c.UserID = b.CustomerID "
@@ -183,7 +195,7 @@ public class ShiftDAO {
                     int bookingId = rs.getInt("BookingID");
                     report.getOrders().add(new ShiftReport.Order(bookingId,
                             rs.getTimestamp("BookingTime").toLocalDateTime(), text(seats, bookingId),
-                            text(exchanges, bookingId), text(refunds, bookingId),
+                            text(exchanges, bookingId), text(refunds, bookingId), text(concessions, bookingId),
                             rs.getString("CustomerName"), rs.getString("PaymentMethod"), rs.getString("PaymentReference"),
                             rs.getBigDecimal("FinalAmount")));
                 }

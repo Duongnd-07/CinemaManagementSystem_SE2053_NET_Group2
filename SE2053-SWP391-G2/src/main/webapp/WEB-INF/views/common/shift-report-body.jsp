@@ -170,7 +170,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-body-md">
                         <thead class="text-label-md text-on-surface-variant border-b border-white/10">
-                        <tr><th class="py-2">Đơn</th><th>Giờ</th><th>Ghế lúc bán</th><th>Đổi ghế</th><th>Hoàn tiền</th>
+                        <tr><th class="py-2">Đơn</th><th>Giờ</th><th>Ghế lúc bán</th><th>Bắp nước</th><th>Đổi ghế</th><th>Hoàn tiền</th>
                             <th>Khách</th><th>Hình thức</th><th class="text-right">Thực thu</th></tr>
                         </thead>
                         <tbody class="divide-y divide-white/5">
@@ -183,7 +183,8 @@
                                     </c:choose>
                                 </td>
                                 <td>${fn:substring(o.bookingTime, 11, 16)}</td>
-                                <td><c:out value="${o.seats}"/></td>
+                                <td><c:out value="${empty o.seats ? '-' : o.seats}"/></td>
+                                <td><c:out value="${empty o.concessions ? '-' : o.concessions}"/></td>
                                 <td class="text-amber-300"><c:out value="${empty o.exchanges ? '-' : o.exchanges}"/></td>
                                 <td class="text-amber-300"><c:out value="${empty o.refunds ? '-' : o.refunds}"/></td>
                                 <td><c:out value="${empty o.customerName ? 'Khách vãng lai' : o.customerName}"/></td>

@@ -40,6 +40,8 @@ public class ShiftReport {
         private final String seats;
         private final String exchanges;
         private final String refunds;
+        // Món bắp nước "Combo nhỏ × 2, Coca × 1" (rỗng nếu không mua)
+        private final String concessions;
         private final String customerName;
         private final String paymentMethod;
         // Mã giao dịch ngân hàng để đối chiếu khi kết ca; null với tiền mặt
@@ -47,12 +49,14 @@ public class ShiftReport {
         private final BigDecimal finalAmount;
 
         public Order(int bookingId, LocalDateTime bookingTime, String seats, String exchanges, String refunds,
-                     String customerName, String paymentMethod, String paymentReference, BigDecimal finalAmount) {
+                     String concessions, String customerName, String paymentMethod, String paymentReference,
+                     BigDecimal finalAmount) {
             this.bookingId = bookingId;
             this.bookingTime = bookingTime;
             this.seats = seats;
             this.exchanges = exchanges;
             this.refunds = refunds;
+            this.concessions = concessions;
             this.customerName = customerName;
             this.paymentMethod = paymentMethod;
             this.paymentReference = paymentReference;
@@ -69,6 +73,10 @@ public class ShiftReport {
 
         public LocalDateTime getBookingTime() {
             return bookingTime;
+        }
+
+        public String getConcessions() {
+            return concessions;
         }
 
         public String getSeats() {

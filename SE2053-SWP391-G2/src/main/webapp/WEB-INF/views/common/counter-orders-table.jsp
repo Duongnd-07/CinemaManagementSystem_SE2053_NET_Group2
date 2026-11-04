@@ -56,7 +56,7 @@
                     <th class="px-space-md py-2">Đơn</th>
                     <c:if test="${showStaff}"><th>Nhân viên</th></c:if>
                     <th>Khách hàng</th>
-                    <th>Vé</th>
+                    <th>Vé / bắp nước</th>
                     <th>Voucher / điểm</th>
                     <th>Thanh toán</th>
                     <th class="px-space-md text-right">Hoàn trả</th>
@@ -68,8 +68,15 @@
                         <td class="px-space-md py-3">
                             <div class="font-label-lg">#${o.bookingId}</div>
                             <div class="text-body-sm text-on-surface-variant">${fn:substring(o.bookingTime, 11, 16)} ${fn:substring(o.bookingTime, 8, 10)}/${fn:substring(o.bookingTime, 5, 7)}</div>
-                            <div class="text-body-sm mt-1"><c:out value="${o.movieTitle}"/></div>
-                            <div class="text-body-sm text-on-surface-variant"><c:out value="${o.roomName}"/> · ${fn:substring(o.startTime, 11, 16)} ${fn:substring(o.startTime, 8, 10)}/${fn:substring(o.startTime, 5, 7)}</div>
+                            <c:choose>
+                                <c:when test="${empty o.movieTitle}">
+                                    <span class="cl-pill cl-pill--warning mt-1">Chỉ bắp nước</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="text-body-sm mt-1"><c:out value="${o.movieTitle}"/></div>
+                                    <div class="text-body-sm text-on-surface-variant"><c:out value="${o.roomName}"/> · ${fn:substring(o.startTime, 11, 16)} ${fn:substring(o.startTime, 8, 10)}/${fn:substring(o.startTime, 5, 7)}</div>
+                                </c:otherwise>
+                            </c:choose>
                         </td>
                         <c:if test="${showStaff}">
                             <td class="py-3">
@@ -98,6 +105,9 @@
                                         <span class="cl-pill ${t.status == 'Watched' ? 'cl-pill--muted' : 'cl-pill--warning'}">${ticketLabels[t.status]}</span>
                                     </c:if>
                                 </div>
+                            </c:forEach>
+                            <c:forEach var="item" items="${o.concessions}">
+                                <div class="text-body-sm"><c:out value="${item}"/></div>
                             </c:forEach>
                         </td>
                         <td class="py-3 text-body-sm">
