@@ -42,9 +42,11 @@
             <span class="cl-pill cl-pill--success">Ca đang mở</span>
             <span class="text-body-sm">Quầy ${fn:substring(shift.counterNo, 1, 2)} · từ
                 ${fn:substring(shift.startedAt, 11, 16)} ${fn:substring(shift.startedAt, 8, 10)}/${fn:substring(shift.startedAt, 5, 7)}</span>
+            <c:if test="${allowedPermissions.contains('OWN_SHIFTS')}">
             <a class="flex items-center gap-1 text-error hover:underline font-label-lg" href="${ctx}/staff/shifts">
                 <span class="material-symbols-outlined text-[18px]">logout</span>Kết ca
             </a>
+            </c:if>
         </div>
     </div>
 
