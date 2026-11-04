@@ -33,6 +33,11 @@
         </div>
 
         <div class="flex items-center gap-4">
+            <a href="${pageContext.request.contextPath}/admin/permissions"
+               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl transition">
+                <span class="material-symbols-outlined text-base">key</span>
+                <span>Phân quyền</span>
+            </a>
             <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
                 <jsp:param name="href" value="${pageContext.request.contextPath}/admin/notifications"/>
             </jsp:include>

@@ -479,6 +479,50 @@
         render();
     });
 
+    // A3: "Bắt đầu từ" tải lại form Thêm phòng với lưới của phòng mẫu đã chọn (chưa lưu gì nên không mất dữ liệu đã lưu)
+    var startFrom = document.getElementById('startFrom');
+    if (startFrom) {
+        var startValue = startFrom.value;
+        startFrom.addEventListener('change', function () {
+            if (!window.confirm('Thay toàn bộ lưới hiện tại bằng lựa chọn mới?')) {
+                startFrom.value = startValue;
+                return;
+            }
+            window.location.href = startFrom.dataset.baseUrl + (startFrom.value ? '&template=' + startFrom.value : '');
+        });
+    }
+
+    // A4: hộp thoại "Lưu thành phòng mẫu"
+    document.querySelectorAll('[data-open]').forEach(function (button) {
+        var modal = document.querySelector(button.dataset.open);
+        if (!modal) {
+            return;
+        }
+        var toggle = function (open) {
+            modal.classList.toggle('hidden', !open);
+            modal.classList.toggle('flex', open);
+            if (open) {
+                var input = modal.querySelector('input[type="text"]');
+                if (input) {
+                    input.focus();
+                }
+            }
+        };
+        button.addEventListener('click', function () {
+            toggle(true);
+        });
+        modal.querySelectorAll('[data-close]').forEach(function (close) {
+            close.addEventListener('click', function () {
+                toggle(false);
+            });
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                toggle(false);
+            }
+        });
+    });
+
     load();
     render();
 })();

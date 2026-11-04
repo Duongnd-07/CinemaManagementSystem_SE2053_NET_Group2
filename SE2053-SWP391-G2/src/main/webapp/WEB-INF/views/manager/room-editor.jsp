@@ -1,7 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<%-- templateMode: sửa phòng mẫu (A5, form.roomId là TemplateID); roomEditing: sửa sơ đồ ghế của phòng có sẵn --%>
+<c:set var="templateMode" value="${requestScope.templateMode == true}"/>
 <c:set var="editing" value="${form.roomId > 0}"/>
+<c:set var="roomEditing" value="${editing and not templateMode}"/>
+<c:set var="backUrl" value="${ctx}${templateMode ? '/manager/room-templates' : '/manager/rooms'}"/>
 <c:set var="inputClass" value="form-input bg-surface-container-high text-on-surface px-4 rounded-lg border border-white/10 focus:border-primary outline-none"/>
 <%-- Ghế bị giới hạn thao tác (vị trí:lý do), để room-editor.js chặn sớm; server vẫn kiểm tra lại khi lưu --%>
 <c:set var="lockData" value=""/>
@@ -11,7 +15,7 @@
 <!DOCTYPE html>
 <html lang="vi" class="dark">
 <head>
-    <title>${editing ? 'Sửa phòng chiếu' : 'Thêm phòng chiếu'} - CineAdmin</title>
+    <title>${templateMode ? (editing ? 'Sửa phòng mẫu' : 'Thêm phòng mẫu') : (editing ? 'Sửa phòng chiếu' : 'Thêm phòng chiếu')} - CineAdmin</title>
     <jsp:include page="/WEB-INF/views/common/manager-head.jsp"/>
     <link href="${ctx}/assets/css/room-editor.css?v=2" rel="stylesheet"/>
 </head>
@@ -24,55 +28,94 @@
         <div class="flex items-center gap-space-sm mb-space-xs">
             <span class="text-label-sm px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Quản lý rạp</span>
             <span class="text-outline text-body-sm">/</span>
-            <a class="text-on-surface-variant text-body-sm hover:text-on-surface" href="${ctx}/manager/rooms">Phòng chiếu</a>
+            <a class="text-on-surface-variant text-body-sm hover:text-on-surface" href="${backUrl}">${templateMode ? 'Phòng mẫu' : 'Phòng chiếu'}</a>
             <span class="text-outline text-body-sm">/</span>
             <span class="text-on-surface-variant text-body-sm">${editing ? 'Chỉnh sửa' : 'Thêm mới'}</span>
         </div>
-        <h1 class="text-headline-lg text-on-surface">
-            <c:choose>
-                <c:when test="${editing}">Sơ đồ ghế: <c:out value="${room.roomName}"/></c:when>
-                <c:otherwise>Thêm phòng chiếu mới</c:otherwise>
-            </c:choose>
-        </h1>
+        <div class="flex flex-wrap items-center justify-between gap-space-md">
+            <h1 class="text-headline-lg text-on-surface">
+                <c:choose>
+                    <c:when test="${templateMode and editing}">Phòng mẫu: <c:out value="${form.name}"/></c:when>
+                    <c:when test="${templateMode}">Thêm phòng mẫu mới</c:when>
+                    <c:when test="${editing}">Sơ đồ ghế: <c:out value="${room.roomName}"/></c:when>
+                    <c:otherwise>Thêm phòng chiếu mới</c:otherwise>
+                </c:choose>
+            </h1>
+            <c:if test="${roomEditing}">
+                <%-- A4: lưu sơ đồ ghế đã lưu của phòng thành phòng mẫu --%>
+                <button type="button" data-open="#saveTemplateModal"
+                        class="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-lg transition-all">
+                    <span class="material-symbols-outlined text-[18px]">bookmark_add</span>Lưu thành phòng mẫu
+                </button>
+            </c:if>
+        </div>
     </div>
+
+    <c:if test="${not empty flashSuccess or not empty flashError}">
+        <div id="toast" role="status"
+             class="fixed top-20 right-8 z-[60] max-w-md flex items-start gap-space-sm px-space-lg py-space-md rounded-xl shadow-2xl border
+                    ${not empty flashSuccess ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-error-container/80 border-error/40 text-on-error-container'}">
+            <span class="material-symbols-outlined">${not empty flashSuccess ? 'check_circle' : 'error'}</span>
+            <span class="font-label-lg"><c:out value="${not empty flashSuccess ? flashSuccess : flashError}"/></span>
+        </div>
+    </c:if>
 
     <%-- E1 và các lỗi nghiệp vụ: liệt kê tất cả, lỗi theo trường hiện thêm ngay dưới ô nhập --%>
     <c:if test="${not empty errors}">
         <div class="form-error-banner mb-space-lg" role="alert">
-            <p class="font-label-lg mb-1">Chưa lưu được phòng chiếu:</p>
+            <p class="font-label-lg mb-1">${templateMode ? 'Chưa lưu được phòng mẫu:' : 'Chưa lưu được phòng chiếu:'}</p>
             <ul class="list-disc pl-5 space-y-0.5">
                 <c:forEach var="error" items="${errors}"><li><c:out value="${error.value}"/></li></c:forEach>
             </ul>
         </div>
     </c:if>
 
-    <form id="roomForm" method="post" action="${ctx}/manager/rooms" novalidate
+    <form id="roomForm" method="post" action="${backUrl}" novalidate
           class="grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-space-lg items-start">
         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="roomId" value="${form.roomId}"/>
         <input type="hidden" id="layout" name="layout" value="<c:out value='${form.layout}'/>"/>
+        <c:if test="${not templateMode and not editing}">
+            <input type="hidden" name="template" value="${selectedTemplate}"/>
+        </c:if>
 
         <!-- Thông tin phòng + công cụ -->
         <div class="space-y-space-lg">
             <section class="bg-surface-container-low border border-white/5 rounded-xl p-space-lg space-y-space-md">
                 <h2 class="font-headline-sm text-on-surface flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">meeting_room</span>Thông tin phòng
+                    <span class="material-symbols-outlined text-primary">${templateMode ? 'bookmarks' : 'meeting_room'}</span>${templateMode ? 'Thông tin phòng mẫu' : 'Thông tin phòng'}
                 </h2>
+                <c:if test="${not templateMode and not editing}">
+                    <%-- A3: chọn phòng mẫu tải lại form với lưới của mẫu; chưa lưu gì cho tới khi bấm Lưu --%>
+                    <div>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="startFrom">Bắt đầu từ</label>
+                        <select class="${inputClass} w-full" id="startFrom" data-base-url="${ctx}/manager/rooms?add=1">
+                            <option value="">Lưới trống (8 × 12 ghế thường)</option>
+                            <c:forEach var="template" items="${templates}">
+                                <option value="${template.templateId}" ${selectedTemplate == template.templateId ? 'selected' : ''}>
+                                    <c:out value="${template.templateName}"/> - ${template.rows} × ${template.cols}, ${template.seatCount} ghế
+                                </option>
+                            </c:forEach>
+                        </select>
+                        <p class="mt-1 text-body-sm text-outline">Đổi lựa chọn sẽ thay toàn bộ lưới hiện tại bằng lưới của phòng mẫu.</p>
+                        <c:if test="${not empty errors.general}"><p class="form-error"><c:out value="${errors.general}"/></p></c:if>
+                    </div>
+                </c:if>
                 <div>
-                    <label class="block text-label-md text-on-surface-variant mb-1" for="name">Tên / mã phòng <span class="req">*</span></label>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="name">${templateMode ? 'Tên phòng mẫu' : 'Tên / mã phòng'} <span class="req">*</span></label>
                     <input class="${inputClass} w-full" id="name" name="name" type="text" maxlength="${maxName}"
-                           value="<c:out value='${form.name}'/>" placeholder="VD: Phòng chiếu 3, IMAX-01"/>
+                           value="<c:out value='${form.name}'/>" placeholder="${templateMode ? 'VD: Phòng 2D 10 x 12' : 'VD: Phòng chiếu 3, IMAX-01'}"/>
                     <c:if test="${not empty errors.name}"><p class="form-error"><c:out value="${errors.name}"/></p></c:if>
                 </div>
                 <div>
-                    <label class="block text-label-md text-on-surface-variant mb-1" for="format">Định dạng chiếu <span class="req">*</span></label>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="format">${templateMode ? 'Định dạng gợi ý' : 'Định dạng chiếu'} <span class="req">*</span></label>
                     <select class="${inputClass} w-full" id="format" name="format">
                         <c:forEach var="format" items="${formats}">
                             <option value="${format}" ${form.format == format ? 'selected' : ''}>${format}</option>
                         </c:forEach>
                     </select>
                     <c:if test="${not empty errors.format}"><p class="form-error"><c:out value="${errors.format}"/></p></c:if>
-                    <c:if test="${editing and upcomingShowtimes > 0}">
+                    <c:if test="${roomEditing and upcomingShowtimes > 0}">
                         <p class="mt-1 text-body-sm text-secondary">Phòng đang có ${upcomingShowtimes} suất chiếu sắp tới nên không thể đổi định dạng.</p>
                     </c:if>
                 </div>
@@ -94,6 +137,10 @@
                     <span class="material-symbols-outlined text-[18px]">grid_on</span>Áp dụng kích thước lưới
                 </button>
                 <c:choose>
+                    <c:when test="${templateMode}">
+                        <%-- Phòng mẫu không có trạng thái; phòng tạo từ mẫu luôn bắt đầu ở Hoạt động --%>
+                        <p class="text-body-sm text-outline">Phòng mẫu không bao giờ được dùng cho suất chiếu. Sửa hoặc xóa phòng mẫu không ảnh hưởng các phòng đã tạo từ mẫu.</p>
+                    </c:when>
                     <c:when test="${editing}">
                         <%-- Phòng có sẵn: đổi trạng thái ở nút Sửa của danh sách phòng --%>
                         <p class="text-body-sm text-on-surface-variant">
@@ -164,7 +211,7 @@
                 <li><span class="cell cell-C cell-wide"></span>Ghế đôi (2 người)</li>
                 <li><span class="cell cell-S cell-off"></span>Đang khóa</li>
                 <li><span class="cell cell-aisle"></span>Lối đi</li>
-                <c:if test="${editing}">
+                <c:if test="${roomEditing}">
                     <li><span class="cell cell-S lock-sold"></span>Đã bán vé suất sắp tới (không khóa, đổi loại hay xóa được)</li>
                     <li><span class="cell cell-S cell-off lock-report"></span>Có báo cáo sự cố chưa xử lý (phải giữ khóa)</li>
                 </c:if>
@@ -172,10 +219,10 @@
 
             <div class="flex items-center justify-end gap-space-md pt-space-lg mt-space-lg border-t border-white/5">
                 <a class="px-5 py-2.5 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-bright font-label-lg transition-all"
-                   href="${ctx}/manager/rooms">Hủy bỏ</a>
+                   href="${backUrl}">Hủy bỏ</a>
                 <button type="submit"
                         class="px-6 py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary/90 font-label-lg shadow-[0_0_20px_-2px_rgba(229,9,20,0.45)] transition-all">
-                    ${editing ? 'Lưu thay đổi' : 'Lưu phòng chiếu'}
+                    ${editing ? 'Lưu thay đổi' : templateMode ? 'Lưu phòng mẫu' : 'Lưu phòng chiếu'}
                 </button>
             </div>
         </section>
@@ -183,7 +230,40 @@
 </div>
 </main>
 
+<c:if test="${roomEditing}">
+    <%-- A4: Lưu thành phòng mẫu (dùng sơ đồ ghế đã lưu của phòng, không gồm thay đổi chưa lưu trên lưới) --%>
+    <div id="saveTemplateModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-md p-space-xl shadow-2xl relative">
+            <button type="button" class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface" data-close title="Đóng">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <h3 class="text-headline-md text-on-surface mb-space-md flex items-center gap-space-sm">
+                <span class="material-symbols-outlined text-primary">bookmark_add</span>Lưu thành phòng mẫu
+            </h3>
+            <p class="text-body-sm text-on-surface-variant mb-space-md">
+                Chép kích thước lưới, loại ghế, ghế khóa, lối đi và định dạng của sơ đồ <strong>đã lưu</strong> của phòng này.
+                Ghế chỉ đang khóa vì báo cáo sự cố được chép thành ghế dùng được.
+            </p>
+            <form method="post" action="${ctx}/manager/room-templates" novalidate class="space-y-space-md">
+                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                <input type="hidden" name="action" value="fromRoom"/>
+                <input type="hidden" name="roomId" value="${form.roomId}"/>
+                <div>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="templateName">Tên phòng mẫu <span class="req">*</span></label>
+                    <input class="${inputClass} w-full" id="templateName" name="templateName" type="text" maxlength="${maxName}" required/>
+                </div>
+                <div class="flex items-center justify-end gap-space-md pt-space-sm">
+                    <button type="button" data-close
+                            class="px-5 py-2.5 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-bright font-label-lg transition-all">Hủy bỏ</button>
+                    <button type="submit"
+                            class="px-6 py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary/90 font-label-lg transition-all">Lưu phòng mẫu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</c:if>
+
 <script src="${ctx}/assets/js/manager-common.js"></script>
-<script src="${ctx}/assets/js/room-editor.js?v=2"></script>
+<script src="${ctx}/assets/js/room-editor.js?v=3"></script>
 </body>
 </html>

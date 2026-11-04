@@ -18,11 +18,13 @@ import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.MovieService;
 import vn.edu.fpt.service.RoomLayoutForm;
 import vn.edu.fpt.service.RoomLayoutService;
+import vn.edu.fpt.service.RoomTemplateService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
 
-// UC-25: Manage Rooms & Seat Layout - danh sách phòng, thêm (?add=1) và sửa (?edit=ID) phòng kèm sơ đồ ghế.
+// UC-25: Manage Rooms & Seat Layout - danh sách phòng, thêm (?add=1, từ phòng mẫu: &template=ID) và sửa (?edit=ID)
+// phòng kèm sơ đồ ghế. Phòng mẫu (A4, A5) ở RoomTemplateServlet.
 // AuthFilter đã giới hạn /manager/* cho Manager/Admin.
 @WebServlet("/manager/rooms")
 public class RoomManagementServlet extends HttpServlet {
@@ -33,6 +35,7 @@ public class RoomManagementServlet extends HttpServlet {
     private static final String FLASH_ERROR = "flashError";
 
     private final RoomLayoutService roomService = new RoomLayoutService();
+    private final RoomTemplateService templateService = new RoomTemplateService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -47,7 +50,7 @@ public class RoomManagementServlet extends HttpServlet {
                     redirectToList(request, response, FLASH_ERROR, e.getErrors().get("general"));
                 }
             } else if ("1".equals(request.getParameter("add"))) {
-                renderEditor(request, response, roomService.newForm(), new LinkedHashMap<>());
+                renderNewRoom(request, response, parseInt(request.getParameter("template")));
             } else if (request.getParameter("info") != null) {
                 try {
                     RoomLayoutForm form = roomService.loadInfoForm(parseInt(request.getParameter("info")));
@@ -94,6 +97,8 @@ public class RoomManagementServlet extends HttpServlet {
                 if (Messages.ROOM_NOT_FOUND.equals(e.getErrors().get("general"))) {
                     redirectToList(request, response, FLASH_ERROR, Messages.ROOM_NOT_FOUND);
                 } else {
+                    // Giữ lựa chọn "Bắt đầu từ" của phòng mới khi hiện lại form có lỗi
+                    request.setAttribute("selectedTemplate", parseInt(request.getParameter("template")));
                     renderEditor(request, response, form, e.getErrors());
                 }
                 return;
@@ -141,8 +146,29 @@ public class RoomManagementServlet extends HttpServlet {
         request.getRequestDispatcher(LIST_VIEW).forward(request, response);
     }
 
+    // A3: Thêm phòng mới, bắt đầu từ lưới trống hoặc từ một phòng mẫu (chưa lưu gì cho tới khi bấm Lưu)
+    private void renderNewRoom(HttpServletRequest request, HttpServletResponse response, int templateId)
+            throws SQLException, ServletException, IOException {
+        if (templateId <= 0) {
+            renderEditor(request, response, roomService.newForm(), new LinkedHashMap<>());
+            return;
+        }
+        try {
+            RoomLayoutForm form = templateService.newRoomFromTemplate(templateId);
+            request.setAttribute("selectedTemplate", templateId);
+            renderEditor(request, response, form, new LinkedHashMap<>());
+        } catch (ValidationException e) {
+            // E6: phòng mẫu vừa bị xóa ở phiên khác
+            renderEditor(request, response, roomService.newForm(), new LinkedHashMap<>(e.getErrors()));
+        }
+    }
+
     private void renderEditor(HttpServletRequest request, HttpServletResponse response, RoomLayoutForm form,
                               Map<String, String> errors) throws SQLException, ServletException, IOException {
+        moveFlashToRequest(request);
+        if (form.getRoomId() <= 0) {
+            request.setAttribute("templates", templateService.listTemplates());
+        }
         request.setAttribute("form", form);
         request.setAttribute("errors", errors);
         request.setAttribute("room", roomService.findRoom(form.getRoomId()));
