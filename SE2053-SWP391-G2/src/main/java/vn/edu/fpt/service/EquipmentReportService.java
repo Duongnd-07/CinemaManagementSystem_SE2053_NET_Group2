@@ -28,8 +28,12 @@ import vn.edu.fpt.util.Page;
 
 public class EquipmentReportService {
     public static final int PAGE_SIZE = 10;
+    private static final int MIN_DESCRIPTION = 10;
     private static final int MAX_DESCRIPTION = 1000;
+    private static final int MIN_NOTE = 5;
     private static final int MAX_NOTE = 500;
+    private static final String DESCRIPTION_INVALID = "Mô tả sự cố phải từ 10 đến 1000 ký tự và có chữ.";
+    private static final String NOTE_INVALID = "Ghi chú phải từ 5 đến 500 ký tự và có chữ.";
     private static final int SQL_UNIQUE_INDEX_VIOLATION = 2601;
     private static final String LOG_ROOM_AUTO_UNLOCKED =
             "Tự động mở khóa phòng chiếu: không còn sự cố nào chưa xử lý.";
@@ -118,8 +122,8 @@ public class EquipmentReportService {
         String description = form.getDescription().trim();
         if (description.isEmpty()) {
             errors.put("description", Messages.format(Messages.MSG02, "Mô tả sự cố"));
-        } else if (description.length() > MAX_DESCRIPTION) {
-            errors.put("description", Messages.format(Messages.MSG08, MAX_DESCRIPTION));
+        } else if (!TextRule.ok(description, MIN_DESCRIPTION, MAX_DESCRIPTION)) {
+            errors.put("description", DESCRIPTION_INVALID);
         }
         return errors;
     }
@@ -299,14 +303,21 @@ public class EquipmentReportService {
 
     public Map<String, String> validateUpdate(EquipmentReport report, EquipmentReportUpdateForm form) {
         Map<String, String> errors = new LinkedHashMap<>();
+        // E2: Manager khác đã đổi trạng thái từ lúc form này được mở
+        if (!form.getCurrentStatus().isEmpty() && !form.getCurrentStatus().equals(report.getStatus())) {
+            errors.put("general", Messages.REPORT_CHANGED);
+            return errors;
+        }
         String newStatus = resolveNewStatus(report, form);
         if (!ReportStatus.isValid(newStatus)) {
             errors.put("newStatus", Messages.REPORT_STATUS_INVALID);
         } else if (!allowedStatuses(report.getStatus()).contains(newStatus)) {
             errors.put("newStatus", Messages.REPORT_STATUS_BACKWARD);
         }
-        if (form.getNote().trim().length() > MAX_NOTE) {
-            errors.put("note", Messages.format(Messages.MSG08, MAX_NOTE));
+        // Ghi chú không bắt buộc; nếu nhập thì phải có nội dung
+        String note = form.getNote().trim();
+        if (!note.isEmpty() && !TextRule.ok(note, MIN_NOTE, MAX_NOTE)) {
+            errors.put("note", NOTE_INVALID);
         }
         if (errors.isEmpty() && newStatus.equals(report.getStatus()) && form.getNote().trim().isEmpty()
                 && form.isLockRoom() == isRoomLocked(report)) {

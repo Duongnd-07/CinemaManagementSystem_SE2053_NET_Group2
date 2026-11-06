@@ -172,14 +172,14 @@
                 <input type="hidden" name="concessionId" value="${form.concessionId}"/>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="name">Tên món <span class="req">*</span></label>
-                    <input class="${inputClass}" id="name" name="name" type="text" maxlength="100" autofocus
-                           value="<c:out value='${form.name}'/>" placeholder="VD: Combo Bắp Nước Nhỏ"/>
+                    <input class="${inputClass}" id="name" name="name" type="text" minlength="2" maxlength="100" autofocus
+                           value="<c:out value='${form.name}'/>" placeholder="Từ 2 đến 100 ký tự, phải có chữ - VD: Combo Bắp Nước Nhỏ"/>
                     <c:if test="${not empty errors.name}"><p class="form-error"><c:out value="${errors.name}"/></p></c:if>
                 </div>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="description">Mô tả</label>
                     <textarea class="${inputClass} py-2" id="description" name="description" rows="2" maxlength="500"
-                              placeholder="VD: 1 bắp lớn + 1 nước vừa"><c:out value="${form.description}"/></textarea>
+                              placeholder="Không bắt buộc, tối đa 500 ký tự.&#10;VD: 1 bắp lớn + 1 nước vừa"><c:out value="${form.description}"/></textarea>
                     <c:if test="${not empty errors.description}"><p class="form-error"><c:out value="${errors.description}"/></p></c:if>
                 </div>
                 <div class="grid grid-cols-2 gap-space-md">

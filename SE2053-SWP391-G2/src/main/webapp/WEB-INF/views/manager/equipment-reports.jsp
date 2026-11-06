@@ -162,6 +162,8 @@
             <form method="post" action="${ctx}/manager/equipment-reports${fn:escapeXml(listQuery)}" novalidate class="space-y-space-md">
                 <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                 <input type="hidden" name="reportId" value="${report.reportId}"/>
+                <%-- E2: trạng thái lúc mở form; Manager khác đổi trước thì lần lưu này bị từ chối --%>
+                <input type="hidden" name="currentStatus" value="${report.status}"/>
                 <c:if test="${not resolved}">
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="newStatus">Cập nhật trạng thái</label>
@@ -175,8 +177,8 @@
                 </c:if>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="note">Ghi chú tiến độ</label>
-                    <textarea class="${inputClass} py-2" id="note" name="note" rows="3" maxlength="500"
-                              placeholder="VD: Đã gọi kỹ thuật, dự kiến sửa xong trong hôm nay"><c:out value="${form.note}"/></textarea>
+                    <textarea class="${inputClass} py-2" id="note" name="note" rows="3" minlength="5" maxlength="500"
+                              placeholder="Không bắt buộc. Nếu nhập: từ 5 đến 500 ký tự và phải có chữ.&#10;VD: Đã gọi kỹ thuật, dự kiến sửa xong trong hôm nay"><c:out value="${form.note}"/></textarea>
                     <c:if test="${not empty errors.note}"><p class="form-error"><c:out value="${errors.note}"/></p></c:if>
                 </div>
                 <label class="flex items-start gap-space-sm cursor-pointer">

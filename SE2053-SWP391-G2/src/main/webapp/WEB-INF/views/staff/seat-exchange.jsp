@@ -118,8 +118,8 @@
 
                 <section class="${cardClass}">
                     <label class="block text-label-md text-on-surface-variant mb-1" for="reason">Tình trạng ghế hỏng <span class="req">*</span></label>
-                    <textarea class="${inputClass} py-2" id="reason" name="reason" rows="2" maxlength="500" required
-                              placeholder="VD: Gãy tựa lưng, không ngả được"><c:out value="${reason}"/></textarea>
+                    <textarea class="${inputClass} py-2" id="reason" name="reason" rows="2" minlength="5" maxlength="500" required
+                              placeholder="Bắt buộc, từ 5 đến 500 ký tự và phải có chữ.&#10;VD: Gãy tựa lưng, không ngả được"><c:out value="${reason}"/></textarea>
                     <c:if test="${not empty errors.reason}"><p class="form-error"><c:out value="${errors.reason}"/></p></c:if>
                     <p class="text-body-sm text-on-surface-variant mt-1">Ghế ${tk.seatLabel} sẽ bị khóa bảo trì và tạo báo cáo sự cố cho quản lý.</p>
                 </section>

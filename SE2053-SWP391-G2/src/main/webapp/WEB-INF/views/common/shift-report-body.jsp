@@ -134,7 +134,7 @@
                     <c:if test="${not empty errors.countedCash}"><p class="form-error"><c:out value="${errors.countedCash}"/></p></c:if>
                     <label class="block text-label-md text-on-surface-variant" for="cashNote">Ghi chú (bắt buộc nếu thừa/thiếu)</label>
                     <textarea class="${inputClass} py-2" id="cashNote" name="cashNote" rows="2" maxlength="500"
-                              placeholder="VD: Thối nhầm cho khách 50.000đ"><c:out value="${cashNote}"/></textarea>
+                              placeholder="Bắt buộc khi két lệch, từ 5 đến 500 ký tự và phải có chữ.&#10;VD: Thối nhầm cho khách 50.000đ"><c:out value="${cashNote}"/></textarea>
                     <c:if test="${not empty errors.cashNote}"><p class="form-error"><c:out value="${errors.cashNote}"/></p></c:if>
                     <button type="submit"
                             class="w-full flex items-center justify-center gap-space-sm py-3 rounded-full bg-primary-container text-on-primary-container font-label-lg">

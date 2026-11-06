@@ -35,7 +35,6 @@ import vn.edu.fpt.model.UrgencyLevel;
 import vn.edu.fpt.model.Voucher;
 import vn.edu.fpt.model.VoucherType;
 import vn.edu.fpt.util.DBContext;
-import vn.edu.fpt.util.Messages;
 
 // UC-20: Exchange Broken Seat.
 // Luôn ưu tiên ghế cùng hạng; chỉ khi hết ghế cùng hạng mới có: ghế thường -> nâng VIP miễn phí; ghế VIP -> xuống
@@ -76,6 +75,8 @@ public class SeatExchangeService {
     private static final String TARGET_TAKEN = "Ghế vừa chọn không còn trống, vui lòng chọn lại.";
     private static final String SHIFT_REQUIRED = "Cần mở ca bán vé để lấy tiền trong két trả cho khách.";
     private static final String REASON_REQUIRED = "Vui lòng ghi tình trạng ghế hỏng.";
+    private static final String REASON_INVALID = "Tình trạng ghế phải từ 5 đến 500 ký tự và có chữ.";
+    private static final int MIN_REASON = 5;
     // Ghép chuỗi thay vì Messages.format: lý do do nhân viên gõ có thể chứa dấu ' mà MessageFormat hiểu sai
     private static final String REPORT_DESCRIPTION_PREFIX = "Khách phản ánh khi đổi ghế (vé ";
     private static final String POINTS_NOTE_PREFIX = "Hoàn điểm do ghế hỏng, vé ";
@@ -425,8 +426,8 @@ public class SeatExchangeService {
         if (value.isEmpty()) {
             throw error(ERROR_REASON, REASON_REQUIRED);
         }
-        if (value.length() > MAX_REASON) {
-            throw error(ERROR_REASON, Messages.format(Messages.MSG08, MAX_REASON));
+        if (!TextRule.ok(value, MIN_REASON, MAX_REASON)) {
+            throw error(ERROR_REASON, REASON_INVALID);
         }
         return value;
     }

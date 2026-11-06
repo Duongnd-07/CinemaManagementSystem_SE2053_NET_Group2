@@ -126,6 +126,7 @@ public class EquipmentReportManagementServlet extends HttpServlet {
         form.setNewStatus(trim(request.getParameter("newStatus")));
         form.setNote(trim(request.getParameter("note")));
         form.setLockRoom("1".equals(request.getParameter("lockRoom")));
+        form.setCurrentStatus(trim(request.getParameter("currentStatus")));
         return form;
     }
 

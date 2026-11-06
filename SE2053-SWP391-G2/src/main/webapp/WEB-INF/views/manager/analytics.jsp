@@ -194,14 +194,15 @@
     <section class="cl-card p-space-lg">
         <h2 class="text-headline-sm text-on-surface">Hiệu quả theo phim</h2>
         <p class="text-body-sm text-on-surface-variant mb-space-md">
-            Bán chạy: lấp đầy từ ${topThreshold}% trở lên. Bán chậm: lấp đầy dưới ${lowThreshold}%. Sắp theo số chỗ đã bán (ghế đôi tính 2).</p>
+            Bán chạy: lấp đầy từ ${topThreshold}% trở lên. Bán chậm: lấp đầy dưới ${lowThreshold}%. Sắp theo số chỗ đã bán (ghế đôi tính 2).
+            Giá trị vé tính theo giá in trên vé còn hiệu lực, chưa trừ voucher, điểm và tiền hoàn; tiền thực thu xem ở ô Doanh thu.</p>
         <table class="w-full text-body-md">
             <thead>
             <tr class="text-on-surface-variant text-body-sm text-left border-b border-white/10">
                 <th class="py-2 font-normal">Phim</th>
                 <th class="py-2 font-normal text-right">Suất chiếu</th>
                 <th class="py-2 font-normal text-right" title="Ghế đôi tính 2 chỗ">Chỗ đã bán</th>
-                <th class="py-2 font-normal text-right">Doanh thu vé</th>
+                <th class="py-2 font-normal text-right" title="Giá in trên vé, chưa trừ voucher, điểm và tiền hoàn">Giá trị vé (niêm yết)</th>
                 <th class="py-2 pl-space-lg font-normal w-64">Tỷ lệ lấp đầy</th>
                 <th class="py-2 pl-space-md font-normal">Xếp loại</th>
             </tr>

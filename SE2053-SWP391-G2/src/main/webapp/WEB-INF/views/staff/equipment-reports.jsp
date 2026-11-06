@@ -224,8 +224,8 @@
                 </div>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="description">Mô tả sự cố <span class="req">*</span></label>
-                    <textarea class="${inputClass} py-2" id="description" name="description" rows="4" maxlength="1000"
-                              placeholder="VD: Máy chiếu bị nhòe hình ở góc phải màn hình"><c:out value="${form.description}"/></textarea>
+                    <textarea class="${inputClass} py-2" id="description" name="description" rows="4" minlength="10" maxlength="1000"
+                              placeholder="Bắt buộc, từ 10 đến 1000 ký tự và phải có chữ.&#10;VD: Máy chiếu bị nhòe hình ở góc phải màn hình"><c:out value="${form.description}"/></textarea>
                     <c:if test="${not empty errors.description}"><p class="form-error"><c:out value="${errors.description}"/></p></c:if>
                 </div>
                 <p class="text-body-sm text-on-surface-variant">

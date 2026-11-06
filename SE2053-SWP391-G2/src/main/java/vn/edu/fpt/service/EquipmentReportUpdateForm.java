@@ -5,6 +5,16 @@ public class EquipmentReportUpdateForm {
     private String newStatus = "";
     private String note = "";
     private boolean lockRoom;
+    // Trạng thái báo cáo lúc mở form, để phát hiện Manager khác đã cập nhật trước
+    private String currentStatus = "";
+
+    public String getCurrentStatus() {
+        return currentStatus;
+    }
+
+    public void setCurrentStatus(String currentStatus) {
+        this.currentStatus = currentStatus;
+    }
 
     public String getNewStatus() {
         return newStatus;

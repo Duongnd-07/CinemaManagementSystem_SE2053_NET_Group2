@@ -48,6 +48,8 @@ public class ShiftService {
     private static final String NOT_YOUR_SHIFT = "Bạn chỉ đếm két được cho ca của mình.";
     private static final String MONEY_INVALID = "Số tiền phải là số nguyên từ 0 đến 99.999.999đ.";
     private static final String NOTE_REQUIRED = "Tiền đếm được lệch {0}đ so với máy, vui lòng ghi lý do.";
+    private static final String NOTE_INVALID = "Lý do lệch két phải từ 5 đến 500 ký tự và có chữ.";
+    private static final int MIN_NOTE = 5;
 
     private final ShiftDAO shiftDAO = new ShiftDAO();
     private final SystemConfigDAO configDAO = new SystemConfigDAO();
@@ -257,6 +259,9 @@ public class ShiftService {
         if (difference != null && difference.signum() != 0 && note == null) {
             throw error(ERROR_NOTE, Messages.format(NOTE_REQUIRED,
                     String.format("%,d", difference.abs().longValue()).replace(',', '.')));
+        }
+        if (difference != null && difference.signum() != 0 && !TextRule.ok(note, MIN_NOTE, MAX_NOTE)) {
+            throw error(ERROR_NOTE, NOTE_INVALID);
         }
     }
 
