@@ -69,7 +69,7 @@ public class CounterSaleService {
     private static final String MEMBER_ONLY = "Chỉ khách thành viên mới được dùng voucher hoặc điểm.";
     private static final String AGE_REQUIRED = "Phim giới hạn độ tuổi {0}: hãy kiểm tra giấy tờ của khách rồi tích xác nhận.";
     private static final String PAYMENT_INVALID = "Vui lòng chọn hình thức thanh toán.";
-    private static final String CASH_INVALID = "Tiền khách đưa không hợp lệ.";
+    private static final String CASH_INVALID = "Tiền khách đưa phải là số nguyên từ 0 đến 99.999.999đ.";
     private static final String CASH_SHORT = "Tiền khách đưa chưa đủ, còn thiếu {0}đ.";
     private static final String TRANSFER_REFERENCE_TAKEN = "Nội dung chuyển khoản này vừa được dùng cho đơn khác, bấm Tính tiền lại.";
     private static final String TRANSFER_REFERENCE_INDEX = "UX_Booking_TransferReference";
@@ -418,11 +418,13 @@ public class CounterSaleService {
         if (!PaymentMethod.CASH.equals(method)) {
             return;
         }
-        String raw = form.getCashReceived().trim().replace(".", "").replace(",", "");
-        if (raw.isEmpty() && quote.getFinalAmount().signum() == 0) {
+        // Đơn 0đ (trả hết bằng voucher/điểm) không thu tiền: bỏ qua tiền khách đưa, không tính và không lưu tiền thối
+        if (quote.getFinalAmount().signum() == 0) {
             return;
         }
-        if (!raw.matches("\\d{1,12}")) {
+        String raw = form.getCashReceived().trim().replace(".", "").replace(",", "");
+        // Tối đa 99.999.999đ (8 chữ số) để chặn gõ nhầm thừa số 0
+        if (!raw.matches("\\d{1,8}")) {
             if (required || !raw.isEmpty()) {
                 quote.errors.put(ERROR_PAYMENT, CASH_INVALID);
             }

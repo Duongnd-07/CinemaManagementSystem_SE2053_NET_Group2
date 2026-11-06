@@ -185,7 +185,7 @@
                 <div class="grid grid-cols-2 gap-space-md">
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="price">Giá bán (VND) <span class="req">*</span></label>
-                        <input class="${inputClass}" id="price" name="price" type="text" inputmode="numeric" maxlength="9"
+                        <input class="${inputClass}" id="price" name="price" type="text" inputmode="numeric" maxlength="8"
                                value="<c:out value='${form.price}'/>" placeholder="65000"/>
                         <c:if test="${not empty errors.price}"><p class="form-error"><c:out value="${errors.price}"/></p></c:if>
                     </div>

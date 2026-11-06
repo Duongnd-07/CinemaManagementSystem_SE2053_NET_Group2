@@ -46,7 +46,7 @@ public class ShiftService {
     private static final String SHIFT_NOT_CLOSED = "Ca chưa kết thúc nên chưa đếm két được.";
     private static final String ALREADY_COUNTED = "Ca này đã được đếm két, không sửa được.";
     private static final String NOT_YOUR_SHIFT = "Bạn chỉ đếm két được cho ca của mình.";
-    private static final String MONEY_INVALID = "Số tiền không hợp lệ.";
+    private static final String MONEY_INVALID = "Số tiền phải là số nguyên từ 0 đến 99.999.999đ.";
     private static final String NOTE_REQUIRED = "Tiền đếm được lệch {0}đ so với máy, vui lòng ghi lý do.";
 
     private final ShiftDAO shiftDAO = new ShiftDAO();
@@ -268,10 +268,10 @@ public class ShiftService {
         return value.isEmpty() ? null : value;
     }
 
-    // Số tiền VND không âm, cho phép gõ dấu chấm/phẩy ngăn cách nghìn; null nếu sai
+    // Số tiền VND từ 0 đến 99.999.999 (8 chữ số), cho phép gõ dấu chấm/phẩy ngăn cách nghìn; null nếu sai
     private BigDecimal parseMoney(String raw) {
         String value = raw == null ? "" : raw.trim().replace(".", "").replace(",", "").replace(" ", "");
-        return value.matches("\\d{1,12}") ? new BigDecimal(value) : null;
+        return value.matches("\\d{1,8}") ? new BigDecimal(value) : null;
     }
 
     private boolean isDuplicateKey(SQLException e) {

@@ -77,10 +77,21 @@
                 <h1 class="text-2xl sm:text-3xl font-bold text-white">Xin chào, <c:out value="${currentUser.fullName}"/>!</h1>
                 <p class="text-sm text-[#8e919f] mt-1">Chúc bạn một ca làm việc tràn đầy năng lượng và hiệu quả tại CineLuxe Cinema.</p>
             </div>
-            <div class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-semibold flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Trạng thái: Đang trong ca trực
-            </div>
+            <%-- UC-22: trạng thái theo ca đang mở của nhân viên; kết ca (hoặc ca tự kết) thì chuyển sang đỏ --%>
+            <c:choose>
+                <c:when test="${not empty openShift}">
+                    <div class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-semibold flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Trạng thái: Đang trong ca trực
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-semibold flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                        Trạng thái: Chưa vào ca trực
+                    </div>
+                </c:otherwise>
+            </c:choose>
         </div>
 
         <!-- Chức năng nghiệp vụ Staff -->
@@ -116,18 +127,6 @@
             </div>
             </a>
             </c:if>
-
-            <!-- 3. Bán bắp nước -->
-            <div class="bg-[#171b26] border border-white/10 hover:border-amber-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
-                <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                    <span class="material-symbols-outlined text-2xl">fastfood</span>
-                </div>
-                <h3 class="font-bold text-white text-base mb-1">Bắp nước &amp; Combo</h3>
-                <p class="text-xs text-[#8e919f] mb-4">Order bắp rang bơ, nước ngọt và các gói combo ưu đãi tại quầy.</p>
-                <span class="text-xs font-semibold text-amber-400 flex items-center gap-1 group-hover:underline">
-                    Bán combo <span class="material-symbols-outlined text-xs">arrow_forward</span>
-                </span>
-            </div>
 
             <!-- 4. Báo cáo sự cố thiết bị -->
             <c:if test="${allowedPermissions.contains('REPORT_EQUIPMENT')}">

@@ -17,6 +17,9 @@ public class ExchangeTicket {
     private String channel;
     private BigDecimal totalPrice;
     private BigDecimal finalAmount;
+    // Tổng giảm giá của đơn (voucher + điểm) và tiền bắp nước của đơn, để tách phần khách thực trả cho vé
+    private BigDecimal discountAmount;
+    private BigDecimal concessionTotal;
     private int pointsRedeemed;
     private Integer customerId;
     private String customerName;
@@ -123,6 +126,22 @@ public class ExchangeTicket {
 
     public void setFinalAmount(BigDecimal finalAmount) {
         this.finalAmount = finalAmount;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
+    public BigDecimal getConcessionTotal() {
+        return concessionTotal;
+    }
+
+    public void setConcessionTotal(BigDecimal concessionTotal) {
+        this.concessionTotal = concessionTotal;
     }
 
     public int getPointsRedeemed() {

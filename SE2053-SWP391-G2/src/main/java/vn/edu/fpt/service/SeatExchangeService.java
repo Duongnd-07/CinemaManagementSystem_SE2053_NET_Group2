@@ -40,9 +40,9 @@ import vn.edu.fpt.util.Messages;
 // UC-20: Exchange Broken Seat.
 // Luôn ưu tiên ghế cùng hạng; chỉ khi hết ghế cùng hạng mới có: ghế thường -> nâng VIP miễn phí; ghế VIP -> xuống
 // ghế thường, trả tiền mặt chênh lệch; ghế đôi -> 2 ghế cạnh nhau cùng loại (cùng VIP hoặc cùng thường).
-// Khách không bị ép đổi ghế: luôn được chọn hoàn tiền mặt ngay (tiền khách thực trả cho vé, không gồm phần voucher
-// giảm giá; điểm đã dùng trả lại vào tài khoản). Mọi trường hợp (kể cả đổi cùng hạng) đều tặng voucher đền bù cho
-// khách thành viên (giá trị, hạn dùng do Admin cấu hình ở UC-33); điểm chỉ trả lại khi hoàn tiền.
+// Khách không bị ép đổi ghế: luôn được chọn hoàn tiền ngay, hoàn cả bill (toàn bộ tiền khách thực trả + toàn bộ điểm
+// đã dùng, kể cả bắp nước; vé còn lại của đơn vẫn giữ), mỗi đơn chỉ hoàn một lần. Mọi trường hợp (kể cả đổi cùng
+// hạng) đều tặng voucher đền bù cho khách thành viên (giá trị, hạn dùng do Admin cấu hình ở UC-33).
 // Ghế hỏng luôn bị khóa bảo trì và có báo cáo sự cố (UC-21) để Manager sửa xong mở lại (UC-26).
 public class SeatExchangeService {
     public static final String ERROR_GENERAL = "general";
@@ -62,6 +62,9 @@ public class SeatExchangeService {
     private static final BigDecimal DEFAULT_VOUCHER_VALUE = BigDecimal.valueOf(50000);
     private static final int DEFAULT_VOUCHER_DAYS = 30;
     private static final BigDecimal DEFAULT_VIP_SURCHARGE = BigDecimal.valueOf(30000);
+    // Cùng cấu hình và giá trị mặc định với bán vé (UC-13/UC-19)
+    private static final String CONFIG_POINT_RATE = "POINT_EXCHANGE_RATE";
+    private static final int DEFAULT_POINT_RATE = 1000;
     private static final Set<Integer> DUPLICATE_KEY_ERRORS = Set.of(2601, 2627);
     private static final String TICKET_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -124,11 +127,12 @@ public class SeatExchangeService {
                 String type = kind == 'S' ? TYPE_SAME : kind == 'U' ? TYPE_UPGRADE
                         : kind == 'D' ? TYPE_DOWNGRADE : TYPE_SPLIT;
 
-                // Xuống ghế thường: trả tiền chênh lệch từ két nên phải đang trong ca; không trả quá tiền khách thực
-                // trả cho vé (vé trả bằng điểm/voucher thì phần đó không quy ra tiền mặt)
-                Shift shift = TYPE_DOWNGRADE.equals(type) ? requireShift(conn, staffId) : null;
-                BigDecimal cash = TYPE_DOWNGRADE.equals(type)
-                        ? options.vipDifference.min(options.refundCash) : BigDecimal.ZERO;
+                // Xuống ghế thường: trả phần khách thực trả cho tiền chênh lệch VIP (cùng công thức hoàn vé: trừ phần
+                // voucher, phần điểm trả lại bằng điểm, còn lại tiền mặt từ két nên phải đang trong ca)
+                boolean downgrade = TYPE_DOWNGRADE.equals(type);
+                Shift shift = downgrade ? requireShift(conn, staffId) : null;
+                BigDecimal cash = downgrade ? options.downgradeCash : BigDecimal.ZERO;
+                int points = downgrade && ticket.isMember() ? options.downgradePoints : 0;
                 if (!exchangeDAO.closeTicket(conn, ticket.getTicketId(), TicketStatus.EXCHANGED,
                         cash.signum() > 0 ? cash : null, shift == null ? null : shift.getShiftId())) {
                     throw error(ERROR_GENERAL, TICKET_NOT_VALID);
@@ -138,13 +142,23 @@ public class SeatExchangeService {
                 for (String id : seats.split("-")) {
                     newSeatIds.add(Integer.parseInt(id));
                 }
-                List<BigDecimal> prices = newPrices(ticket.getPrice().subtract(cash), newSeatIds.size());
+                // Vé mới mang giá ghế thường (đã trừ đủ chênh lệch), để lần hoàn sau tính đúng theo cùng công thức
+                BigDecimal newTotal = downgrade
+                        ? ticket.getPrice().subtract(options.vipDifference.min(ticket.getPrice())) : ticket.getPrice();
+                List<BigDecimal> prices = newPrices(newTotal, newSeatIds.size());
                 List<Integer> newTicketIds = createTickets(conn, ticket, newSeatIds, prices);
+                if (points > 0) {
+                    if (!bookingDAO.addPoints(conn, ticket.getCustomerId(), points)) {
+                        throw new SQLException("Customer loyalty balance exceeds the supported range.");
+                    }
+                    bookingDAO.insertLoyaltyTransaction(conn, ticket.getCustomerId(), ticket.getBookingId(),
+                            "Adjustment", points, POINTS_NOTE_PREFIX + ticket.getTicketCode());
+                }
 
                 lockBrokenSeat(conn, ticket, staffId, cleanReason);
                 Integer voucherId = giveVoucher(conn, ticket, options);
                 int exchangeId = exchangeDAO.insertExchange(conn, ticket.getTicketId(), type, newTicketIds.get(0),
-                        newTicketIds.size() > 1 ? newTicketIds.get(1) : null, cleanReason, cash, 0, voucherId,
+                        newTicketIds.size() > 1 ? newTicketIds.get(1) : null, cleanReason, cash, points, voucherId,
                         staffId, shift == null ? null : shift.getShiftId());
                 conn.commit();
                 return exchangeId;
@@ -231,15 +245,44 @@ public class SeatExchangeService {
                 .subtract(TicketPricing.priceOf(SeatType.STANDARD, ticket.getBasePrice(), surcharge)).max(BigDecimal.ZERO);
         options.voucherValue = configDAO.getDecimal(conn, CONFIG_VOUCHER_VALUE, DEFAULT_VOUCHER_VALUE);
 
-        // Tiền khách thực trả cho vé = giá vé x (thực thu / tổng đơn): phần giảm giá (voucher, điểm) chia theo tỷ lệ
-        BigDecimal total = ticket.getTotalPrice();
-        if (total != null && total.signum() > 0) {
-            options.refundCash = ticket.getPrice().multiply(ticket.getFinalAmount())
-                    .divide(total, 0, RoundingMode.DOWN).min(ticket.getPrice());
-            options.refundPoints = BigDecimal.valueOf(ticket.getPointsRedeemed()).multiply(ticket.getPrice())
-                    .divide(total, 0, RoundingMode.DOWN).intValue();
-        }
+        // Voucher chỉ trừ vào tiền vé; phần còn lại của đơn (sau voucher) trả bằng điểm + tiền mặt; bắp nước không hoàn.
+        // shortcut: tiền voucher suy từ DiscountAmount - điểm x tỷ lệ hiện tại; Admin đổi POINT_EXCHANGE_RATE sau khi
+        // bán thì lệch, cần lưu riêng tiền voucher trên Booking nếu muốn chính xác tuyệt đối
+        int rate = Math.max(1, configDAO.getInt(conn, CONFIG_POINT_RATE, DEFAULT_POINT_RATE));
+        BigDecimal ticketTotal = ticket.getTotalPrice().subtract(ticket.getConcessionTotal());
+        BigDecimal voucher = ticket.getDiscountAmount()
+                .subtract(BigDecimal.valueOf((long) ticket.getPointsRedeemed() * rate))
+                .max(BigDecimal.ZERO).min(ticketTotal.max(BigDecimal.ZERO));
+        // Hoàn vé ghế hỏng: hoàn cả bill (toàn bộ tiền khách thực trả + toàn bộ điểm đã dùng, kể cả phần bắp nước),
+        // vé còn lại của đơn khách vẫn giữ. Trừ phần đơn đã nhận ở lần đổi/hoàn trước để một đơn chỉ được hoàn một lần
+        BigDecimal[] refunded = exchangeDAO.sumRefunded(conn, ticket.getBookingId());
+        options.refundCash = ticket.getFinalAmount().subtract(refunded[0]).max(BigDecimal.ZERO);
+        options.refundPoints = Math.max(0, ticket.getPointsRedeemed() - refunded[1].intValue());
+        Refund downgrade = refundOf(options.vipDifference.min(ticket.getPrice()), ticketTotal, voucher,
+                ticket.getTotalPrice(), ticket.getPointsRedeemed(), rate);
+        options.downgradePoints = downgrade.points();
+        options.downgradeCash = downgrade.cash();
         return options;
+    }
+
+    // Phần khách thực trả cho tiền chênh lệch VIP khi xuống ghế thường, trả bằng gì hoàn bằng nấy (BR UC-20):
+    //   giá trị = khoản tiền x (tổng tiền vé - voucher) / tổng tiền vé      (voucher chia theo giá vé)
+    //   điểm    = điểm đã dùng x giá trị / (tổng đơn - voucher), làm tròn xuống
+    //   tiền    = giá trị - điểm x tỷ lệ quy đổi                            (phần lẻ của điểm trả bằng tiền)
+    record Refund(int points, BigDecimal cash) {
+    }
+
+    static Refund refundOf(BigDecimal amount, BigDecimal ticketTotal, BigDecimal voucher, BigDecimal orderTotal,
+                           int pointsRedeemed, int rate) {
+        if (amount.signum() <= 0 || ticketTotal.signum() <= 0) {
+            return new Refund(0, BigDecimal.ZERO);
+        }
+        BigDecimal value = amount.multiply(ticketTotal.subtract(voucher)).divide(ticketTotal, 0, RoundingMode.DOWN);
+        BigDecimal rest = orderTotal.subtract(voucher);
+        int points = rest.signum() <= 0 ? 0 : BigDecimal.valueOf(pointsRedeemed).multiply(value)
+                .divide(rest, 0, RoundingMode.DOWN).min(BigDecimal.valueOf(pointsRedeemed)).intValue();
+        BigDecimal cash = value.subtract(BigDecimal.valueOf((long) points * rate)).max(BigDecimal.ZERO);
+        return new Refund(points, cash);
     }
 
     private void addSeats(List<ExchangeOptions.Choice> target, List<Seat> free, String seatType) {

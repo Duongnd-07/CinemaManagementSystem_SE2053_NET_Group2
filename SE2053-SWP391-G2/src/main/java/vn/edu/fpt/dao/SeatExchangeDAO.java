@@ -25,7 +25,9 @@ public class SeatExchangeDAO {
 
     private static final String TICKET_COLUMNS = "SELECT t.TicketID, t.TicketCode, t.Status AS TicketStatus, t.Price, "
             + "t.SeatID, se.RowName, se.ColNumber, se.SeatType, b.BookingID, b.Status AS BookingStatus, b.Channel, "
-            + "b.TotalPrice, b.FinalAmount, b.PointsRedeemed, b.CustomerID, c.FullName AS CustomerName, "
+            + "b.TotalPrice, b.FinalAmount, ISNULL(b.DiscountAmount, 0) AS DiscountAmount, "
+            + "ISNULL((SELECT SUM(bc.SubtotalPrice) FROM Booking_Concession bc WHERE bc.BookingID = b.BookingID), 0) "
+            + "AS ConcessionTotal, b.PointsRedeemed, b.CustomerID, c.FullName AS CustomerName, "
             + "s.ShowtimeID, s.Status AS ShowtimeStatus, s.StartTime, s.EndTime, s.BasePrice, m.Title, "
             + "r.RoomID, r.RoomName ";
     private static final String TICKET_JOINS = "JOIN Booking b ON b.BookingID = t.BookingID "
@@ -115,6 +117,25 @@ public class SeatExchangeDAO {
             ps.setString(1, voucherCode);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : null;
+            }
+        }
+    }
+
+    // {tiền mặt, điểm} đơn đã nhận lại qua các lần đổi/hoàn ghế hỏng trước. Khóa dòng Booking (UPDLOCK) để hai
+    // nhân viên hoàn hai vé của cùng một đơn cùng lúc không cùng hoàn cả bill
+    public BigDecimal[] sumRefunded(Connection conn, int bookingId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM Booking WITH (UPDLOCK, HOLDLOCK) WHERE BookingID = ?")) {
+            ps.setInt(1, bookingId);
+            ps.executeQuery().close();
+        }
+        String sql = "SELECT ISNULL(SUM(x.CashRefund), 0), ISNULL(SUM(x.PointsReturned), 0) FROM TicketExchange x "
+                + "JOIN Ticket t ON t.TicketID = x.OldTicketID WHERE t.BookingID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, bookingId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return new BigDecimal[] {rs.getBigDecimal(1), rs.getBigDecimal(2)};
             }
         }
     }
@@ -221,6 +242,8 @@ public class SeatExchangeDAO {
         ticket.setChannel(rs.getString("Channel"));
         ticket.setTotalPrice(rs.getBigDecimal("TotalPrice"));
         ticket.setFinalAmount(rs.getBigDecimal("FinalAmount"));
+        ticket.setDiscountAmount(rs.getBigDecimal("DiscountAmount"));
+        ticket.setConcessionTotal(rs.getBigDecimal("ConcessionTotal"));
         ticket.setPointsRedeemed(rs.getInt("PointsRedeemed"));
         ticket.setCustomerId(rs.getObject("CustomerID", Integer.class));
         ticket.setCustomerName(rs.getString("CustomerName"));
