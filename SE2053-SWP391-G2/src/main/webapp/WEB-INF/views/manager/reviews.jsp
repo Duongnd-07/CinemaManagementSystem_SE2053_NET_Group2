@@ -130,8 +130,8 @@
 </main>
 
 <c:if test="${not empty review}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" data-modal>
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-lg p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto" data-modal>
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-lg p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
                href="${ctx}/manager/reviews${fn:escapeXml(listQuery)}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
