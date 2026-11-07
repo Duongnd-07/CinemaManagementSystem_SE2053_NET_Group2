@@ -76,7 +76,8 @@ public class TicketPrintDAO {
 
     // Vé của đơn kèm lần in gần nhất và vé thay thế nếu đã đổi ghế
     private List<PrintTicket> findTickets(int bookingId) throws SQLException {
-        String sql = "SELECT t.TicketID, CONCAT(se.RowName, se.ColNumber) AS SeatLabel, se.SeatType, t.Price, t.TicketCode, "
+        String sql = "SELECT t.TicketID, CONCAT(se.RowName, se.ColNumber) AS SeatLabel, se.SeatType, se.Status AS SeatStatus, "
+                + "t.Price, t.TicketCode, "
                 + "t.Status, lp.PrintNo, lp.PrintedAt, lp.StaffName, "
                 + "CONCAT(ns.RowName, ns.ColNumber) AS NewSeat, nt.TicketCode AS NewCode "
                 + "FROM Ticket t JOIN Seat se ON se.SeatID = t.SeatID "
@@ -94,6 +95,7 @@ public class TicketPrintDAO {
                     ticket.setTicketId(rs.getInt("TicketID"));
                     ticket.setSeatLabel(rs.getString("SeatLabel"));
                     ticket.setSeatType(rs.getString("SeatType"));
+                    ticket.setSeatStatus(rs.getString("SeatStatus"));
                     ticket.setPrice(rs.getBigDecimal("Price"));
                     ticket.setTicketCode(rs.getString("TicketCode"));
                     ticket.setStatus(rs.getString("Status"));
@@ -135,6 +137,12 @@ public class TicketPrintDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }
+        }
+    }
+
+    public boolean hasAnyPrint(int bookingId) throws SQLException {
+        try (Connection conn = DBContext.getConnection()) {
+            return hasAnyPrint(conn, bookingId);
         }
     }
 

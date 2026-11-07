@@ -15,6 +15,7 @@ import vn.edu.fpt.dao.TicketPrintDAO;
 import vn.edu.fpt.model.BookingStatus;
 import vn.edu.fpt.model.PrintBooking;
 import vn.edu.fpt.model.PrintTicket;
+import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.model.Shift;
 import vn.edu.fpt.model.ShowtimeStatus;
 import vn.edu.fpt.model.TicketStatus;
@@ -34,12 +35,16 @@ public class TicketPrintService {
     public static final String TOO_EARLY = "Vé chỉ được in từ {0}.";
     public static final String ENDED = "Suất chiếu đã kết thúc hoặc đã bị huỷ, không thể in vé.";
     public static final String ALREADY_PRINTED = "Vé {0} đã được in lúc {1} bởi {2}.";
-    public static final String COUNTER_PRINTED = "Vé bán tại quầy đã được in khi bán.";
+    public static final String BROKEN_SEAT =
+            "Ghế {0} đang hỏng, không thể in vé. Vui lòng đổi ghế hoặc hoàn tiền cho khách trước.";
+    public static final String COUNTER_PRINTED ="Vé bán tại quầy đã được in khi bán.";
     public static final String NOT_PRINTED_YET = "Vé chưa được in lần nào, hãy dùng nút In vé.";
     public static final String REASON_REQUIRED = "Vui lòng nhập lý do in lại (ít nhất 5 ký tự).";
     public static final String NOTHING_SELECTED = "Vui lòng chọn ít nhất một vé để in.";
     public static final String PRINTED = "Đã in {0} vé.";
     public static final String REPRINTED = "Đã in lại vé {0}.";
+    public static final String PRINT_CANCELLED = "Đã hủy lượt in, vé không được tính là đã in.";
+    public static final String PRINT_EXPIRED = "Lượt in này không còn hiệu lực. Vui lòng tra cứu lại vé và in lại.";
 
     // Mở in từ 24 giờ trước giờ chiếu (trùng lúc hết hạn hủy vé online UC-16) đến khi suất chiếu kết thúc
     public static final int PRINT_WINDOW_HOURS = 24;
@@ -94,10 +99,12 @@ public class TicketPrintService {
         return booking;
     }
 
-    // Bước 6: đánh dấu và trả về lượt in (các vé giấy + phiếu nhận bắp nước nếu là lần in đầu của đơn)
-    public PrintBooking print(int bookingId, List<Integer> ticketIds, int staffId, String staffName)
+    // Bước 6: chuẩn bị lượt in (các vé giấy + phiếu nhận bắp nước nếu đơn chưa in lần nào). CHƯA ghi DB: trình
+    // duyệt không cho biết nhân viên bấm In hay Hủy trong hộp thoại in, nên chỉ ghi khi nhân viên xác nhận vé đã
+    // ra giấy (confirm). Hủy, bấm Back hay rời trang đều không làm vé bị tính là đã in.
+    public PrintBooking preparePrint(int bookingId, List<Integer> ticketIds, int staffId, String staffName)
             throws SQLException, ValidationException {
-        Shift shift = requireShift(staffId);
+        requireShift(staffId);
         PrintBooking booking = loadBooking(bookingId);
         if (booking.getBlockReason() != null) {
             throw error(booking.getBlockReason());
@@ -116,39 +123,22 @@ public class TicketPrintService {
         if (chosen.isEmpty()) {
             throw error(NOTHING_SELECTED);
         }
-        try (Connection conn = DBContext.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                boolean slip = !booking.getConcessions().isEmpty() && !printDAO.hasAnyPrint(conn, bookingId);
-                for (PrintTicket ticket : chosen) {
-                    if (printDAO.lockLastPrintNo(conn, ticket.getTicketId()) > 0) {
-                        conn.rollback();
-                        throw alreadyPrinted(bookingId, ticket.getTicketId());
-                    }
-                    ticket.setPrintedAt(printDAO.insertPrint(conn, ticket.getTicketId(), 1, null, staffId,
-                            shift.getShiftId()));
-                    ticket.setPrintCount(1);
-                    ticket.setPrintedBy(staffName);
-                }
-                conn.commit();
-                booking.setConcessionSlip(slip);
-            } catch (SQLException e) {
-                conn.rollback();
-                if (isDuplicate(e)) {
-                    // E5: nhân viên khác vừa in cùng vé
-                    throw alreadyPrinted(bookingId, chosen.get(0).getTicketId());
-                }
-                throw e;
-            }
+        LocalDateTime now = LocalDateTime.now();
+        for (PrintTicket ticket : chosen) {
+            ticket.setPrintCount(1);
+            ticket.setPrintedAt(now);
+            ticket.setPrintedBy(staffName);
+            ticket.setPrintReason(null);
         }
+        booking.setConcessionSlip(!booking.getConcessions().isEmpty() && !printDAO.hasAnyPrint(bookingId));
         booking.setTickets(chosen);
         return booking;
     }
 
-    // A2: in lại vé giấy bị mất, bắt buộc lý do; trả về lượt in chỉ gồm vé đó
-    public PrintBooking reprint(int ticketId, String reason, int staffId, String staffName)
+    // A2: chuẩn bị in lại vé giấy bị mất, bắt buộc lý do; lượt in chỉ gồm vé đó. Cũng chỉ ghi DB khi xác nhận.
+    public PrintBooking prepareReprint(int ticketId, String reason, int staffId, String staffName)
             throws SQLException, ValidationException {
-        Shift shift = requireShift(staffId);
+        requireShift(staffId);
         String cleanReason = reason == null ? "" : reason.trim();
         if (cleanReason.length() < MIN_REASON) {
             throw error(REASON_REQUIRED);
@@ -165,28 +155,67 @@ public class TicketPrintService {
         if (!ticket.isReprintable()) {
             throw error(ticket.isPrintable() ? NOT_PRINTED_YET : ticket.getBlockReason());
         }
-        try (Connection conn = DBContext.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                // Vé bán tại quầy coi như đã in lần 1 lúc bán (BR-36-06)
-                int last = Math.max(printDAO.lockLastPrintNo(conn, ticketId), booking.isCounterSale() ? 1 : 0);
-                if (last == 0) {
-                    conn.rollback();
-                    throw error(NOT_PRINTED_YET);
-                }
-                ticket.setPrintedAt(printDAO.insertPrint(conn, ticketId, last + 1, cleanReason, staffId,
-                        shift.getShiftId()));
-                ticket.setPrintCount(last + 1);
-                ticket.setPrintedBy(staffName);
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            }
-        }
+        ticket.setPrintCount(lastPrintNo(booking, ticket.getPrintCount()) + 1);
+        ticket.setPrintedAt(LocalDateTime.now());
+        ticket.setPrintedBy(staffName);
+        ticket.setPrintReason(cleanReason);
         booking.setTickets(List.of(ticket));
         booking.setConcessionSlip(false);
         return booking;
+    }
+
+    // Nhân viên xác nhận vé đã ra giấy: ghi lượt in vào DB. Kiểm tra lại vì giữa lúc mở hộp thoại in và lúc xác
+    // nhận, vé có thể đã bị hủy / đổi ghế hoặc nhân viên khác đã in (E5). Ghi cả lượt hoặc không ghi gì.
+    public void confirmPrint(PrintBooking job, int staffId, String staffName) throws SQLException, ValidationException {
+        if (job == null || job.getTickets().isEmpty()) {
+            throw error(PRINT_EXPIRED);
+        }
+        Shift shift = requireShift(staffId);
+        PrintBooking current = loadBooking(job.getBookingId());
+        if (current.getBlockReason() != null) {
+            throw error(current.getBlockReason());
+        }
+        for (PrintTicket ticket : job.getTickets()) {
+            PrintTicket now = current.getTickets().stream().filter(t -> t.getTicketId() == ticket.getTicketId())
+                    .findFirst().orElseThrow(() -> error(NOT_FOUND));
+            boolean stillValid = ticket.getPrintCount() == 1 ? now.isPrintable()
+                    : now.isReprintable() && lastPrintNo(current, now.getPrintCount()) == ticket.getPrintCount() - 1;
+            if (!stillValid) {
+                throw error(now.getBlockReason() != null ? now.getBlockReason() : PRINT_EXPIRED);
+            }
+        }
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                for (PrintTicket ticket : job.getTickets()) {
+                    int last = lastPrintNo(current, printDAO.lockLastPrintNo(conn, ticket.getTicketId()));
+                    if (last != ticket.getPrintCount() - 1) {
+                        conn.rollback();
+                        throw alreadyPrinted(job.getBookingId(), ticket.getTicketId());
+                    }
+                    ticket.setPrintedAt(printDAO.insertPrint(conn, ticket.getTicketId(), ticket.getPrintCount(),
+                            ticket.getPrintReason(), staffId, shift.getShiftId()));
+                    ticket.setPrintedBy(staffName);
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                if (isDuplicate(e)) {
+                    // E5: nhân viên khác vừa in cùng vé
+                    throw alreadyPrinted(job.getBookingId(), job.getTickets().get(0).getTicketId());
+                }
+                throw e;
+            }
+        }
+    }
+
+    // Số lần in đã có; vé bán tại quầy coi như đã in lần 1 lúc bán (BR-36-06)
+    private int lastPrintNo(PrintBooking booking, int printedInDb) {
+        return Math.max(printedInDb, booking.isCounterSale() ? 1 : 0);
+    }
+
+    public String cancelledMessage() {
+        return PRINT_CANCELLED;
     }
 
     public String printedMessage(int count) {
@@ -213,6 +242,7 @@ public class TicketPrintService {
         for (PrintTicket ticket : booking.getTickets()) {
             ticket.setPrintable(false);
             ticket.setReprintable(false);
+            ticket.setBrokenSeat(false);
             if (TicketStatus.CANCELLED.equals(ticket.getStatus())) {
                 ticket.setBlockReason(CANCELLED);
             } else if (TicketStatus.EXCHANGED.equals(ticket.getStatus())) {
@@ -220,6 +250,10 @@ public class TicketPrintService {
                         : Messages.format(EXCHANGED, ticket.getExchangedSeat(), ticket.getExchangedCode()));
             } else if (!TicketStatus.UPCOMING.equals(ticket.getStatus())) {
                 ticket.setBlockReason(ENDED);
+            } else if (RoomStatus.MAINTENANCE.equals(ticket.getSeatStatus())) {
+                // E9: ghế đã báo hỏng sau khi bán vé - không in / in lại, chuyển sang đổi ghế hoặc hoàn tiền (UC-20)
+                ticket.setBrokenSeat(true);
+                ticket.setBlockReason(Messages.format(BROKEN_SEAT, ticket.getSeatLabel()));
             } else if (ticket.getPrintCount() > 0) {
                 ticket.setBlockReason(Messages.format(ALREADY_PRINTED, ticket.getTicketCode(),
                         ticket.getPrintedAt() == null ? "" : ticket.getPrintedAt().format(TIME),

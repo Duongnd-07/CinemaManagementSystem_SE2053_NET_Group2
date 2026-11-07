@@ -107,7 +107,7 @@
                             </thead>
                             <tbody class="divide-y divide-white/5 text-body-md">
                             <c:forEach var="t" items="${b.tickets}">
-                                <tr class="${t.printable ? '' : 'opacity-70'}">
+                                <tr class="${t.printable or t.brokenSeat ? '' : 'opacity-70'} ${t.brokenSeat ? 'bg-error/10' : ''}">
                                     <td class="py-2 pr-3">
                                         <input type="checkbox" name="ticketIds" value="${t.ticketId}"
                                                ${t.printable ? 'checked' : 'disabled'} aria-label="In vé ghế ${t.seatLabel}"/>
@@ -119,6 +119,15 @@
                                     <td class="py-2 text-body-sm">
                                         <c:choose>
                                             <c:when test="${t.printable}"><span class="text-emerald-400">Chưa in</span></c:when>
+                                            <%-- E9: ghế đã báo hỏng sau khi bán vé - chuyển sang đổi ghế / hoàn tiền (UC-20) --%>
+                                            <c:when test="${t.brokenSeat}">
+                                                <span class="block text-error font-label-md"><c:out value="${t.blockReason}"/></span>
+                                                <c:url var="exchangeUrl" value="/staff/seat-exchange"><c:param name="code" value="${t.ticketCode}"/></c:url>
+                                                <a href="${exchangeUrl}"
+                                                   class="mt-1 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-error text-on-error hover:bg-error/90 font-label-md">
+                                                    <span class="material-symbols-outlined text-[16px]">swap_horiz</span>Đổi ghế / hoàn tiền
+                                                </a>
+                                            </c:when>
                                             <c:otherwise><span class="text-on-surface-variant"><c:out value="${t.blockReason}"/></span></c:otherwise>
                                         </c:choose>
                                         <c:if test="${t.reprintable}">
@@ -173,11 +182,48 @@
         </c:otherwise>
     </c:choose>
 </main>
+
+<%-- Sau khi đóng hộp thoại in: trình duyệt không cho biết đã bấm In hay Hủy, nên hỏi nhân viên. Chỉ khi bấm
+     "Đã in xong" lượt in mới được ghi; hủy / Back / rời trang thì vé vẫn là chưa in. Lượt in chưa trả lời sẽ được
+     hỏi lại ngay khi mở trang. --%>
+<c:if test="${not empty printJob and not empty printToken}">
+    <div id="printConfirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[70] hidden items-center justify-center p-4">
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-md p-space-xl shadow-2xl space-y-space-md">
+            <h3 class="text-headline-md text-on-surface flex items-center gap-space-sm">
+                <span class="material-symbols-outlined text-primary-container">print</span>Vé đã được in ra giấy chưa?
+            </h3>
+            <p class="text-body-sm text-on-surface-variant">
+                Đơn #${printJob.bookingId} · ${fn:length(printJob.tickets)} vé
+                (<c:forEach var="t" items="${printJob.tickets}" varStatus="st">${t.seatLabel}${t.reprintNo > 0 ? ' - in lại' : ''}${st.last ? '' : ', '}</c:forEach>).
+                Vé chỉ được tính là đã in khi bạn bấm "Đã in xong". Nếu đã hủy hộp thoại in hoặc máy in không ra giấy,
+                chọn "Chưa in được".
+            </p>
+            <div class="flex flex-col gap-space-sm">
+                <form method="post" action="${ctx}/staff/ticket-print">
+                    <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                    <input type="hidden" name="action" value="confirm"/>
+                    <input type="hidden" name="printToken" value="${printToken}"/>
+                    <button type="submit" id="printConfirmDone"
+                            class="w-full px-6 py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary/90 font-label-lg">Đã in xong</button>
+                </form>
+                <button type="button" data-print-again
+                        class="w-full px-6 py-2.5 rounded-full bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-lg">Mở lại hộp thoại in</button>
+                <form method="post" action="${ctx}/staff/ticket-print">
+                    <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                    <input type="hidden" name="action" value="cancel"/>
+                    <input type="hidden" name="printToken" value="${printToken}"/>
+                    <button type="submit"
+                            class="w-full px-6 py-2.5 rounded-full border border-error/40 text-error hover:bg-error/10 font-label-lg">Chưa in được - hủy lượt in</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</c:if>
 </div>
 
-<%-- Vé giấy của lượt in vừa rồi: chỉ hiện khi in (khổ 80 mm), trang tự mở hộp thoại in --%>
+<%-- Vé giấy của lượt in đang chờ xác nhận: chỉ hiện khi in (khổ 80 mm); lượt vừa tạo thì trang tự mở hộp thoại in --%>
 <c:if test="${not empty printJob}">
-    <div id="printArea" data-auto-print="true">
+    <div id="printArea" ${autoPrint ? 'data-auto-print="true"' : ''}>
         <c:forEach var="t" items="${printJob.tickets}">
             <div class="paper-ticket">
                 <div class="pt-brand">CINELUXE CINEMA</div>

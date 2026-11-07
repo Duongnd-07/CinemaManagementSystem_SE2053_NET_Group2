@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -28,15 +29,22 @@ import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
 
 // UC-36: Scan E-ticket & Print Paper Ticket. GET ?code=... tra cứu đơn theo mã quét được;
-// POST action=print (in các vé đã chọn) / reprint (in lại một vé, bắt buộc lý do).
-// Chỉ Staff đang mở ca mới được dùng. Sau khi in, lượt in được giữ trong session một lần để trang mở hộp thoại in.
+// POST action=print (in các vé đã chọn) / reprint (in lại một vé, bắt buộc lý do) chỉ chuẩn bị lượt in và mở hộp
+// thoại in, CHƯA ghi DB; action=confirm (nhân viên xác nhận vé đã ra giấy) mới ghi lượt in, action=cancel bỏ lượt in.
+// Trình duyệt không cho biết đã bấm In hay Hủy trong hộp thoại in, nên hủy / bấm Back / rời trang đều không làm vé bị
+// tính là đã in. Lượt in chưa xác nhận được giữ trong session và trang nhắc xác nhận cho tới khi nhân viên trả lời.
+// Chỉ Staff đang mở ca mới được dùng.
 @WebServlet("/staff/ticket-print")
 public class TicketPrintServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(TicketPrintServlet.class.getName());
     private static final String VIEW = "/WEB-INF/views/staff/ticket-print.jsp";
     private static final String FLASH_SUCCESS = "flashSuccess";
     private static final String FLASH_ERROR = "flashError";
-    private static final String SESSION_JOB = "ticketPrintJob";
+    // Lượt in đang chờ xác nhận và token của nó (form xác nhận / hủy phải gửi đúng token)
+    private static final String SESSION_PENDING = "ticketPrintPending";
+    private static final String SESSION_PENDING_TOKEN = "ticketPrintPendingToken";
+    // Lượt in vừa tạo: trang tự mở hộp thoại in một lần
+    private static final String SESSION_AUTO_PRINT = "ticketPrintAutoPrint";
     // Đơn vừa tra cứu: chỉ đơn này được mở lại bằng ?booking=ID (không cho tra cứu bằng mã đơn - BR-36-01)
     private static final String SESSION_BOOKING = "ticketPrintBooking";
     private static final String FORBIDDEN = "Bạn không có quyền truy cập vào khu vực này.";
@@ -63,10 +71,12 @@ public class TicketPrintServlet extends HttpServlet {
             request.setAttribute("minReason", TicketPrintService.MIN_REASON);
             request.setAttribute("maxReason", TicketPrintService.MAX_REASON);
             if (shift != null) {
-                Object job = session.getAttribute(SESSION_JOB);
-                if (job != null) {
-                    request.setAttribute("printJob", job);
-                    session.removeAttribute(SESSION_JOB);
+                Object pending = session.getAttribute(SESSION_PENDING);
+                if (pending instanceof PrintBooking) {
+                    request.setAttribute("printJob", pending);
+                    request.setAttribute("printToken", session.getAttribute(SESSION_PENDING_TOKEN));
+                    request.setAttribute("autoPrint", session.getAttribute(SESSION_AUTO_PRINT) != null);
+                    session.removeAttribute(SESSION_AUTO_PRINT);
                 }
                 loadBooking(request, session);
             }
@@ -112,30 +122,22 @@ public class TicketPrintServlet extends HttpServlet {
             return;
         }
         HttpSession session = request.getSession();
-        int bookingId = parseInt(request.getParameter("bookingId"));
+        String action = request.getParameter("action");
         try {
-            PrintBooking job;
-            if ("reprint".equals(request.getParameter("action"))) {
-                String reason = request.getParameter("reason");
-                job = printService.reprint(parseInt(request.getParameter("ticketId")), reason, user.getUserId(),
-                        user.getFullName());
-                PrintTicket ticket = job.getTickets().get(0);
-                ActivityLogger.info(request, LogEventType.OPERATION, "In lại vé giấy", TARGET, job.getBookingId(),
-                        "Vé " + ticket.getTicketCode() + " (ghế " + ticket.getSeatLabel() + "), lần in lại "
-                                + ticket.getReprintNo() + ", lý do: " + reason.trim());
-                session.setAttribute(FLASH_SUCCESS, printService.reprintedMessage(ticket.getTicketCode()));
+            if ("confirm".equals(action) || "cancel".equals(action)) {
+                finishPending(request, session, user, "confirm".equals(action));
             } else {
-                job = printService.print(bookingId, selectedTickets(request), user.getUserId(), user.getFullName());
-                ActivityLogger.info(request, LogEventType.OPERATION, "In vé giấy", TARGET, job.getBookingId(),
-                        "Đơn #" + job.getBookingId() + ": in " + job.getTickets().size() + " vé ("
-                                + job.getTickets().stream().map(t -> t.getTicketCode() + " ghế " + t.getSeatLabel())
-                                .collect(Collectors.joining(", ")) + ")"
-                                + (job.isConcessionSlip() ? " kèm phiếu nhận bắp nước" : ""));
-                session.setAttribute(FLASH_SUCCESS, printService.printedMessage(job.getTickets().size()));
+                PrintBooking job = "reprint".equals(action)
+                        ? printService.prepareReprint(parseInt(request.getParameter("ticketId")),
+                                request.getParameter("reason"), user.getUserId(), user.getFullName())
+                        : printService.preparePrint(parseInt(request.getParameter("bookingId")), selectedTickets(request),
+                                user.getUserId(), user.getFullName());
+                // Lượt in mới thay lượt đang chờ (nếu có); chưa ghi DB cho tới khi nhân viên xác nhận
+                session.setAttribute(SESSION_PENDING, job);
+                session.setAttribute(SESSION_PENDING_TOKEN, UUID.randomUUID().toString());
+                session.setAttribute(SESSION_AUTO_PRINT, Boolean.TRUE);
+                session.setAttribute(SESSION_BOOKING, job.getBookingId());
             }
-            session.setAttribute(SESSION_JOB, job);
-            session.setAttribute(SESSION_BOOKING, job.getBookingId());
-            bookingId = job.getBookingId();
         } catch (ValidationException e) {
             session.setAttribute(FLASH_ERROR, e.getErrors().get("general"));
         } catch (SQLException e) {
@@ -143,8 +145,43 @@ public class TicketPrintServlet extends HttpServlet {
             return;
         }
         Object last = session.getAttribute(SESSION_BOOKING);
-        String query = last instanceof Integer id && (bookingId <= 0 || id == bookingId) ? "?booking=" + id : "";
-        response.sendRedirect(request.getContextPath() + "/staff/ticket-print" + query);
+        response.sendRedirect(request.getContextPath() + "/staff/ticket-print"
+                + (last instanceof Integer id ? "?booking=" + id : ""));
+    }
+
+    // Sau hộp thoại in: nhân viên xác nhận vé đã ra giấy (ghi lượt in vào DB, ghi nhật ký) hoặc chưa in được (bỏ lượt
+    // in, không ghi gì). Chỉ lượt in đang chờ của chính phiên này, đúng token mới xử lý được.
+    private void finishPending(HttpServletRequest request, HttpSession session, User user, boolean confirm)
+            throws SQLException, ValidationException {
+        Object pending = session.getAttribute(SESSION_PENDING);
+        Object token = session.getAttribute(SESSION_PENDING_TOKEN);
+        if (!(pending instanceof PrintBooking job) || token == null
+                || !token.equals(request.getParameter("printToken"))) {
+            throw new ValidationException(java.util.Map.of("general", TicketPrintService.PRINT_EXPIRED));
+        }
+        session.removeAttribute(SESSION_PENDING);
+        session.removeAttribute(SESSION_PENDING_TOKEN);
+        session.removeAttribute(SESSION_AUTO_PRINT);
+        session.setAttribute(SESSION_BOOKING, job.getBookingId());
+        if (!confirm) {
+            session.setAttribute(FLASH_SUCCESS, printService.cancelledMessage());
+            return;
+        }
+        printService.confirmPrint(job, user.getUserId(), user.getFullName());
+        PrintTicket first = job.getTickets().get(0);
+        if (first.getPrintReason() != null) {
+            ActivityLogger.info(request, LogEventType.OPERATION, "In lại vé giấy", TARGET, job.getBookingId(),
+                    "Vé " + first.getTicketCode() + " (ghế " + first.getSeatLabel() + "), lần in lại "
+                            + first.getReprintNo() + ", lý do: " + first.getPrintReason());
+            session.setAttribute(FLASH_SUCCESS, printService.reprintedMessage(first.getTicketCode()));
+        } else {
+            ActivityLogger.info(request, LogEventType.OPERATION, "In vé giấy", TARGET, job.getBookingId(),
+                    "Đơn #" + job.getBookingId() + ": in " + job.getTickets().size() + " vé ("
+                            + job.getTickets().stream().map(t -> t.getTicketCode() + " ghế " + t.getSeatLabel())
+                            .collect(Collectors.joining(", ")) + ")"
+                            + (job.isConcessionSlip() ? " kèm phiếu nhận bắp nước" : ""));
+            session.setAttribute(FLASH_SUCCESS, printService.printedMessage(job.getTickets().size()));
+        }
     }
 
     private List<Integer> selectedTickets(HttpServletRequest request) {
