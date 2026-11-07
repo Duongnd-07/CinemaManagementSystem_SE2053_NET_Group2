@@ -162,6 +162,8 @@
                             <p class="text-body-sm text-outline">
                                 Báo sự cố mở ở tab mới. Gửi xong quay lại đây và bấm "Tải lại": các báo cáo bạn gửi cho phòng này
                                 sẽ được gắn vào lần kiểm tra khi bấm xác nhận, kết quả thành "Có sự cố".
+                                Không đánh dấu "Thiết bị khác bình thường" thì phải có báo cáo sự cố thiết bị cho phòng
+                                (bạn vừa gửi, hoặc thiết bị đã được báo và đang chờ xử lý).
                             </p>
                             <ul class="text-body-sm space-y-1">
                                 <c:forEach var="report" items="${linkedReports}">
@@ -174,7 +176,11 @@
                                         <c:if test="${not empty report.seatLabel}">ghế <c:out value="${report.seatLabel}"/></c:if>
                                         · <span class="text-secondary">sẽ gắn khi ${s.inspected ? 'cập nhật' : 'xác nhận'}</span></li>
                                 </c:forEach>
-                                <c:if test="${empty linkedReports and empty pendingReports}">
+                                <c:forEach var="report" items="${openReports}">
+                                    <li class="text-on-surface-variant">#SC-${report.reportId} · <c:out value="${report.equipmentCategory}"/>
+                                        · <span class="text-amber-300">đã báo trước đó, đang chờ xử lý</span></li>
+                                </c:forEach>
+                                <c:if test="${empty linkedReports and empty pendingReports and empty openReports}">
                                     <li class="text-on-surface-variant">Chưa có báo cáo sự cố nào.</li>
                                 </c:if>
                             </ul>

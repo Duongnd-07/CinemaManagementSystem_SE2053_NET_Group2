@@ -35,6 +35,9 @@ public class RoomInspectionService {
     public static final String NOT_AVAILABLE = "Suất chiếu đã bị hủy hoặc đã kết thúc, không thể kiểm tra.";
     public static final String NOT_INSPECTED_YET = "Suất chiếu này chưa được kiểm tra.";
     public static final String URGENT_BADGE = "{0} phòng chưa được kiểm tra cho các suất chiếu trong 30 phút tới";
+    public static final String EQUIPMENT_REPORT_REQUIRED =
+            "Bạn chưa đánh dấu \"Thiết bị khác bình thường\". Vui lòng báo sự cố cho thiết bị đó (nút \"Báo thiết bị khác\")"
+            + " rồi bấm \"Tải lại\" trước khi xác nhận, hoặc đánh dấu lại nếu thiết bị bình thường.";
     public static final String AFFECTED_TICKETS =
             "Ghế vừa báo hỏng đang có {0} vé cho suất chiếu sắp tới, cần đổi ghế hoặc hoàn tiền khi khách đến quầy.";
 
@@ -134,11 +137,12 @@ public class RoomInspectionService {
         }
         validateTicks(seatsChecked, roomCleaned, note);
         List<EquipmentReport> reports = inspectionDAO.findNewReports(slot.getRoomId(), staffId, slot.getWindowOpen(), 0);
+        requireEquipmentReport(equipmentOk, reports, slot.getRoomId());
         slot.setStaffId(staffId);
         slot.setSeatsChecked(true);
         slot.setRoomCleaned(true);
         slot.setEquipmentOk(equipmentOk);
-        slot.setHasIssue(!reports.isEmpty());
+        slot.setHasIssue(!reports.isEmpty() || !equipmentOk);
         slot.setNote(cleanNote(note));
         slot.setInspectedAt(now);
         slot.setLate(now.isAfter(slot.getStartTime()));
@@ -169,8 +173,11 @@ public class RoomInspectionService {
         validateTicks(seatsChecked, roomCleaned, note);
         List<EquipmentReport> reports = inspectionDAO.findNewReports(slot.getRoomId(), staffId, slot.getWindowOpen(),
                 slot.getInspectionId());
+        // findNewReports trả về cả báo cáo đã gắn với lần kiểm tra này (chỉ loại của lần kiểm tra khác)
+        requireEquipmentReport(equipmentOk, reports, slot.getRoomId());
         slot.setEquipmentOk(equipmentOk);
-        slot.setHasIssue(slot.isHasIssue() || !reports.isEmpty());
+        slot.setHasIssue(!reports.isEmpty() || !inspectionDAO.findLinkedReports(slot.getInspectionId()).isEmpty()
+                || !equipmentOk);
         slot.setNote(cleanNote(note));
         try (Connection conn = DBContext.getConnection()) {
             conn.setAutoCommit(false);
@@ -259,6 +266,25 @@ public class RoomInspectionService {
     }
 
     // E2 + độ dài ghi chú
+    // BR-35-04: không đánh dấu "Thiết bị khác bình thường" thì phải có báo cáo sự cố thiết bị (không phải ghế) cho
+    // phòng: báo cáo nhân viên vừa gửi trong lần kiểm tra này, hoặc báo cáo của phòng chưa xử lý xong
+    private void requireEquipmentReport(boolean equipmentOk, List<EquipmentReport> reports, int roomId)
+            throws SQLException, ValidationException {
+        if (equipmentOk) {
+            return;
+        }
+        boolean reported = reports.stream().anyMatch(r -> !EquipmentCategory.SEAT.equals(r.getEquipmentCategory()))
+                || !inspectionDAO.findOpenEquipmentReports(roomId).isEmpty();
+        if (!reported) {
+            throw error(EQUIPMENT_REPORT_REQUIRED);
+        }
+    }
+
+    // Báo cáo thiết bị khác của phòng chưa xử lý xong, để hiện trên bảng kiểm tra
+    public List<EquipmentReport> openEquipmentReports(InspectionSlot slot) throws SQLException {
+        return inspectionDAO.findOpenEquipmentReports(slot.getRoomId());
+    }
+
     private void validateTicks(boolean seatsChecked, boolean roomCleaned, String note) throws ValidationException {
         if (!seatsChecked || !roomCleaned) {
             throw error(REQUIRED_NOT_TICKED);
