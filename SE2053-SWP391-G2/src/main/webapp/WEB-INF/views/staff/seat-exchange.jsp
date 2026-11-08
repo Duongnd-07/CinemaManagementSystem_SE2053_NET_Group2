@@ -129,14 +129,14 @@
                 <%-- Nhóm ghế theo phương án; value gửi lên dạng "S:12", "U:12", "D:12", "P:12-13" --%>
                 <c:forEach var="group" items="${[['S', options.same, 'Ghế cùng hạng (ưu tiên)', true],
                                                  ['U', options.upgrade, 'Hết ghế thường: nâng lên ghế VIP miễn phí', true],
-                                                 ['P', options.pairs, 'Hết ghế đôi: chuyển sang 2 ghế cạnh nhau', true],
-                                                 ['D', options.downgrade, 'Hết ghế VIP: xuống ghế thường, trả tiền chênh lệch', true]]}">
+                                                 ['P', options.pairs, 'Hết ghế đôi: chuyển sang 2 ghế cạnh nhau, đền bù tiền mặt', true],
+                                                 ['D', options.downgrade, 'Hết ghế VIP: xuống ghế thường, đền bù tiền mặt', true]]}">
                     <c:if test="${not empty group[1]}">
                         <section class="${cardClass}">
                             <h2 class="text-title-md mb-1">${group[2]}</h2>
                             <p class="text-body-sm text-on-surface-variant mb-space-md">
                                 <c:choose>
-                                    <c:when test="${group[0] == 'D'}">Trả khách <b><fmt:formatNumber value="${options.downgradeCash}" maxFractionDigits="0"/>đ</b> tiền mặt chênh lệch<c:if test="${tk.member and options.downgradePoints > 0}"> + <b>${options.downgradePoints} điểm</b></c:if> (cần đang trong ca)</c:when>
+                                    <c:when test="${(group[0] == 'D' or group[0] == 'P') and options.compensationCash > 0}">Đền bù khách <b><fmt:formatNumber value="${options.compensationCash}" maxFractionDigits="0"/>đ</b> tiền mặt (cần đang trong ca)</c:when>
                                     <c:otherwise>Không thu thêm tiền</c:otherwise>
                                 </c:choose>
                                 <c:if test="${group[3] and options.voucherEligible}"> · tặng voucher <b><fmt:formatNumber value="${options.voucherValue}" maxFractionDigits="0"/>đ</b></c:if>
