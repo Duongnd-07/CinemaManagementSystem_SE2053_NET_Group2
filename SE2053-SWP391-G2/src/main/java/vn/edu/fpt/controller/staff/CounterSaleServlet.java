@@ -32,6 +32,7 @@ import vn.edu.fpt.service.ShiftService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
+import vn.edu.fpt.util.VietQr;
 
 // UC-19: Sell Ticket & Concession at Counter
 // GET: chưa mở ca -> form mở ca; ?showtimeId -> màn hình bán; ?mode=concession -> bán riêng bắp nước;
@@ -205,6 +206,10 @@ public class CounterSaleServlet extends HttpServlet {
         shiftAttributes(request, shift);
         request.setAttribute("form", form);
         request.setAttribute("quote", quote);
+        // Đã tính tiền xong thì có sẵn mã VietQR đúng số tiền + mã đối chiếu, hiện khi chọn chuyển khoản
+        if (quote != null && quote.isValid() && quote.getFinalAmount().signum() > 0) {
+            request.setAttribute("transferQr", VietQr.dataUri(quote.getFinalAmount(), form.getTransferNote(), 260));
+        }
         request.setAttribute("errors", errors);
         request.setAttribute("concessions", quote != null ? quote.getConcessions() : saleService.listConcessions());
         request.setAttribute("paymentMethods", CounterSaleService.PAYMENT_METHODS);

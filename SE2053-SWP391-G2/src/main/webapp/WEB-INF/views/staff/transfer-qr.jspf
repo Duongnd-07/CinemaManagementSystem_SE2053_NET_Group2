@@ -1,0 +1,14 @@
+<%@ page pageEncoding="UTF-8" %>
+<%-- UC-19: mã VietQR cho khách quét chuyển khoản; cần request attribute "transferQr" (có sau khi bấm Tính tiền) --%>
+<c:choose>
+    <c:when test="${not empty transferQr}">
+        <div class="rounded-lg bg-white p-space-sm text-center text-slate-900">
+            <img src="${transferQr}" alt="Mã VietQR chuyển khoản" class="mx-auto w-[220px] h-[220px]"/>
+            <div class="text-body-sm font-semibold mt-1">MB Bank · DUONG HUU THAI SON</div>
+            <div class="text-body-sm">0969712567 · <b><fmt:formatNumber value="${quote.finalAmount}" maxFractionDigits="0"/>đ</b></div>
+        </div>
+    </c:when>
+    <c:otherwise>
+        <p class="text-body-sm text-on-surface-variant">Bấm <b>Tính tiền</b> để hiện mã QR có sẵn số tiền cho khách quét.</p>
+    </c:otherwise>
+</c:choose>
