@@ -66,7 +66,7 @@
                 <table class="w-full text-left text-body-md">
                     <thead class="text-label-md text-on-surface-variant border-b border-white/10">
                     <tr><th class="px-space-md py-2">Ca</th><th>Quầy</th><th>Bắt đầu</th><th>Kết thúc</th>
-                        <th class="text-right">Tiền mặt</th><th class="text-right">Chuyển khoản</th><th class="text-right">Thẻ</th><th class="px-space-md">Két</th></tr>
+                        <th class="text-right">Tiền mặt</th><th class="text-right">Chuyển khoản</th><th class="px-space-md">Két</th></tr>
                     </thead>
                     <tbody class="divide-y divide-white/5">
                     <c:forEach var="s" items="${history}">
@@ -78,7 +78,6 @@
                                 <c:otherwise>${fn:substring(s.endedAt, 11, 16)} ${fn:substring(s.endedAt, 8, 10)}/${fn:substring(s.endedAt, 5, 7)}${empty s.closedBy ? ' (tự kết)' : ''}</c:otherwise></c:choose></td>
                             <td class="text-right"><c:if test="${not empty s.cashTotal}"><fmt:formatNumber value="${s.cashTotal}" maxFractionDigits="0"/>đ</c:if></td>
                             <td class="text-right"><c:if test="${not empty s.transferTotal}"><fmt:formatNumber value="${s.transferTotal}" maxFractionDigits="0"/>đ</c:if></td>
-                            <td class="text-right"><c:if test="${not empty s.cardTotal}"><fmt:formatNumber value="${s.cardTotal}" maxFractionDigits="0"/>đ</c:if></td>
                             <td class="px-space-md"><c:choose>
                                 <c:when test="${empty s.endedAt}">-</c:when>
                                 <c:when test="${empty s.countedCash}"><span class="cl-pill cl-pill--warning">Chưa đếm</span></c:when>

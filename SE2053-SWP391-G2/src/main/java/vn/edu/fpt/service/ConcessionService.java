@@ -18,10 +18,14 @@ public class ConcessionService {
     // Form chỉ cho chọn hai trạng thái này; Out of Stock do hệ thống tự đặt theo tồn kho
     public static final List<String> FORM_STATUSES = List.of(ConcessionStatus.ACTIVE, ConcessionStatus.HIDDEN);
 
+    private static final int MIN_NAME = 2;
     private static final int MAX_NAME = 100;
+    private static final String NAME_INVALID = "Tên món phải từ 2 đến 100 ký tự và có chữ.";
     private static final int MAX_DESCRIPTION = 500;
     private static final int MAX_URL = 500;
-    private static final Pattern PRICE = Pattern.compile("\\d{1,9}");
+    // Giá tối đa 99.999.999đ (8 chữ số), cùng mức với các ô nhập tiền tại quầy và ca làm việc
+    private static final Pattern PRICE = Pattern.compile("\\d{1,8}");
+    private static final String PRICE_INVALID = "Giá bán phải là số nguyên từ 0 đến 99.999.999đ.";
     private static final Pattern STOCK = Pattern.compile("\\d{1,6}");
     private static final int SQL_UNIQUE_VIOLATION = 2627;
     private static final int SQL_UNIQUE_INDEX_VIOLATION = 2601;
@@ -67,8 +71,8 @@ public class ConcessionService {
         String name = form.getName().trim();
         if (name.isEmpty()) {
             errors.put("name", Messages.format(Messages.MSG02, "Tên món"));
-        } else if (name.length() > MAX_NAME) {
-            errors.put("name", Messages.format(Messages.MSG08, MAX_NAME));
+        } else if (!TextRule.ok(name, MIN_NAME, MAX_NAME)) {
+            errors.put("name", NAME_INVALID);
         } else if (concessionDAO.existsByName(name, form.getConcessionId())) {
             errors.put("name", Messages.CONCESSION_NAME_DUPLICATE);
         }
@@ -82,7 +86,7 @@ public class ConcessionService {
         if (price.isEmpty()) {
             errors.put("price", Messages.format(Messages.MSG02, "Giá bán"));
         } else if (!PRICE.matcher(price).matches()) {
-            errors.put("price", Messages.CONCESSION_PRICE_INVALID);
+            errors.put("price", PRICE_INVALID);
         }
         String stock = form.getStockQuantity().trim();
         if (stock.isEmpty()) {

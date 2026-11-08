@@ -7,11 +7,23 @@
 <%@ attribute name="baseUrl" required="true" description="URL trang hiện tại (chưa có tham số page), dùng cho phân trang và gửi form" %>
 <%@ attribute name="summary" required="true" type="vn.edu.fpt.model.ReviewSummary" %>
 <%@ attribute name="myReview" required="false" type="vn.edu.fpt.model.Review" %>
+<%@ attribute name="draft" required="false" type="vn.edu.fpt.service.ReviewForm" %>
 <%@ attribute name="reviewPage" required="true" type="vn.edu.fpt.util.Page" %>
 <%@ attribute name="canReview" required="true" type="java.lang.Boolean" %>
 <%@ attribute name="isCustomer" required="true" type="java.lang.Boolean" %>
 <%@ attribute name="csrfToken" required="false" %>
+<%@ attribute name="star" required="false" type="java.lang.Integer" description="Số sao đang lọc (null = tất cả)" %>
+<%@ attribute name="sort" required="true" description="newest | highest | lowest (đã chuẩn hóa ở Service)" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<c:set var="formRating" value="${not empty draft ? draft.rating : (not empty myReview ? myReview.rating : 0)}"/>
+<c:set var="formComment" value="${not empty draft ? draft.comment : myReview.comment}"/>
+<c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&' : '?'}"/>
+<%-- filterBase giữ cách sắp xếp khi đổi số sao; listUrl giữ cả bộ lọc khi chuyển trang --%>
+<c:set var="starParam" value=""/>
+<c:if test="${not empty star}"><c:set var="starParam" value="&star=${star}"/></c:if>
+<c:set var="filterBase" value="${baseUrl}${sep}sort=${sort}"/>
+<c:set var="listUrl" value="${filterBase}${starParam}"/>
+<c:set var="sortLabels" value="${{'newest':'Mới nhất','highest':'Điểm cao nhất','lowest':'Điểm thấp nhất'}}"/>
 
 <section id="reviews" class="space-y-5">
     <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
@@ -24,22 +36,23 @@
             <span class="text-4xl font-extrabold text-white"><fmt:formatNumber value="${summary.averageRating}" pattern="0.0"/></span>
             <%-- Font icon chỉ nạp FILL 0 nên sao đạt/không đạt được phân biệt bằng màu; điểm làm tròn tới sao gần nhất --%>
             <div class="flex items-center gap-0.5 mt-1">
-                <c:forEach begin="1" end="5" var="star">
-                    <span class="material-symbols-outlined text-lg ${star <= summary.averageRating + 0.5 ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}">star</span>
+                <c:forEach begin="1" end="5" var="i">
+                    <span class="material-symbols-outlined text-lg ${i <= summary.averageRating + 0.5 ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}">star</span>
                 </c:forEach>
             </div>
             <span class="text-xs text-[#8e919f] mt-1">${summary.totalReviews} lượt đánh giá</span>
         </div>
         <div class="flex-1 space-y-1.5">
-            <%-- starCounts đã được xếp theo thứ tự 5 sao -> 1 sao từ ReviewSummary --%>
+            <%-- starCounts đã được xếp theo thứ tự 5 sao -> 1 sao từ ReviewSummary; bấm vào một dòng để lọc theo mức sao đó --%>
             <c:forEach var="entry" items="${summary.starCounts}">
-                <div class="flex items-center gap-2 text-xs text-[#8e919f]">
+                <a href="${filterBase}&star=${entry.key}#reviews"
+                   class="flex items-center gap-2 text-xs rounded-md px-1 transition hover:bg-white/5 ${star == entry.key ? 'text-white' : 'text-[#8e919f]'}">
                     <span class="w-8 text-right">${entry.key} ★</span>
                     <div class="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
                         <div class="h-full bg-[#ffb95f]" style="width: ${summary.percentOf(entry.key)}%"></div>
                     </div>
                     <span class="w-10">${entry.value}</span>
-                </div>
+                </a>
             </c:forEach>
         </div>
     </div>
@@ -58,19 +71,20 @@
                     <p class="text-sm text-[#ffb4ab]">Đánh giá của bạn đang bị ẩn do vi phạm. Lý do: <c:out value="${myReview.hiddenReason}"/></p>
                 </c:if>
                 <c:if test="${myReview.status != 'Hidden'}">
-                    <form method="post" action="${ctx}/customer/reviews" novalidate class="space-y-3" data-review-form>
+                    <form method="post" action="${ctx}/customer/reviews" novalidate class="space-y-3" data-review-form
+                          data-rating-message="${fn:escapeXml(reviewRatingMessage)}" data-comment-message="${fn:escapeXml(reviewCommentMessage)}">
                         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                         <input type="hidden" name="movieId" value="${movieId}"/>
                         <div class="flex items-center gap-1" data-star-picker>
-                            <c:forEach begin="1" end="5" var="star">
+                            <c:forEach begin="1" end="5" var="i">
                                 <label class="cursor-pointer">
-                                    <input type="radio" name="rating" value="${star}" class="sr-only" ${myReview.rating == star ? 'checked' : ''}/>
-                                    <span class="material-symbols-outlined text-2xl ${star <= myReview.rating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}" data-star="${star}">star</span>
+                                    <input type="radio" name="rating" value="${i}" class="sr-only" ${formRating == i ? 'checked' : ''}/>
+                                    <span class="material-symbols-outlined text-2xl ${i <= formRating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}" data-star="${i}">star</span>
                                 </label>
                             </c:forEach>
                         </div>
-                        <textarea name="comment" rows="3" maxlength="1000" placeholder="Chia sẻ cảm nhận của bạn (không bắt buộc)..."
-                                  class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"><c:out value="${myReview.comment}"/></textarea>
+                        <textarea name="comment" rows="3" minlength="10" maxlength="1000" required placeholder="Chia sẻ cảm nhận của bạn (10–1000 ký tự)..."
+                                  class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"><c:out value="${formComment}"/></textarea>
                         <div class="flex items-center justify-end gap-3">
                             <button type="submit" class="h-10 px-5 rounded-xl bg-[#e50914] hover:bg-[#b80710] text-white text-sm font-bold transition">Cập nhật đánh giá</button>
                         </div>
@@ -86,20 +100,21 @@
             </div>
         </c:when>
         <c:when test="${canReview}">
-            <form method="post" action="${ctx}/customer/reviews" novalidate class="p-5 rounded-2xl bg-[#171b26] border border-white/10 space-y-3" data-review-form>
+            <form method="post" action="${ctx}/customer/reviews" novalidate class="p-5 rounded-2xl bg-[#171b26] border border-white/10 space-y-3" data-review-form
+                  data-rating-message="${fn:escapeXml(reviewRatingMessage)}" data-comment-message="${fn:escapeXml(reviewCommentMessage)}">
                 <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                 <input type="hidden" name="movieId" value="${movieId}"/>
                 <span class="text-sm font-bold text-white">Viết đánh giá của bạn</span>
                 <div class="flex items-center gap-1" data-star-picker>
-                    <c:forEach begin="1" end="5" var="star">
+                    <c:forEach begin="1" end="5" var="i">
                         <label class="cursor-pointer">
-                            <input type="radio" name="rating" value="${star}" class="sr-only" required/>
-                            <span class="material-symbols-outlined text-2xl text-[#4a4e5c]" data-star="${star}">star</span>
+                            <input type="radio" name="rating" value="${i}" class="sr-only" required ${formRating == i ? 'checked' : ''}/>
+                            <span class="material-symbols-outlined text-2xl ${i <= formRating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}" data-star="${i}">star</span>
                         </label>
                     </c:forEach>
                 </div>
-                <textarea name="comment" rows="3" maxlength="1000" placeholder="Chia sẻ cảm nhận của bạn (không bắt buộc)..."
-                          class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"></textarea>
+                <textarea name="comment" rows="3" minlength="10" maxlength="1000" required placeholder="Chia sẻ cảm nhận của bạn (10–1000 ký tự)..."
+                          class="w-full rounded-xl bg-[#0f131d] border border-white/10 p-3 text-sm text-[#dfe2f1] focus:border-[#e50914] outline-none"><c:out value="${formComment}"/></textarea>
                 <div class="flex items-center justify-end">
                     <button type="submit" class="h-10 px-5 rounded-xl bg-[#e50914] hover:bg-[#b80710] text-white text-sm font-bold transition">Gửi đánh giá</button>
                 </div>
@@ -122,18 +137,44 @@
         </c:otherwise>
     </c:choose>
 
+    <%-- Bộ lọc số sao + sắp xếp cho danh sách đánh giá của khách khác --%>
+    <c:set var="chipOn" value="bg-[#e50914] border-[#e50914] text-white"/>
+    <c:set var="chipOff" value="bg-white/5 border-white/10 text-[#dfe2f1] hover:bg-white/10"/>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="${filterBase}#reviews" class="px-3 py-1 rounded-full text-xs font-semibold border transition ${empty star ? chipOn : chipOff}">Tất cả</a>
+            <c:forEach var="entry" items="${summary.starCounts}">
+                <a href="${filterBase}&star=${entry.key}#reviews"
+                   class="px-3 py-1 rounded-full text-xs font-semibold border transition ${star == entry.key ? chipOn : chipOff}">${entry.key} ★ (${entry.value})</a>
+            </c:forEach>
+        </div>
+        <div class="flex items-center gap-3 text-xs">
+            <span class="text-[#8e919f]">Sắp xếp:</span>
+            <%-- Lặp theo chuỗi cố định để giữ thứ tự (map literal của EL không giữ thứ tự) --%>
+            <c:forEach var="option" items="${fn:split('newest,highest,lowest', ',')}">
+                <a href="${baseUrl}${sep}sort=${option}${starParam}#reviews"
+                   class="font-semibold ${sort == option ? 'text-[#ffb95f]' : 'text-[#8e919f] hover:text-white'}">${sortLabels[option]}</a>
+            </c:forEach>
+        </div>
+    </div>
+
     <%-- Danh sách đánh giá của khách khác --%>
     <div class="space-y-4">
         <c:if test="${empty reviewPage.items}">
-            <p class="text-sm text-[#8e919f]">Chưa có đánh giá nào khác cho phim này.</p>
+            <p class="text-sm text-[#8e919f]">
+                <c:choose>
+                    <c:when test="${empty star}">Chưa có đánh giá nào khác cho phim này.</c:when>
+                    <c:otherwise>Chưa có đánh giá ${star} sao nào.</c:otherwise>
+                </c:choose>
+            </p>
         </c:if>
         <c:forEach var="item" items="${reviewPage.items}">
             <div class="p-4 rounded-xl bg-[#171b26] border border-white/10 space-y-1.5">
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-bold text-white"><c:out value="${item.reviewerName}"/></span>
                     <div class="flex items-center">
-                        <c:forEach begin="1" end="5" var="star">
-                            <span class="material-symbols-outlined text-base ${star <= item.rating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}">star</span>
+                        <c:forEach begin="1" end="5" var="i">
+                            <span class="material-symbols-outlined text-base ${i <= item.rating ? 'text-[#ffb95f]' : 'text-[#4a4e5c]'}">star</span>
                         </c:forEach>
                     </div>
                 </div>
@@ -146,11 +187,10 @@
         </c:forEach>
     </div>
     <c:if test="${reviewPage.totalPages > 1}">
-        <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&' : '?'}"/>
         <div class="flex justify-end gap-5 text-sm">
-            <c:if test="${reviewPage.page > 1}"><a class="text-[#ffb4ab]" href="${baseUrl}${sep}page=${reviewPage.page - 1}#reviews">← Trang trước</a></c:if>
+            <c:if test="${reviewPage.page > 1}"><a class="text-[#ffb4ab]" href="${listUrl}&page=${reviewPage.page - 1}#reviews">← Trang trước</a></c:if>
             <span class="text-gray-400">Trang ${reviewPage.page} / ${reviewPage.totalPages}</span>
-            <c:if test="${reviewPage.page < reviewPage.totalPages}"><a class="text-[#ffb4ab]" href="${baseUrl}${sep}page=${reviewPage.page + 1}#reviews">Trang sau →</a></c:if>
+            <c:if test="${reviewPage.page < reviewPage.totalPages}"><a class="text-[#ffb4ab]" href="${listUrl}&page=${reviewPage.page + 1}#reviews">Trang sau →</a></c:if>
         </div>
     </c:if>
 </section>

@@ -40,8 +40,9 @@
         </div>
 
         <ui:review-panel movieId="${movie.movieId}" baseUrl="${ctx}/customer/reviews?movieId=${movie.movieId}"
-                          summary="${reviewSummary}" myReview="${myReview}" reviewPage="${reviewPage}"
-                          canReview="${canReview}" isCustomer="${true}" csrfToken="${csrfToken}"/>
+                          summary="${reviewSummary}" myReview="${myReview}" draft="${reviewDraft}" reviewPage="${reviewPage}"
+                          canReview="${canReview}" isCustomer="${true}" csrfToken="${csrfToken}"
+                          star="${reviewStar}" sort="${reviewSort}"/>
     </main>
     <jsp:include page="/WEB-INF/views/common/public-footer.jsp"/>
     <script src="${ctx}/assets/js/movie-review.js"></script>

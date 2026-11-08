@@ -13,8 +13,12 @@ public class ExchangeOptions {
     final List<Choice> pairs = new ArrayList<>();
     BigDecimal voucherValue = BigDecimal.ZERO;
     BigDecimal vipDifference = BigDecimal.ZERO;
+    // Hoàn vé: phần khách thực trả cho vé, tách thành điểm trả lại + tiền mặt
     BigDecimal refundCash = BigDecimal.ZERO;
     int refundPoints;
+    // Xuống ghế thường: phần khách thực trả cho tiền chênh lệch VIP, tách cùng cách
+    BigDecimal downgradeCash = BigDecimal.ZERO;
+    int downgradePoints;
 
     public ExchangeOptions(ExchangeTicket ticket) {
         this.ticket = ticket;
@@ -89,5 +93,13 @@ public class ExchangeOptions {
 
     public int getRefundPoints() {
         return refundPoints;
+    }
+
+    public BigDecimal getDowngradeCash() {
+        return downgradeCash;
+    }
+
+    public int getDowngradePoints() {
+        return downgradePoints;
     }
 }

@@ -13,13 +13,14 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import vn.edu.fpt.model.Permission;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.User;
-import vn.edu.fpt.service.ProfileService;
+import vn.edu.fpt.dao.UserDAO;
 import vn.edu.fpt.service.RolePermissionService;
 import vn.edu.fpt.util.AppConfig;
 import vn.edu.fpt.util.Messages;
@@ -39,7 +40,7 @@ public class AuthFilter implements Filter {
     // Tên các quyền của người dùng hiện tại, JSP dùng để ẩn menu không được phép
     private static final String ALLOWED_PERMISSIONS = "allowedPermissions";
 
-    private final ProfileService profileService = new ProfileService();
+    private final UserDAO userDAO = new UserDAO();
     private final RolePermissionService permissionService = new RolePermissionService();
 
     @Override
@@ -77,17 +78,36 @@ public class AuthFilter implements Filter {
             redirectToLogin(req, resp);
             return;
         }
+        User dbUser;
+        try {
+            dbUser = userDAO.findById(user.getUserId());
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi kiểm tra hiệu lực phiên đăng nhập", e);
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, Messages.SYSTEM_ERROR);
+            return;
+        }
+        // Không chuyển quyền cho phiên cũ khi Admin khóa tài khoản hoặc đổi vai trò.
+        if (dbUser == null || !ACTIVE.equals(dbUser.getStatus())
+                || !Objects.equals(user.getRole(), dbUser.getRole())
+                || user.getPasswordHash() == null
+                || !user.getPasswordHash().equals(dbUser.getPasswordHash())) {
+            session.invalidate();
+            req.getSession(true).setAttribute("flashError", Messages.SESSION_REVOKED);
+            redirectToLogin(req, resp);
+            return;
+        }
+        boolean permitted = allowedRoles.contains(dbUser.getRole());
         if (managerArea || staffArea) {
             // UC-31: chức năng trong danh mục do Admin phân quyền; URL ngoài danh mục giữ quy tắc theo tiền tố
             try {
                 Permission permission = Permission.fromPath(req.getServletPath());
                 if (permission != null) {
-                    allowed = ACTIVE.equals(user.getStatus()) && permissionService.isAllowed(user.getRole(), permission);
+                    permitted = permissionService.isAllowed(dbUser.getRole(), permission);
                 }
-                if (allowed) {
-                    req.setAttribute(ALLOWED_PERMISSIONS, permissionService.allowedFor(user.getRole()).stream()
+                if (permitted) {
+                    req.setAttribute(ALLOWED_PERMISSIONS, permissionService.allowedFor(dbUser.getRole()).stream()
                             .map(Permission::name).collect(Collectors.toSet()));
-                    req.setAttribute("managementHome", permissionService.firstManagementPath(user.getRole()));
+                    req.setAttribute("managementHome", permissionService.firstManagementPath(dbUser.getRole()));
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi kiểm tra quyền truy cập", e);
@@ -95,26 +115,9 @@ public class AuthFilter implements Filter {
                 return;
             }
         }
-        if (!allowed) {
+        if (!permitted) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập vào khu vực này.");
             return;
-        }
-        if (customerArea) {
-            boolean credentialCurrent;
-            try {
-                credentialCurrent = profileService.isSessionCredentialCurrent(user);
-            } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi kiểm tra hiệu lực phiên đăng nhập", e);
-                resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, Messages.SYSTEM_ERROR);
-                return;
-            }
-            if (!credentialCurrent) {
-                // UC-10 AF1 bước 4: mật khẩu đã được đổi ở phiên khác -> thu hồi phiên này
-                session.invalidate();
-                req.getSession(true).setAttribute("flashError", Messages.PROFILE_SESSION_REVOKED);
-                redirectToLogin(req, resp);
-                return;
-            }
         }
         chain.doFilter(request, response);
     }

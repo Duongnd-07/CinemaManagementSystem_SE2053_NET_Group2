@@ -12,6 +12,7 @@ BEGIN
         StartDate DATETIME NOT NULL CONSTRAINT DF_Voucher_StartDate DEFAULT GETDATE(),
         ExpiryDate DATETIME NOT NULL,
         UsageLimit INT NULL,
+        PerUserUsageLimit INT NOT NULL CONSTRAINT DF_Voucher_PerUserUsageLimit DEFAULT 1,
         OwnerUserID INT NULL CONSTRAINT FK_Voucher_OwnerUser REFERENCES [User](UserID),
         Status VARCHAR(20) NOT NULL CONSTRAINT DF_Voucher_Status DEFAULT 'Active',
         VoucherType VARCHAR(20) NOT NULL CONSTRAINT DF_Voucher_Type DEFAULT 'Promotion',
@@ -42,6 +43,9 @@ IF COL_LENGTH('Voucher', 'StartDate') IS NULL
         CONSTRAINT DF_Voucher_StartDate DEFAULT GETDATE() WITH VALUES;
 IF COL_LENGTH('Voucher', 'UsageLimit') IS NULL
     ALTER TABLE Voucher ADD UsageLimit INT NULL;
+IF COL_LENGTH('Voucher', 'PerUserUsageLimit') IS NULL
+    ALTER TABLE Voucher ADD PerUserUsageLimit INT NOT NULL
+        CONSTRAINT DF_Voucher_PerUserUsageLimit DEFAULT 1 WITH VALUES;
 GO
 
 IF NOT EXISTS (
@@ -93,6 +97,11 @@ IF NOT EXISTS (
 )
     ALTER TABLE Voucher ADD CONSTRAINT CK_Voucher_UsageLimit CHECK (UsageLimit IS NULL OR UsageLimit > 0);
 IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_Voucher_PerUserUsageLimit' AND parent_object_id = OBJECT_ID('Voucher')
+)
+    ALTER TABLE Voucher ADD CONSTRAINT CK_Voucher_PerUserUsageLimit CHECK (PerUserUsageLimit > 0);
+IF NOT EXISTS (
     SELECT 1
     FROM sys.indexes i
     JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
@@ -122,4 +131,8 @@ IF NOT EXISTS (
     SELECT 1 FROM sys.indexes WHERE name = 'IX_Booking_Voucher_Status' AND object_id = OBJECT_ID('Booking')
 )
     CREATE INDEX IX_Booking_Voucher_Status ON Booking (VoucherID, Status, BookingID);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes WHERE name = 'IX_Booking_Voucher_Customer_Status' AND object_id = OBJECT_ID('Booking')
+)
+    CREATE INDEX IX_Booking_Voucher_Customer_Status ON Booking (VoucherID, CustomerID, Status);
 GO

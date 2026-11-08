@@ -1,6 +1,7 @@
-<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" import="java.time.format.DateTimeFormatter" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<c:set var="timeFormat" value="${DateTimeFormatter.ofPattern('dd/MM/yyyy HH:mm')}"/>
 <!DOCTYPE html>
 <html lang="vi" class="dark">
 <head>
@@ -39,13 +40,15 @@
                     <c:forEach var="notification" items="${notifications.items}">
                         <article class="rounded-xl border ${notification.read ? 'border-white/5 bg-[#171b26]/60' : 'border-[#e50914]/30 bg-[#171b26]'} p-5">
                             <div class="flex items-start justify-between gap-4">
-                                <div class="min-w-0">
+                                <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
                                     <h2 class="font-bold text-white"><c:out value="${notification.title}"/></h2>
                                     <p class="mt-2 whitespace-pre-line text-sm text-gray-300"><c:out value="${notification.message}"/></p>
-                                    <p class="mt-3 text-xs text-gray-500"><c:out value="${notification.createdAt}"/></p>
+                                    <time class="mt-3 block text-xs text-gray-500" datetime="<c:out value='${notification.createdAt}'/>">
+                                        <c:out value="${notification.createdAt.format(timeFormat)}"/>
+                                    </time>
                                 </div>
                                 <span class="shrink-0 rounded-full px-3 py-1 text-xs ${notification.read ? 'bg-white/10 text-gray-400' : 'bg-[#e50914]/20 text-[#ffb4ab]'}">
-                                    <c:out value="${notification.read ? 'Đã đọc' : 'Chưa đọc'}"/>
+                                    <c:out value="${notification.read ? 'Đã đọc' : 'Mới'}"/>
                                 </span>
                             </div>
                         </article>

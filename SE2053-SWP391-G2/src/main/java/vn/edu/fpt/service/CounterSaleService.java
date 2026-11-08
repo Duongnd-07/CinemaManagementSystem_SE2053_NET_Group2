@@ -58,23 +58,20 @@ public class CounterSaleService {
     public static final String ERROR_AGE = "age";
 
     public static final List<String> PAYMENT_METHODS =
-            List.of(PaymentMethod.CASH, PaymentMethod.TRANSFER, PaymentMethod.CARD);
+            List.of(PaymentMethod.CASH, PaymentMethod.TRANSFER);
 
     private static final String SHIFT_REQUIRED = "Bạn cần mở ca trước khi bán vé.";
     private static final String SHIFT_EXPIRED = "Ca của bạn đã hết giờ, đơn chưa được bán. Vui lòng mở ca mới.";
     private static final String SEAT_REQUIRED = "Vui lòng chọn ít nhất một ghế.";
+    private static final String ITEM_REQUIRED = "Vui lòng chọn ít nhất một món.";
     private static final String SEAT_UNAVAILABLE = "Ghế {0} vừa được bán hoặc đang được giữ, vui lòng chọn ghế khác.";
     private static final String CUSTOMER_NOT_FOUND = "Không tìm thấy khách thành viên với số điện thoại/email này.";
     private static final String MEMBER_ONLY = "Chỉ khách thành viên mới được dùng voucher hoặc điểm.";
     private static final String AGE_REQUIRED = "Phim giới hạn độ tuổi {0}: hãy kiểm tra giấy tờ của khách rồi tích xác nhận.";
     private static final String PAYMENT_INVALID = "Vui lòng chọn hình thức thanh toán.";
-    private static final String CASH_INVALID = "Tiền khách đưa không hợp lệ.";
+    private static final String CASH_INVALID = "Tiền khách đưa phải là số nguyên từ 0 đến 99.999.999đ.";
     private static final String CASH_SHORT = "Tiền khách đưa chưa đủ, còn thiếu {0}đ.";
-    private static final String CARD_REFERENCE_INVALID = "Nhập mã chuẩn chi 6 số in trên hóa đơn máy POS sau khi cà thẻ thành công.";
-    private static final String TRANSFER_REFERENCE_INVALID =
-            "Nhập mã giao dịch ngân hàng (6-30 chữ/số) trong thông báo đã nhận tiền.";
-    private static final String TRANSFER_REFERENCE_USED = "Mã giao dịch này đã được dùng cho đơn #{0}, kiểm tra lại giao dịch.";
-    private static final String TRANSFER_REFERENCE_TAKEN = "Mã giao dịch này vừa được dùng cho đơn khác, kiểm tra lại giao dịch.";
+    private static final String TRANSFER_REFERENCE_TAKEN = "Nội dung chuyển khoản này vừa được dùng cho đơn khác, bấm Tính tiền lại.";
     private static final String TRANSFER_REFERENCE_INDEX = "UX_Booking_TransferReference";
 
     // Cùng cấu hình và giá trị mặc định với BookingService (UC-13)
@@ -108,7 +105,7 @@ public class CounterSaleService {
 
     // Sơ đồ ghế và giá từng loại ghế dùng chung với UC-09/UC-13
     public BookingSeatView loadSeats(int showtimeId) throws SQLException, ValidationException {
-        return bookingService.loadSeatSelection(showtimeId);
+        return bookingService.loadCounterSeatSelection(showtimeId);
     }
 
     // Món đang bán và còn hàng khi mới mở màn hình bán (chưa chọn số lượng)
@@ -127,7 +124,7 @@ public class CounterSaleService {
     public CounterQuote quote(CounterSaleForm form) throws SQLException, ValidationException {
         try (Connection conn = DBContext.getConnection()) {
             CounterQuote quote = price(conn, form, false);
-            checkPayment(conn, form, quote, false);
+            checkPayment(form, quote, false);
             return quote;
         }
     }
@@ -147,8 +144,11 @@ public class CounterSaleService {
                 if (shiftService.isExpired(shift, shiftService.shiftHours())) {
                     throw error(ERROR_SHIFT, SHIFT_EXPIRED);
                 }
+                if (!form.isConcessionOnly()) {
+                    bookingDAO.lockShowtimeSeats(conn, form.getShowtimeId());
+                }
                 CounterQuote quote = price(conn, form, true);
-                checkPayment(conn, form, quote, true);
+                checkPayment(form, quote, true);
                 if (!quote.isValid()) {
                     throw new ValidationException(quote.errors);
                 }
@@ -157,6 +157,9 @@ public class CounterSaleService {
                 return quote;
             } catch (SQLException | ValidationException | RuntimeException e) {
                 conn.rollback();
+                if (e instanceof SQLException sql && BookingDAO.isSeatLockFailure(sql)) {
+                    throw error(ERROR_SEATS, Messages.BOOKING_SEATS_BUSY);
+                }
                 // Hai quầy nhập cùng một mã chuyển khoản cùng lúc: UX_Booking_TransferReference chặn đơn đến sau
                 if (e instanceof SQLException sql && isDuplicateKey(sql)
                         && String.valueOf(sql.getMessage()).contains(TRANSFER_REFERENCE_INDEX)) {
@@ -181,6 +184,16 @@ public class CounterSaleService {
     private CounterQuote price(Connection conn, CounterSaleForm form, boolean lock)
             throws SQLException, ValidationException {
         CounterQuote quote = new CounterQuote();
+        // Đơn chỉ bắp nước: không gắn khách nên không dùng voucher, không đổi điểm, không tích điểm (bỏ qua mọi
+        // trường khách / voucher / điểm gửi lên)
+        if (form.isConcessionOnly()) {
+            priceConcessions(conn, form, quote);
+            if (!quote.errors.containsKey(ERROR_CONCESSION)
+                    && quote.concessions.stream().allMatch(line -> line.getQuantity() == 0)) {
+                quote.errors.put(ERROR_CONCESSION, ITEM_REQUIRED);
+            }
+            return quote;
+        }
         Showtime showtime = loadSellableShowtime(conn, form.getShowtimeId());
         Movie movie = showtime.getMovie();
         if (AGE_RESTRICTED.contains(movie.getAgeRating()) && !form.isAgeConfirmed()) {
@@ -198,7 +211,7 @@ public class CounterSaleService {
                 quote.customer = customer;
             }
         }
-        priceVoucher(conn, form, quote);
+        priceVoucher(conn, form, quote, showtime.getMovieId());
         pricePoints(conn, form, quote, lock);
         return quote;
     }
@@ -295,10 +308,13 @@ public class CounterSaleService {
     }
 
     // GB-05 giống UC-13: còn hiệu lực, công khai hoặc thuộc chính khách, đạt đơn tối thiểu, chưa hết lượt
-    private void priceVoucher(Connection conn, CounterSaleForm form, CounterQuote quote) throws SQLException {
+    private void priceVoucher(Connection conn, CounterSaleForm form, CounterQuote quote, int movieId)
+            throws SQLException {
+        // Voucher chỉ áp dụng cho tiền vé, không giảm giá bắp nước.
+        BigDecimal ticketTotal = quote.getTicketTotal();
         BigDecimal gross = quote.getGrossTotal();
         if (quote.customer != null) {
-            for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, quote.customer.getUserId())) {
+            for (Voucher voucher : bookingDAO.findActiveVouchersOfOwner(conn, quote.customer.getUserId(), movieId)) {
                 quote.vouchers.add(new CheckoutVoucherOption(voucher.getVoucherCode(), voucher.getDiscountType(),
                         voucher.getDiscountValue(), voucher.getMinOrderAmount(), voucher.getExpiryDate(),
                         gross.compareTo(voucher.getMinOrderAmount()) < 0,
@@ -315,19 +331,19 @@ public class CounterSaleService {
             return;
         }
         Voucher voucher = bookingDAO.findVoucherByCode(conn, code);
-        if (!isVoucherUsable(conn, quote.customer, voucher, gross)) {
+        if (!isVoucherUsable(conn, quote.customer, voucher, gross, movieId)) {
             quote.errors.put(ERROR_VOUCHER, Messages.BOOKING_VOUCHER_INVALID);
             return;
         }
         BigDecimal discount = VoucherService.PERCENT.equals(voucher.getDiscountType())
-                ? gross.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                ? ticketTotal.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
                 : voucher.getDiscountValue();
-        quote.voucherDiscount = discount.min(gross).setScale(0, RoundingMode.HALF_UP);
+        quote.voucherDiscount = discount.min(ticketTotal).setScale(0, RoundingMode.HALF_UP);
         quote.voucherId = voucher.getVoucherId();
         quote.voucherCode = voucher.getVoucherCode();
     }
 
-    private boolean isVoucherUsable(Connection conn, User customer, Voucher voucher, BigDecimal gross)
+    private boolean isVoucherUsable(Connection conn, User customer, Voucher voucher, BigDecimal gross, int movieId)
             throws SQLException {
         if (voucher == null || !VoucherService.ACTIVE.equals(voucher.getStatus())) {
             return false;
@@ -341,6 +357,9 @@ public class CounterSaleService {
         if (owner != null && owner != customer.getUserId()) {
             return false;
         }
+        if (voucher.getMovieId() != null && voucher.getMovieId() != movieId) {
+            return false;
+        }
         if (gross.compareTo(voucher.getMinOrderAmount()) < 0) {
             return false;
         }
@@ -348,12 +367,15 @@ public class CounterSaleService {
                 && bookingDAO.countActiveVoucherUses(conn, voucher.getVoucherId()) >= voucher.getUsageLimit()) {
             return false;
         }
-        // Voucher công khai: mỗi khách một lần. Voucher cá nhân: chỉ một lần
-        return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(),
-                owner == null ? Integer.valueOf(customer.getUserId()) : null, 0);
+        if (owner == null) {
+            int perUserLimit = voucher.getPerUserUsageLimit() == null ? 1 : voucher.getPerUserUsageLimit();
+            return bookingDAO.countActiveVoucherUsesByCustomer(conn, voucher.getVoucherId(),
+                    customer.getUserId()) < perUserLimit;
+        }
+        return !bookingDAO.isVoucherInUse(conn, voucher.getVoucherId(), null, 0);
     }
 
-    // BR-LOYALTY-01: điểm chỉ trừ vào tiền vé, không làm tổng âm, không vượt số điểm còn dùng được
+    // D05: điểm trừ vào cả bill sau voucher, không làm tổng âm, không vượt số điểm còn dùng được.
     private void pricePoints(Connection conn, CounterSaleForm form, CounterQuote quote, boolean lock)
             throws SQLException {
         quote.pointRate = Math.max(1, configDAO.getInt(conn, CONFIG_POINT_RATE, DEFAULT_POINT_RATE));
@@ -369,7 +391,7 @@ public class CounterSaleService {
         Integer balance = bookingDAO.findPointBalance(conn, quote.customer.getUserId(), lock);
         int reserved = bookingDAO.sumReservedPoints(conn, quote.customer.getUserId(), 0);
         quote.availablePoints = Math.max(0, (balance == null ? 0 : balance) - reserved);
-        BigDecimal cap = quote.ticketTotal.min(quote.getGrossTotal().subtract(quote.voucherDiscount)).max(BigDecimal.ZERO);
+        BigDecimal cap = quote.getGrossTotal().subtract(quote.voucherDiscount).max(BigDecimal.ZERO);
         int maxByAmount = cap.divide(BigDecimal.valueOf(quote.pointRate), 0, RoundingMode.DOWN).intValue();
         quote.maxPoints = Math.min(quote.availablePoints, maxByAmount);
         if (points < 0) {
@@ -384,8 +406,8 @@ public class CounterSaleService {
     }
 
     // required = false khi chỉ tính tiền: chưa chọn hình thức thì chưa báo lỗi, nhưng vẫn tính tiền thối nếu có
-    private void checkPayment(Connection conn, CounterSaleForm form, CounterQuote quote, boolean required)
-            throws SQLException {
+    // Chuyển khoản: nhân viên tự xem app ngân hàng đã nhận tiền rồi mới bấm xác nhận, không nhập mã giao dịch
+    private void checkPayment(CounterSaleForm form, CounterQuote quote, boolean required) {
         String method = form.getPaymentMethod();
         if (!PAYMENT_METHODS.contains(method)) {
             if (required) {
@@ -394,14 +416,15 @@ public class CounterSaleService {
             return;
         }
         if (!PaymentMethod.CASH.equals(method)) {
-            checkReference(conn, method, paymentReference(form), quote, required);
+            return;
+        }
+        // Đơn 0đ (trả hết bằng voucher/điểm) không thu tiền: bỏ qua tiền khách đưa, không tính và không lưu tiền thối
+        if (quote.getFinalAmount().signum() == 0) {
             return;
         }
         String raw = form.getCashReceived().trim().replace(".", "").replace(",", "");
-        if (raw.isEmpty() && quote.getFinalAmount().signum() == 0) {
-            return;
-        }
-        if (!raw.matches("\\d{1,12}")) {
+        // Tối đa 99.999.999đ (8 chữ số) để chặn gõ nhầm thừa số 0
+        if (!raw.matches("\\d{1,8}")) {
             if (required || !raw.isEmpty()) {
                 quote.errors.put(ERROR_PAYMENT, CASH_INVALID);
             }
@@ -414,29 +437,6 @@ public class CounterSaleService {
             return;
         }
         quote.changeDue = cash.subtract(quote.getFinalAmount());
-    }
-
-    // Thẻ / chuyển khoản không tự xác minh được với ngân hàng: bắt buộc mã giao dịch làm bằng chứng tiền đã về,
-    // lưu vào đơn để Manager đối chiếu với hóa đơn POS và sao kê khi kết ca (UC-22). Đơn 0đ không cần mã
-    private void checkReference(Connection conn, String method, String reference, CounterQuote quote,
-                                boolean required) throws SQLException {
-        if (quote.getFinalAmount().signum() == 0 || (reference.isEmpty() && !required)) {
-            return;
-        }
-        boolean card = PaymentMethod.CARD.equals(method);
-        if (!reference.matches(card ? "\\d{6}" : "[A-Z0-9]{6,30}")) {
-            quote.errors.put(ERROR_PAYMENT, card ? CARD_REFERENCE_INVALID : TRANSFER_REFERENCE_INVALID);
-            return;
-        }
-        Integer usedBy = card ? null : counterDAO.findBookingIdByTransferReference(conn, reference);
-        if (usedBy != null) {
-            quote.errors.put(ERROR_PAYMENT, Messages.format(TRANSFER_REFERENCE_USED, String.valueOf(usedBy)));
-        }
-    }
-
-    // Mã giao dịch viết hoa, bỏ khoảng trắng; tiền mặt không lưu mã
-    private String paymentReference(CounterSaleForm form) {
-        return form.getPaymentReference().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
     }
 
     private int save(Connection conn, CounterSaleForm form, CounterQuote quote, int staffId, int shiftId)
@@ -459,29 +459,33 @@ public class CounterSaleService {
         booking.setPointsRedeemed(quote.pointsRedeemed);
         booking.setPointsEarned(pointsEarned);
         boolean cash = PaymentMethod.CASH.equals(form.getPaymentMethod());
-        String reference = cash ? "" : paymentReference(form);
+        // Lưu nội dung chuyển khoản (CINExxxxxx) để Manager đối chiếu với sao kê khi kết ca (UC-22)
+        String reference = cash || quote.getFinalAmount().signum() == 0 ? null : form.getTransferNote();
         // checkPayment đã tính tiền thối từ tiền khách đưa; đơn 0đ không nhập tiền thì không có
         BigDecimal cashReceived = cash && quote.changeDue != null ? quote.getFinalAmount().add(quote.changeDue) : null;
-        int bookingId = counterDAO.insertBooking(conn, booking, reference.isEmpty() ? null : reference, cashReceived);
+        int bookingId = counterDAO.insertBooking(conn, booking, reference, cashReceived);
 
-        List<Ticket> tickets = new ArrayList<>();
-        for (BookingSeatLine seat : quote.seats) {
-            Ticket ticket = new Ticket();
-            ticket.setBookingId(bookingId);
-            ticket.setSeatId(seat.getSeatId());
-            ticket.setPrice(seat.getPrice());
-            ticket.setTicketCode(newTicketCode());
-            ticket.setStatus(TicketStatus.UPCOMING);
-            ticket.setShowtimeId(form.getShowtimeId());
-            tickets.add(ticket);
+        // Đơn chỉ bắp nước không có vé
+        if (!quote.seats.isEmpty()) {
+            List<Ticket> tickets = new ArrayList<>();
+            for (BookingSeatLine seat : quote.seats) {
+                Ticket ticket = new Ticket();
+                ticket.setBookingId(bookingId);
+                ticket.setSeatId(seat.getSeatId());
+                ticket.setPrice(seat.getPrice());
+                ticket.setTicketCode(newTicketCode());
+                ticket.setStatus(TicketStatus.UPCOMING);
+                ticket.setShowtimeId(form.getShowtimeId());
+                tickets.add(ticket);
+            }
+            bookingDAO.insertTickets(conn, tickets);
+            // Mã QR để soát vé, giống vé online sau khi thanh toán (UC-14)
+            List<Ticket> saved = bookingDAO.findTickets(conn, bookingId);
+            for (Ticket ticket : saved) {
+                ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
+            }
+            bookingDAO.updateTicketQrCodes(conn, saved);
         }
-        bookingDAO.insertTickets(conn, tickets);
-        // Mã QR để soát vé, giống vé online sau khi thanh toán (UC-14)
-        List<Ticket> saved = bookingDAO.findTickets(conn, bookingId);
-        for (Ticket ticket : saved) {
-            ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
-        }
-        bookingDAO.updateTicketQrCodes(conn, saved);
 
         List<BookingConcession> items = new ArrayList<>();
         for (BookingConcessionLine line : quote.concessions) {
@@ -525,9 +529,9 @@ public class CounterSaleService {
         return bookingId;
     }
 
-    // Cùng công thức UC-14: (tiền vé - giảm giá) x POINT_EARN_PERCENT% / tỷ lệ quy đổi, làm tròn xuống
+    // Cùng công thức UC-14: (tổng bill - giảm giá) x POINT_EARN_PERCENT% / tỷ lệ quy đổi, làm tròn xuống
     private int earnedPoints(Connection conn, CounterQuote quote) throws SQLException {
-        BigDecimal eligible = quote.ticketTotal.subtract(quote.getDiscountTotal()).max(BigDecimal.ZERO);
+        BigDecimal eligible = quote.getGrossTotal().subtract(quote.getDiscountTotal()).max(BigDecimal.ZERO);
         BigDecimal percent = configDAO.getDecimal(conn, CONFIG_POINT_EARN_PERCENT, BigDecimal.ONE);
         if (percent.signum() < 0 || percent.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new SQLException("POINT_EARN_PERCENT must be between 0 and 100.");

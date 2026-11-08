@@ -12,12 +12,15 @@ public class Voucher {
     private LocalDateTime startDate;
     private LocalDateTime expiryDate;
     private Integer usageLimit;
+    private Integer perUserUsageLimit;
     private int usageCount;
     private Integer ownerUserId;
     private String status;
     private String voucherType;
     private BigDecimal minOrderAmount;
     private Integer createdByUserId;
+    private Integer movieId;
+    private String movieTitle;
 
     public Voucher() {
     }
@@ -86,6 +89,14 @@ public class Voucher {
         this.usageLimit = usageLimit;
     }
 
+    public Integer getPerUserUsageLimit() {
+        return perUserUsageLimit;
+    }
+
+    public void setPerUserUsageLimit(Integer perUserUsageLimit) {
+        this.perUserUsageLimit = perUserUsageLimit;
+    }
+
     public int getUsageCount() {
         return usageCount;
     }
@@ -132,5 +143,21 @@ public class Voucher {
 
     public void setCreatedByUserId(Integer createdByUserId) {
         this.createdByUserId = createdByUserId;
+    }
+
+    public Integer getMovieId() {
+        return movieId;
+    }
+
+    public void setMovieId(Integer movieId) {
+        this.movieId = movieId;
+    }
+
+    public String getMovieTitle() {
+        return movieTitle;
+    }
+
+    public void setMovieTitle(String movieTitle) {
+        this.movieTitle = movieTitle;
     }
 }

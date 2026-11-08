@@ -71,6 +71,9 @@
                                             </p>
                                             <div class="mt-4 space-y-1 text-sm text-gray-300">
                                                 <p>Đơn tối thiểu: <fmt:formatNumber value="${voucher.minOrderAmount}" pattern="#,##0"/>đ</p>
+                                                <c:if test="${not empty voucher.movieId}">
+                                                    <p>Áp dụng cho phim: <c:out value="${voucher.movieTitle}"/></p>
+                                                </c:if>
                                                 <p>Hạn sử dụng: <c:out value="${voucher.expiryDate}"/></p>
                                             </div>
                                         </article>

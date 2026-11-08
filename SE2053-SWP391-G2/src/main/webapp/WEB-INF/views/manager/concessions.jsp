@@ -152,8 +152,8 @@
 </main>
 
 <c:if test="${showForm}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" data-modal>
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-xl p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto" data-modal>
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-xl p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
                href="${ctx}/manager/concessions${fn:escapeXml(listQuery)}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
@@ -172,20 +172,20 @@
                 <input type="hidden" name="concessionId" value="${form.concessionId}"/>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="name">Tên món <span class="req">*</span></label>
-                    <input class="${inputClass}" id="name" name="name" type="text" maxlength="100" autofocus
-                           value="<c:out value='${form.name}'/>" placeholder="VD: Combo Bắp Nước Nhỏ"/>
+                    <input class="${inputClass}" id="name" name="name" type="text" minlength="2" maxlength="100" autofocus
+                           value="<c:out value='${form.name}'/>" placeholder="Từ 2 đến 100 ký tự, phải có chữ - VD: Combo Bắp Nước Nhỏ"/>
                     <c:if test="${not empty errors.name}"><p class="form-error"><c:out value="${errors.name}"/></p></c:if>
                 </div>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="description">Mô tả</label>
                     <textarea class="${inputClass} py-2" id="description" name="description" rows="2" maxlength="500"
-                              placeholder="VD: 1 bắp lớn + 1 nước vừa"><c:out value="${form.description}"/></textarea>
+                              placeholder="Không bắt buộc, tối đa 500 ký tự.&#10;VD: 1 bắp lớn + 1 nước vừa"><c:out value="${form.description}"/></textarea>
                     <c:if test="${not empty errors.description}"><p class="form-error"><c:out value="${errors.description}"/></p></c:if>
                 </div>
                 <div class="grid grid-cols-2 gap-space-md">
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="price">Giá bán (VND) <span class="req">*</span></label>
-                        <input class="${inputClass}" id="price" name="price" type="text" inputmode="numeric" maxlength="9"
+                        <input class="${inputClass}" id="price" name="price" type="text" inputmode="numeric" maxlength="8"
                                value="<c:out value='${form.price}'/>" placeholder="65000"/>
                         <c:if test="${not empty errors.price}"><p class="form-error"><c:out value="${errors.price}"/></p></c:if>
                     </div>

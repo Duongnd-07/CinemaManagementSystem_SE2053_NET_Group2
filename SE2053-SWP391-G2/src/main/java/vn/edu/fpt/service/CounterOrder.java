@@ -30,7 +30,11 @@ public class CounterOrder {
     private String paymentReference;
     private BigDecimal cashReceived;
     private BigDecimal refundTotal = BigDecimal.ZERO;
+    private String channel;
+    private boolean soldInScope = true;
     private final List<Ticket> tickets = new ArrayList<>();
+    // Món bắp nước dạng "Tên × số lượng"
+    private final List<String> concessions = new ArrayList<>();
 
     // Một vé của đơn: ghế, mã vé, trạng thái, tiền đã hoàn (hủy vé / đổi xuống ghế thường)
     public static final class Ticket {
@@ -254,6 +258,27 @@ public class CounterOrder {
 
     public void setRefundTotal(BigDecimal refundTotal) {
         this.refundTotal = refundTotal;
+    }
+
+    public String getChannel() {
+        return channel;
+    }
+
+    public void setChannel(String channel) {
+        this.channel = channel;
+    }
+
+    // false: đơn chỉ hiện vì có đổi / hoàn trong phạm vi (mua online hoặc bán ở ca / ngày khác), tiền không tính vào thu
+    public boolean isSoldInScope() {
+        return soldInScope;
+    }
+
+    public void setSoldInScope(boolean soldInScope) {
+        this.soldInScope = soldInScope;
+    }
+
+    public List<String> getConcessions() {
+        return concessions;
     }
 
     public List<Ticket> getTickets() {

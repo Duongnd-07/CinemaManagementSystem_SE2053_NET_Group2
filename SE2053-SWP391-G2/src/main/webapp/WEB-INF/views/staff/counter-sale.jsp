@@ -6,8 +6,8 @@
 <%-- UC-19: bán vé & bắp nước tại quầy. Ba trạng thái: chưa mở ca -> mở ca; đã mở ca -> chọn suất chiếu;
      có attribute "booking" -> màn hình bán (ghế, bắp nước, thành viên, voucher, điểm, thu tiền) --%>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
-<c:set var="paymentLabels" value="${{'Cash':'Tiền mặt','Transfer':'Chuyển khoản / QR','Card':'Thẻ (máy POS)'}}"/>
-<c:set var="paymentIcons" value="${{'Cash':'payments','Transfer':'qr_code_2','Card':'credit_card'}}"/>
+<c:set var="paymentLabels" value="${{'Cash':'Tiền mặt','Transfer':'Chuyển khoản / QR'}}"/>
+<c:set var="paymentIcons" value="${{'Cash':'payments','Transfer':'qr_code_2'}}"/>
 <c:set var="inputClass" value="form-input w-full bg-surface-container-high text-on-surface px-4 rounded-lg border border-white/10 focus:border-primary outline-none"/>
 <c:set var="cardClass" value="bg-surface-container-low rounded-xl border border-white/10 p-space-lg"/>
 <!DOCTYPE html>
@@ -109,6 +109,10 @@
                 <c:if test="${date ne today}">
                     <a class="text-primary hover:underline font-label-lg pb-3" href="${ctx}/staff/counter">Về hôm nay</a>
                 </c:if>
+                <a class="ml-auto flex items-center gap-space-sm h-11 px-space-md rounded-full bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-label-lg"
+                   href="${ctx}/staff/counter?mode=concession">
+                    <span class="material-symbols-outlined text-[20px]">fastfood</span>Chỉ bán bắp nước
+                </a>
             </form>
             <c:choose>
                 <c:when test="${empty showtimes}">
@@ -277,7 +281,7 @@
                             </div>
 
                             <div>
-                                <label class="block text-label-md text-on-surface-variant mb-1" for="voucherCode">Voucher</label>
+                                <label class="block text-label-md text-on-surface-variant mb-1" for="voucherCode">Voucher (chỉ áp dụng cho vé)</label>
                                 <select class="${inputClass} h-11" id="voucherCode" name="voucherCode">
                                     <option value="">-- Không dùng voucher trong ví --</option>
                                     <c:forEach var="v" items="${quote.vouchers}">
@@ -327,7 +331,7 @@
                                 <div class="flex justify-between"><dt>Bắp nước</dt>
                                     <dd><fmt:formatNumber value="${quote.concessionTotal}" maxFractionDigits="0"/>đ</dd></div>
                                 <c:if test="${quote.voucherDiscount > 0}">
-                                    <div class="flex justify-between text-emerald-300"><dt>Voucher <c:out value="${quote.voucherCode}"/></dt>
+                                    <div class="flex justify-between text-emerald-300"><dt>Voucher <c:out value="${quote.voucherCode}"/> (vé)</dt>
                                         <dd>-<fmt:formatNumber value="${quote.voucherDiscount}" maxFractionDigits="0"/>đ</dd></div>
                                 </c:if>
                                 <c:if test="${quote.pointsRedeemed > 0}">
@@ -362,20 +366,12 @@
                             <p class="mt-1 text-emerald-300">Tiền thối: <b><fmt:formatNumber value="${quote.changeDue}" maxFractionDigits="0"/>đ</b></p>
                         </c:if>
                     </div>
-                    <%-- Thẻ / chuyển khoản: chỉ xác nhận khi đã thấy tiền về, nhập mã giao dịch làm bằng chứng (đối chiếu ở UC-22) --%>
+                    <%-- Chuyển khoản: nhân viên thấy tiền về trên app ngân hàng rồi mới xác nhận; nội dung CK được lưu vào đơn để đối chiếu (UC-22) --%>
                     <input type="hidden" name="transferNote" value="${form.transferNote}"/>
-                    <div id="referenceField" class="space-y-space-sm" ${form.paymentMethod == 'Card' or form.paymentMethod == 'Transfer' ? '' : 'hidden'}>
-                        <div data-method="Transfer" class="rounded-lg border border-white/10 bg-surface-container-high p-space-sm text-body-sm"
-                             ${form.paymentMethod == 'Transfer' ? '' : 'hidden'}>
-                            Nội dung chuyển khoản khách cần ghi: <b class="text-primary tracking-wider">${form.transferNote}</b>
-                            <span class="block text-on-surface-variant">Đợi app ngân hàng báo đã nhận đúng số tiền với nội dung này rồi nhập mã giao dịch.</span>
-                        </div>
-                        <label class="block text-label-md text-on-surface-variant" for="paymentReference">
-                            <span data-method="Card" ${form.paymentMethod == 'Card' ? '' : 'hidden'}>Mã chuẩn chi trên hóa đơn POS (6 số)</span>
-                            <span data-method="Transfer" ${form.paymentMethod == 'Transfer' ? '' : 'hidden'}>Mã giao dịch ngân hàng</span>
-                        </label>
-                        <input class="${inputClass} h-11 uppercase" type="text" id="paymentReference" name="paymentReference" maxlength="30"
-                               value="<c:out value='${form.paymentReference}'/>" placeholder="VD: 123456 / FT26297XXXXXX" autocomplete="off"/>
+                    <div id="referenceField" class="rounded-lg border border-white/10 bg-surface-container-high p-space-sm text-body-sm"
+                         ${form.paymentMethod == 'Transfer' ? '' : 'hidden'}>
+                        Nội dung chuyển khoản khách cần ghi: <b class="text-primary tracking-wider">${form.transferNote}</b>
+                        <span class="block text-on-surface-variant">Đợi app ngân hàng báo đã nhận đủ tiền rồi bấm xác nhận thanh toán.</span>
                     </div>
                     <c:if test="${not empty errors.payment}"><p class="form-error"><c:out value="${errors.payment}"/></p></c:if>
 
@@ -397,6 +393,6 @@
     </c:choose>
 </main>
 
-<script src="${ctx}/assets/js/counter-sale.js?v=2"></script>
+<script src="${ctx}/assets/js/counter-sale.js?v=5"></script>
 </body>
 </html>

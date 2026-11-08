@@ -32,9 +32,9 @@ public enum SystemConfigParam {
     BROKEN_SEAT_VOUCHER_DAYS(Group.VOUCHER, "Hiệu lực voucher đền bù ghế hỏng", "ngày",
             "Số ngày hiệu lực của voucher đền bù ghế hỏng.", "30", 1, 365, false),
     POINT_EARN_PERCENT(Group.LOYALTY, "Tỷ lệ tích điểm", "%",
-            "Phần trăm tiền vé (sau giảm giá) được quy thành điểm thưởng.", "1", 0, 100, true),
+            "Phần trăm tổng bill vé và bắp nước (sau giảm giá) được quy thành điểm thưởng.", "1", 0, 100, true),
     POINT_EXCHANGE_RATE(Group.LOYALTY, "Giá trị quy đổi 1 điểm", "VND",
-            "Số tiền được trừ vào giá vé cho mỗi điểm thưởng khách dùng.", "1000", 1, 1_000_000, false);
+            "Số tiền được trừ vào tổng bill sau voucher cho mỗi điểm thưởng khách dùng.", "1000", 1, 1_000_000, false);
 
     // Số chữ số thập phân tối đa của tham số cho phép số lẻ
     public static final int MAX_DECIMALS = 2;

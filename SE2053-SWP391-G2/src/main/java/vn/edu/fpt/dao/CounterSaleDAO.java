@@ -11,15 +11,16 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import vn.edu.fpt.model.Booking;
 import vn.edu.fpt.model.BookingChannel;
 import vn.edu.fpt.model.MovieStatus;
 import vn.edu.fpt.model.Movie;
-import vn.edu.fpt.model.PaymentMethod;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.model.Showtime;
 import vn.edu.fpt.model.ShowtimeStatus;
+import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.service.CounterReceipt;
 import vn.edu.fpt.util.DBContext;
 
@@ -71,8 +72,8 @@ public class CounterSaleDAO {
     }
 
     // Đơn tại quầy đã thu tiền ngay nên lưu thẳng trạng thái Paid, kèm nhân viên và ca; khách vãng lai CustomerID NULL.
-    // paymentReference: mã chuẩn chi POS / mã giao dịch ngân hàng, null với tiền mặt;
-    // cashReceived: tiền mặt khách đưa (để tính tiền thối), null với thẻ / chuyển khoản
+    // paymentReference: nội dung chuyển khoản (CINExxxxxx), null với tiền mặt;
+    // cashReceived: tiền mặt khách đưa (để tính tiền thối), null với chuyển khoản
     public int insertBooking(Connection conn, Booking booking, String paymentReference, BigDecimal cashReceived)
             throws SQLException {
         String sql = "INSERT INTO Booking (CustomerID, StaffID, ShowtimeID, VoucherID, TotalPrice, DiscountAmount, "
@@ -81,7 +82,8 @@ public class CounterSaleDAO {
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             setNullableInt(ps, 1, booking.getCustomerId());
             ps.setInt(2, booking.getStaffId());
-            ps.setInt(3, booking.getShowtimeId());
+            // Đơn chỉ bắp nước không có suất chiếu (Booking.ShowtimeID cho phép NULL)
+            setNullableInt(ps, 3, booking.getShowtimeId() == 0 ? null : booking.getShowtimeId());
             setNullableInt(ps, 4, booking.getVoucherId());
             ps.setBigDecimal(5, booking.getTotalPrice());
             ps.setBigDecimal(6, booking.getDiscountAmount());
@@ -104,25 +106,14 @@ public class CounterSaleDAO {
         }
     }
 
-    // Đơn chuyển khoản đã dùng mã giao dịch ngân hàng này; null nếu chưa dùng
-    public Integer findBookingIdByTransferReference(Connection conn, String reference) throws SQLException {
-        String sql = "SELECT TOP 1 BookingID FROM Booking WHERE PaymentMethod = ? AND PaymentReference = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, PaymentMethod.TRANSFER);
-            ps.setString(2, reference);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt(1) : null;
-            }
-        }
-    }
 
     // Chỉ đơn bán tại quầy; null nếu không có
     public CounterReceipt findReceipt(int bookingId) throws SQLException {
         String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.PaymentReference, b.TotalPrice, b.DiscountAmount, "
                 + "b.FinalAmount, b.PointsRedeemed, b.PointsEarned, m.Title, r.RoomName, s.StartTime, "
                 + "st.FullName AS StaffName, c.FullName AS CustomerName, v.VoucherCode, sh.CounterNo "
-                + "FROM Booking b JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
-                + "JOIN Movie m ON m.MovieID = s.MovieID JOIN Room r ON r.RoomID = s.RoomID "
+                + "FROM Booking b LEFT JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
+                + "LEFT JOIN Movie m ON m.MovieID = s.MovieID LEFT JOIN Room r ON r.RoomID = s.RoomID "
                 + "LEFT JOIN [User] st ON st.UserID = b.StaffID LEFT JOIN [User] c ON c.UserID = b.CustomerID "
                 + "LEFT JOIN Voucher v ON v.VoucherID = b.VoucherID LEFT JOIN Shift sh ON sh.ShiftID = b.ShiftID "
                 + "WHERE b.BookingID = ? AND b.Channel = ?";
@@ -147,22 +138,38 @@ public class CounterSaleDAO {
                     receipt.setPointsEarned(rs.getInt("PointsEarned"));
                     receipt.setMovieTitle(rs.getString("Title"));
                     receipt.setRoomName(rs.getString("RoomName"));
-                    receipt.setStartTime(rs.getTimestamp("StartTime").toLocalDateTime());
+                    Timestamp start = rs.getTimestamp("StartTime");
+                    receipt.setStartTime(start == null ? null : start.toLocalDateTime());
                     receipt.setStaffName(rs.getString("StaffName"));
                     receipt.setCustomerName(rs.getString("CustomerName"));
                     receipt.setVoucherCode(rs.getString("VoucherCode"));
                     receipt.setCounterNo(rs.getString("CounterNo"));
                 }
             }
-            String ticketSql = "SELECT se.RowName, se.ColNumber, t.TicketCode, t.Price FROM Ticket t "
-                    + "JOIN Seat se ON se.SeatID = t.SeatID WHERE t.BookingID = ? ORDER BY se.RowName, se.ColNumber";
+            // Hóa đơn liệt kê vé bán ra (khớp Tổng); vé cấp lại khi đổi ghế (UC-20) chỉ ghi chú cạnh vé gốc
+            String ticketSql = "SELECT CONCAT(se.RowName, se.ColNumber) AS Seat, t.TicketCode, t.Price, t.Status, "
+                    + "t.RefundAmount, CASE WHEN EXISTS (SELECT 1 FROM TicketExchange n "
+                    + "WHERE t.TicketID IN (n.NewTicketID, n.NewTicketID2)) THEN 1 ELSE 0 END AS Issued, x.ExchangeID, "
+                    + "CONCAT(s1.RowName, s1.ColNumber) AS NewSeat, n1.TicketCode AS NewCode, "
+                    + "CONCAT(s2.RowName, s2.ColNumber) AS NewSeat2, n2.TicketCode AS NewCode2 "
+                    + "FROM Ticket t JOIN Seat se ON se.SeatID = t.SeatID "
+                    + "LEFT JOIN TicketExchange x ON x.OldTicketID = t.TicketID AND x.ExchangeType <> 'Refund' "
+                    + "LEFT JOIN Ticket n1 ON n1.TicketID = x.NewTicketID LEFT JOIN Seat s1 ON s1.SeatID = n1.SeatID "
+                    + "LEFT JOIN Ticket n2 ON n2.TicketID = x.NewTicketID2 LEFT JOIN Seat s2 ON s2.SeatID = n2.SeatID "
+                    + "WHERE t.BookingID = ? ORDER BY se.RowName, se.ColNumber";
             try (PreparedStatement ps = conn.prepareStatement(ticketSql)) {
                 ps.setInt(1, bookingId);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        receipt.getTickets().add(new CounterReceipt.Line(
-                                rs.getString("RowName") + rs.getInt("ColNumber"), rs.getString("TicketCode"), 1,
-                                rs.getBigDecimal("Price")));
+                        String seat = rs.getString("Seat");
+                        String status = rs.getString("Status");
+                        if (TicketStatus.UPCOMING.equals(status) || TicketStatus.WATCHED.equals(status)) {
+                            receipt.getUsableSeats().add(seat);
+                        }
+                        if (rs.getInt("Issued") == 0) {
+                            receipt.getTickets().add(new CounterReceipt.Line(seat, rs.getString("TicketCode"), 1,
+                                    rs.getBigDecimal("Price"), ticketNote(rs)));
+                        }
                     }
                 }
             }
@@ -173,12 +180,29 @@ public class CounterSaleDAO {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         receipt.getConcessions().add(new CounterReceipt.Line(rs.getString("Name"), null,
-                                rs.getInt("Quantity"), rs.getBigDecimal("SubtotalPrice")));
+                                rs.getInt("Quantity"), rs.getBigDecimal("SubtotalPrice"), null));
                     }
                 }
             }
             return receipt;
         }
+    }
+
+    // "Đã đổi → D4 (TK...)" / "Đã hoàn 98.333đ"; xuống hạng có cả hai. null nếu vé còn nguyên
+    private String ticketNote(ResultSet rs) throws SQLException {
+        List<String> parts = new ArrayList<>();
+        if (rs.getObject("ExchangeID") != null) {
+            String moved = rs.getString("NewSeat") + " (" + rs.getString("NewCode") + ")";
+            if (!rs.getString("NewSeat2").isEmpty()) {
+                moved += " + " + rs.getString("NewSeat2") + " (" + rs.getString("NewCode2") + ")";
+            }
+            parts.add("Đã đổi → " + moved);
+        }
+        BigDecimal refund = rs.getBigDecimal("RefundAmount");
+        if (refund != null && refund.signum() > 0) {
+            parts.add("Đã hoàn " + String.format(Locale.forLanguageTag("vi-VN"), "%,.0fđ", refund));
+        }
+        return parts.isEmpty() ? null : String.join(" · ", parts);
     }
 
     private void setNullableInt(PreparedStatement ps, int index, Integer value) throws SQLException {

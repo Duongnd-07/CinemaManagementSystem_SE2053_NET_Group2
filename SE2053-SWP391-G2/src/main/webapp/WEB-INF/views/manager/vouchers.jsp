@@ -86,9 +86,11 @@
                 <tr class="bg-surface-container border-b border-white/10 text-on-surface-variant text-label-md uppercase tracking-wider">
                     <th class="py-4 px-5">Mã voucher</th>
                     <th class="py-4 px-5">Phân loại</th>
+                    <th class="py-4 px-5">Phạm vi</th>
                     <th class="py-4 px-5">Mức giảm</th>
                     <th class="py-4 px-5">Đơn tối thiểu</th>
                     <th class="py-4 px-5">Đã dùng / đang giữ</th>
+                    <th class="py-4 px-5">Lượt dùng/người</th>
                     <th class="py-4 px-5">Ngày tạo</th>
                     <th class="py-4 px-5">Bắt đầu</th>
                     <th class="py-4 px-5">Hạn sử dụng</th>
@@ -102,6 +104,12 @@
                         <td class="py-4 px-5 font-label-lg"><c:out value="${voucher.voucherCode}"/></td>
                         <td class="py-4 px-5">
                             <c:out value="${voucher.voucherType == 'Refund80' ? 'Hoàn vé' : 'Khuyến mãi'}"/>
+                        </td>
+                        <td class="py-4 px-5">
+                            <c:choose>
+                                <c:when test="${empty voucher.movieId}">Toàn bộ phim</c:when>
+                                <c:otherwise><c:out value="${voucher.movieTitle}"/></c:otherwise>
+                            </c:choose>
                         </td>
                         <td class="py-4 px-5">
                             <c:choose>
@@ -119,6 +127,14 @@
                             <c:choose>
                                 <c:when test="${voucher.voucherType == 'Promotion'}">
                                     <c:out value="${voucher.usageCount}"/> / <c:out value="${voucher.usageLimit}"/>
+                                </c:when>
+                                <c:otherwise>Cá nhân</c:otherwise>
+                            </c:choose>
+                        </td>
+                        <td class="py-4 px-5">
+                            <c:choose>
+                                <c:when test="${voucher.voucherType == 'Promotion'}">
+                                    <c:out value="${voucher.perUserUsageLimit}"/>
                                 </c:when>
                                 <c:otherwise>Cá nhân</c:otherwise>
                             </c:choose>
@@ -147,7 +163,7 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty voucherPage.items}">
-                    <tr><td colspan="10" class="py-12 px-6 text-center text-on-surface-variant">
+                    <tr><td colspan="12" class="py-12 px-6 text-center text-on-surface-variant">
                         <c:out value="${msgNoResult}"/>
                     </td></tr>
                 </c:if>
@@ -164,8 +180,8 @@
 </main>
 
 <c:if test="${showForm}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-xl p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto">
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-xl p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
                href="${ctx}/manager/vouchers${listQuery}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
@@ -188,6 +204,29 @@
                     <label class="block text-label-md text-on-surface-variant mb-1" for="createdAt">Ngày tạo</label>
                     <input id="createdAt" class="${inputClass} w-full opacity-70" type="text"
                            value="<c:out value='${voucherCreatedAt}'/>" readonly/>
+                </div>
+                <div>
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="scope">Phạm vi áp dụng</label>
+                    <select id="scope" name="scope" class="${inputClass} w-full" required>
+                        <option value="All" ${form.scope == 'All' || empty form.scope ? 'selected' : ''}>Toàn bộ phim</option>
+                        <option value="Movie" ${form.scope == 'Movie' ? 'selected' : ''}>Một phim cụ thể</option>
+                    </select>
+                    <p class="mt-1 text-sm text-on-surface-variant">
+                        Voucher theo phim áp dụng cho đơn của phim đã chọn, bao gồm vé và bắp nước.
+                    </p>
+                    <c:if test="${not empty errors.scope}"><p class="form-error"><c:out value="${errors.scope}"/></p></c:if>
+                </div>
+                <div id="movieScopeField" class="${form.scope == 'Movie' ? '' : 'hidden'}">
+                    <label class="block text-label-md text-on-surface-variant mb-1" for="movieId">Phim áp dụng</label>
+                    <select id="movieId" name="movieId" class="${inputClass} w-full">
+                        <option value="">-- Chọn phim --</option>
+                        <c:forEach var="movie" items="${movies}">
+                            <option value="${movie.movieId}" ${form.movieId == movie.movieId ? 'selected' : ''}>
+                                <c:out value="${movie.title}"/>
+                            </option>
+                        </c:forEach>
+                    </select>
+                    <c:if test="${not empty errors.movieId}"><p class="form-error"><c:out value="${errors.movieId}"/></p></c:if>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                     <div>
@@ -225,10 +264,20 @@
                         <c:if test="${not empty errors.expiryDate}"><p class="form-error"><c:out value="${errors.expiryDate}"/></p></c:if>
                     </div>
                     <div>
-                        <label class="block text-label-md text-on-surface-variant mb-1" for="usageLimit">Giới hạn lượt dùng</label>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="usageLimit">Giới hạn tổng lượt dùng</label>
                         <input id="usageLimit" name="usageLimit" class="${inputClass} w-full"
                                type="number" min="1" step="1" required value="<c:out value='${form.usageLimit}'/>"/>
                         <c:if test="${not empty errors.usageLimit}"><p class="form-error"><c:out value="${errors.usageLimit}"/></p></c:if>
+                    </div>
+                    <div>
+                        <label class="block text-label-md text-on-surface-variant mb-1" for="perUserUsageLimit">Giới hạn lượt dùng/người</label>
+                        <input id="perUserUsageLimit" name="perUserUsageLimit" class="${inputClass} w-full"
+                               type="number" min="1" step="1" required
+                               value="<c:out value='${form.perUserUsageLimit}'/>"/>
+                        <p class="mt-1 text-sm text-on-surface-variant">
+                            Số lần tối đa mỗi tài khoản được dùng campaign này.
+                        </p>
+                        <c:if test="${not empty errors.perUserUsageLimit}"><p class="form-error"><c:out value="${errors.perUserUsageLimit}"/></p></c:if>
                     </div>
                 </div>
                 <div class="flex justify-end gap-space-sm pt-space-sm">
@@ -239,5 +288,19 @@
         </div>
     </div>
 </c:if>
+<script>
+    const voucherScope = document.getElementById('scope');
+    if (voucherScope) {
+        const movieScopeField = document.getElementById('movieScopeField');
+        const movieSelect = document.getElementById('movieId');
+        const updateMovieScope = () => {
+            const appliesToMovie = voucherScope.value === 'Movie';
+            movieScopeField.classList.toggle('hidden', !appliesToMovie);
+            movieSelect.required = appliesToMovie;
+        };
+        voucherScope.addEventListener('change', updateMovieScope);
+        updateMovieScope();
+    }
+</script>
 </body>
 </html>

@@ -3,7 +3,7 @@ package vn.edu.fpt.service;
 import java.math.BigDecimal;
 
 // UC-13 bước 8: bảng tính tiền của đơn.
-// Tổng = tiền vé + bắp nước; voucher giảm trên tổng (GB-05); điểm chỉ trừ vào tiền vé (BR-LOYALTY-01)
+// Tổng = tiền vé + bắp nước; voucher chỉ giảm tiền vé, điểm trừ vào tổng đơn sau voucher.
 public class BookingQuote {
     private final BigDecimal ticketTotal;
     private final BigDecimal concessionTotal;

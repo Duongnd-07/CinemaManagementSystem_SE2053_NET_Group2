@@ -37,7 +37,7 @@
         <h1 class="text-headline-lg text-on-surface">Kiểm duyệt đánh giá phim</h1>
     </div>
 
-    <%-- Bộ lọc trạng thái --%>
+    <%-- Bộ lọc trạng thái và phim --%>
     <c:set var="allCount" value="0"/>
     <c:forEach var="st" items="${statuses}">
         <c:set var="allCount" value="${allCount + (empty statusCounts[st] ? 0 : statusCounts[st])}"/>
@@ -45,17 +45,33 @@
     <div class="flex flex-wrap items-center gap-space-sm bg-surface-container-low p-space-md rounded-xl mb-space-lg">
         <c:set var="tabOn" value="bg-primary-container text-on-primary-container shadow-[0_0_15px_-2px_rgba(229,9,20,0.4)]"/>
         <c:set var="tabOff" value="bg-surface-container-high text-on-surface-variant hover:text-on-surface"/>
+        <c:url var="allTabUrl" value="/manager/reviews">
+            <c:if test="${not empty movieIdFilter}"><c:param name="movieId" value="${movieIdFilter}"/></c:if>
+        </c:url>
         <a class="px-4 py-2 rounded-lg font-label-lg text-sm transition-all ${empty statusFilter ? tabOn : tabOff}"
-           href="${ctx}/manager/reviews">Tất cả (${allCount})</a>
+           href="${fn:escapeXml(allTabUrl)}">Tất cả (${allCount})</a>
         <c:forEach var="st" items="${statuses}">
             <c:url var="tabUrl" value="/manager/reviews">
                 <c:param name="status" value="${st}"/>
+                <c:if test="${not empty movieIdFilter}"><c:param name="movieId" value="${movieIdFilter}"/></c:if>
             </c:url>
             <a class="px-4 py-2 rounded-lg font-label-lg text-sm transition-all ${statusFilter == st ? tabOn : tabOff}"
                href="${fn:escapeXml(tabUrl)}">
                 ${statusLabels[st]} (${empty statusCounts[st] ? 0 : statusCounts[st]})
             </a>
         </c:forEach>
+        <form method="get" action="${ctx}/manager/reviews" class="w-full sm:w-auto sm:ml-auto flex flex-wrap items-center gap-space-sm min-w-0">
+            <input type="hidden" name="status" value="${statusFilter}"/>
+            <label for="reviewMovieFilter" class="text-label-lg text-on-surface-variant">Phim</label>
+            <select id="reviewMovieFilter" name="movieId" data-auto-submit
+                    class="${inputClass} w-full sm:w-72 max-w-full cursor-pointer">
+                <option value="">Tất cả phim</option>
+                <c:forEach var="movie" items="${movies}">
+                    <option value="${movie.movieId}" ${movieIdFilter == movie.movieId ? 'selected' : ''}><c:out value="${movie.title}"/></option>
+                </c:forEach>
+            </select>
+            <noscript><button type="submit" class="px-4 py-2 rounded-lg bg-primary-container text-on-primary-container">Lọc</button></noscript>
+        </form>
     </div>
 
     <div class="cl-card overflow-hidden">
@@ -123,6 +139,7 @@
         </div>
         <c:url var="pageBase" value="/manager/reviews">
             <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+            <c:if test="${not empty movieIdFilter}"><c:param name="movieId" value="${movieIdFilter}"/></c:if>
         </c:url>
         <ui:pagination pageData="${reviewPage}" baseUrl="${pageBase}" label="đánh giá"/>
     </div>
@@ -130,8 +147,8 @@
 </main>
 
 <c:if test="${not empty review}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" data-modal>
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-lg p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto" data-modal>
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-lg p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
                href="${ctx}/manager/reviews${fn:escapeXml(listQuery)}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>

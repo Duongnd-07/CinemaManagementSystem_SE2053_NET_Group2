@@ -25,19 +25,27 @@ public class CounterReceipt {
     private int pointsEarned;
     private final List<Line> tickets = new ArrayList<>();
     private final List<Line> concessions = new ArrayList<>();
+    // Ghế còn vào phòng được (gồm ghế cấp lại khi đổi), chỉ khác ghế lúc bán khi đã đổi / hoàn vé
+    private final List<String> usableSeats = new ArrayList<>();
 
-    // Một dòng hóa đơn: vé (name = ghế, code = mã vé) hoặc món bắp nước (quantity > 0)
+    // Một dòng hóa đơn: vé bán ra (name = ghế, code = mã vé, note = đã đổi / đã hoàn) hoặc món bắp nước
     public static final class Line {
         private final String name;
         private final String code;
         private final int quantity;
         private final BigDecimal amount;
+        private final String note;
 
-        public Line(String name, String code, int quantity, BigDecimal amount) {
+        public Line(String name, String code, int quantity, BigDecimal amount, String note) {
             this.name = name;
             this.code = code;
             this.quantity = quantity;
             this.amount = amount;
+            this.note = note;
+        }
+
+        public String getNote() {
+            return note;
         }
 
         public String getName() {
@@ -188,6 +196,15 @@ public class CounterReceipt {
 
     public List<Line> getTickets() {
         return tickets;
+    }
+
+    public List<String> getUsableSeats() {
+        return usableSeats;
+    }
+
+    // Có vé đã đổi / đã hoàn thì hóa đơn ghi thêm danh sách ghế còn dùng được
+    public boolean isAdjusted() {
+        return tickets.stream().anyMatch(t -> t.getNote() != null);
     }
 
     public List<Line> getConcessions() {

@@ -20,10 +20,10 @@ import vn.edu.fpt.util.Messages;
 
 public class TicketCancellationService {
     // UC-33: hạn hủy vé và % giá vé hoàn thành voucher do Admin cấu hình
-    private static final String CONFIG_MIN_HOURS = "CANCELLATION_MIN_HOURS";
-    private static final String CONFIG_VOUCHER_PERCENT = "CANCELLATION_VOUCHER_PERCENT";
-    private static final int DEFAULT_MIN_HOURS = 24;
-    private static final int DEFAULT_VOUCHER_PERCENT = 80;
+    private static final SystemConfigParam MIN_HOURS_CONFIG = SystemConfigParam.CANCELLATION_MIN_HOURS;
+    private static final SystemConfigParam VOUCHER_PERCENT_CONFIG = SystemConfigParam.CANCELLATION_VOUCHER_PERCENT;
+    private static final int DEFAULT_MIN_HOURS = Integer.parseInt(MIN_HOURS_CONFIG.getDefaultValue());
+    private static final int DEFAULT_VOUCHER_PERCENT = Integer.parseInt(VOUCHER_PERCENT_CONFIG.getDefaultValue());
     private static final String ACTIVE = "Active";
     private static final String AMOUNT = "Amount";
     private final CustomerBookingDAO bookingDAO = new CustomerBookingDAO();
@@ -77,6 +77,8 @@ public class TicketCancellationService {
                             -pointsToRevoke, "Thu hồi điểm do hủy vé UC16 #" + ticketId);
                 }
                 voucherDAO.insertRefundVoucher(conn, voucher);
+                bookingDAO.recordCancellation(conn, ticketId, voucher.getVoucherCode(), voucherAmount, customerId,
+                        LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
                 notificationDAO.insert(conn, customerId, "Voucher hoàn tiền vé",
                         "Vé đã được hủy. Voucher " + voucher.getVoucherCode()
                                 + " trị giá " + voucherAmount.toPlainString() + "đ đã được thêm vào ví.",
@@ -105,31 +107,28 @@ public class TicketCancellationService {
         if (remainingEarnedPoints == 0) {
             return 0;
         }
-        if (ticket.getUpcomingTicketCount() <= 1) {
-            return remainingEarnedPoints;
+        BigDecimal totalPrice = ticket.getBookingTotalPrice();
+        if (totalPrice == null || totalPrice.signum() <= 0) {
+            throw new SQLException("Booking total price must be positive to reverse earned loyalty points.");
         }
-
-        BigDecimal totalTicketPrice = ticket.getBookingTicketTotal();
-        if (totalTicketPrice == null || totalTicketPrice.signum() <= 0) {
-            throw new SQLException("Booking ticket total must be positive to reverse earned loyalty points.");
-        }
+        // D04b: chỉ thu hồi phần điểm của vé bị hủy; giữ lại điểm của bắp nước, kể cả vé cuối.
         int proportionalPoints = BigDecimal.valueOf(earnedPoints).multiply(ticket.getPrice())
-                .divide(totalTicketPrice, 0, RoundingMode.DOWN).intValueExact();
+                .divide(totalPrice, 0, RoundingMode.DOWN).intValueExact();
         return Math.min(proportionalPoints, remainingEarnedPoints);
     }
 
     private int minimumHours(Connection conn) throws SQLException {
-        int hours = configDAO.getInt(conn, CONFIG_MIN_HOURS, DEFAULT_MIN_HOURS);
+        int hours = configDAO.getInt(conn, MIN_HOURS_CONFIG.getKey(), DEFAULT_MIN_HOURS);
         if (hours < 0) {
-            throw new SQLException("CANCELLATION_MIN_HOURS must not be negative.");
+            throw new SQLException(MIN_HOURS_CONFIG.getKey() + " must not be negative.");
         }
         return hours;
     }
 
     private int voucherPercent(Connection conn) throws SQLException {
-        int percent = configDAO.getInt(conn, CONFIG_VOUCHER_PERCENT, DEFAULT_VOUCHER_PERCENT);
+        int percent = configDAO.getInt(conn, VOUCHER_PERCENT_CONFIG.getKey(), DEFAULT_VOUCHER_PERCENT);
         if (percent < 1 || percent > 100) {
-            throw new SQLException("CANCELLATION_VOUCHER_PERCENT must be between 1 and 100.");
+            throw new SQLException(VOUCHER_PERCENT_CONFIG.getKey() + " must be between 1 and 100.");
         }
         return percent;
     }

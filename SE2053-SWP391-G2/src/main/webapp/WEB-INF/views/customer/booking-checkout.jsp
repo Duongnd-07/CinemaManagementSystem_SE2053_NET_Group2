@@ -132,7 +132,7 @@
                 <section class="cl-card p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <h2 class="booking-section-title"><span class="material-symbols-outlined">confirmation_number</span>Mã giảm giá</h2>
-                        <label for="voucherCode" class="booking-hint">Mỗi đơn áp dụng tối đa 1 mã · nhập tay hoặc chọn từ danh sách</label>
+                        <label for="voucherCode" class="booking-hint">Mỗi đơn áp dụng tối đa 1 mã · chỉ giảm trên tiền vé</label>
                         <%-- Ô nhập kiêm danh sách thả xuống (combobox): gõ tay mã bất kỳ, hoặc mở danh sách voucher trong ví
                              để chọn. booking-checkout.js mở/đóng, lọc theo chữ đã gõ và tự tính lại tiền khi chọn. --%>
                         <div id="voucherCombo" class="voucher-combo mt-2">
@@ -208,7 +208,7 @@
                                 <p class="booking-field-error"><c:out value="${errors['points']}"/></p>
                             </c:if>
                         </div>
-                        <p class="booking-hint mt-2">Điểm chỉ trừ vào tiền vé, không áp dụng cho bắp nước.</p>
+                        <p class="booking-hint mt-2">Điểm được trừ vào tổng tiền vé và bắp nước sau khi áp dụng voucher.</p>
                     </div>
                 </section>
             </div>
@@ -220,7 +220,7 @@
                     <div class="booking-line"><span>Tiền vé (${fn:length(checkout.seats)} ghế)</span><span><fmt:formatNumber value="${quote.ticketTotal}" maxFractionDigits="0"/>đ</span></div>
                     <div class="booking-line"><span>Bắp nước</span><span><fmt:formatNumber value="${quote.concessionTotal}" maxFractionDigits="0"/>đ</span></div>
                     <c:if test="${quote.voucherDiscount > 0}">
-                        <div class="booking-line booking-line--discount"><span>Voucher <c:out value="${quote.voucherCode}"/></span><span>−<fmt:formatNumber value="${quote.voucherDiscount}" maxFractionDigits="0"/>đ</span></div>
+                        <div class="booking-line booking-line--discount"><span>Voucher <c:out value="${quote.voucherCode}"/> (vé)</span><span>−<fmt:formatNumber value="${quote.voucherDiscount}" maxFractionDigits="0"/>đ</span></div>
                     </c:if>
                     <c:if test="${quote.pointsRedeemed > 0}">
                         <div class="booking-line booking-line--discount"><span>Đổi <fmt:formatNumber value="${quote.pointsRedeemed}"/> điểm</span><span>−<fmt:formatNumber value="${quote.pointsDiscount}" maxFractionDigits="0"/>đ</span></div>

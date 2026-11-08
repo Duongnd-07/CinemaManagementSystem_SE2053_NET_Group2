@@ -114,6 +114,8 @@ public class ReviewManagementServlet extends HttpServlet {
     private void render(HttpServletRequest request, HttpServletResponse response, ReviewView review,
                         Map<String, String> errors) throws SQLException, ServletException, IOException {
         String status = trim(request.getParameter("status"));
+        int selectedMovieId = parseInt(request.getParameter("movieId"));
+        Integer movieId = selectedMovieId > 0 ? selectedMovieId : null;
 
         HttpSession session = request.getSession();
         for (String key : List.of(FLASH_SUCCESS, FLASH_ERROR)) {
@@ -123,8 +125,10 @@ public class ReviewManagementServlet extends HttpServlet {
                 session.removeAttribute(key);
             }
         }
-        request.setAttribute("reviewPage", reviewService.listAll(status, parseInt(request.getParameter("page"))));
-        request.setAttribute("statusCounts", reviewService.countAllByStatus());
+        request.setAttribute("reviewPage", reviewService.listAll(status, movieId, parseInt(request.getParameter("page"))));
+        request.setAttribute("statusCounts", reviewService.countAllByStatus(movieId));
+        request.setAttribute("movies", reviewService.listMoviesForModeration());
+        request.setAttribute("movieIdFilter", movieId);
         request.setAttribute("statusFilter", ReviewStatus.isValid(status) ? status : "");
         request.setAttribute("statuses", ReviewStatus.ALL);
         request.setAttribute("listQuery", listQuery(request));
@@ -160,7 +164,7 @@ public class ReviewManagementServlet extends HttpServlet {
     // Giữ bộ lọc/trang hiện tại khi mở và đóng hộp thoại ẩn review
     private String listQuery(HttpServletRequest request) {
         List<String> parts = new ArrayList<>();
-        for (String name : List.of("status", "page")) {
+        for (String name : List.of("status", "movieId", "page")) {
             String value = trim(request.getParameter(name));
             if (!value.isEmpty()) {
                 parts.add(name + "=" + URLEncoder.encode(value, StandardCharsets.UTF_8));

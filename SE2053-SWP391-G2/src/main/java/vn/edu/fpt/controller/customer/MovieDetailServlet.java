@@ -74,9 +74,17 @@ public class MovieDetailServlet extends HttpServlet {
             }
         }
 
+        Integer star = reviewService.normalizeStar(request.getParameter("star"));
+        String sort = reviewService.normalizeSort(request.getParameter("sort"));
         request.setAttribute("reviewSummary", reviewService.summarize(movie.getMovieId()));
-        request.setAttribute("reviewPage", reviewService.listOthers(movie.getMovieId(), userId, parsePage(request)));
+        request.setAttribute("reviewRatingMessage", Messages.REVIEW_RATING_INVALID);
+        request.setAttribute("reviewCommentMessage", Messages.REVIEW_COMMENT_LENGTH_POLICY);
+        request.setAttribute("reviewPage",
+                reviewService.listOthers(movie.getMovieId(), userId, star, sort, parsePage(request)));
+        request.setAttribute("reviewStar", star);
+        request.setAttribute("reviewSort", sort);
         request.setAttribute("isCustomer", isCustomer);
+        request.setAttribute("reviewDraft", MovieReviewServlet.consumeDraft(session, movie.getMovieId()));
         if (isCustomer) {
             request.setAttribute("myReview", reviewService.findMine(movie.getMovieId(), userId));
             request.setAttribute("canReview", reviewService.canWriteReview(movie.getMovieId(), userId));

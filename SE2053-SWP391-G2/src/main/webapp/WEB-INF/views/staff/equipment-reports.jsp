@@ -94,7 +94,19 @@
                                 <span class="text-on-surface-variant"> • ${not empty report.seatId ? 'Ghế ' : ''}<c:out value="${report.seatLabel}"/></span>
                             </c:if>
                         </td>
-                        <td class="py-4 px-5 text-on-surface-variant max-w-xs"><p class="line-clamp-2"><c:out value="${report.description}"/></p></td>
+                        <%-- Mô tả dài: hiện 2 dòng, bấm "Xem thêm" để xem đủ ngay trong bảng --%>
+                        <td class="py-4 px-5 text-on-surface-variant max-w-xs"><c:choose>
+                            <c:when test="${fn:length(report.description) > 60}">
+                                <details class="group">
+                                    <summary class="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                                        <span class="block line-clamp-2 group-open:line-clamp-none whitespace-pre-line"><c:out value="${report.description}"/></span>
+                                        <span class="text-body-sm text-primary hover:underline group-open:hidden">Xem thêm</span>
+                                        <span class="text-body-sm text-primary hover:underline hidden group-open:inline">Thu gọn</span>
+                                    </summary>
+                                </details>
+                            </c:when>
+                            <c:otherwise><p class="whitespace-pre-line"><c:out value="${report.description}"/></p></c:otherwise>
+                        </c:choose></td>
                         <td class="py-4 px-5"><span class="cl-pill ${urgencyPills[report.urgencyLevel]}"><c:out value="${urgencyLabels[report.urgencyLevel]}"/></span></td>
                         <td class="py-4 px-5"><span class="cl-pill ${statusPills[report.status]}"><c:out value="${statusLabels[report.status]}"/></span></td>
                         <td class="py-4 px-5 text-on-surface-variant whitespace-nowrap">
@@ -117,8 +129,8 @@
 </main>
 
 <c:if test="${showForm}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" data-modal>
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-xl p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto" data-modal>
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-xl p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
                href="${ctx}/staff/equipment-reports${fn:escapeXml(listQuery)}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
@@ -212,8 +224,8 @@
                 </div>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="description">Mô tả sự cố <span class="req">*</span></label>
-                    <textarea class="${inputClass} py-2" id="description" name="description" rows="4" maxlength="1000"
-                              placeholder="VD: Máy chiếu bị nhòe hình ở góc phải màn hình"><c:out value="${form.description}"/></textarea>
+                    <textarea class="${inputClass} py-2" id="description" name="description" rows="4" minlength="10" maxlength="1000"
+                              placeholder="Bắt buộc, từ 10 đến 1000 ký tự và phải có chữ.&#10;VD: Máy chiếu bị nhòe hình ở góc phải màn hình"><c:out value="${form.description}"/></textarea>
                     <c:if test="${not empty errors.description}"><p class="form-error"><c:out value="${errors.description}"/></p></c:if>
                 </div>
                 <p class="text-body-sm text-on-surface-variant">

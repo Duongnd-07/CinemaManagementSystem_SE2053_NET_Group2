@@ -8,8 +8,35 @@ public class SalesSummary {
     private int ticketCount;
     private BigDecimal revenue = BigDecimal.ZERO;
     private BigDecimal concessionRevenue = BigDecimal.ZERO;
+    // Phần của kênh online; tại quầy = tổng - online
+    private int onlineOrderCount;
+    private BigDecimal onlineRevenue = BigDecimal.ZERO;
 
     public SalesSummary() {
+    }
+
+    public int getOnlineOrderCount() {
+        return onlineOrderCount;
+    }
+
+    public void setOnlineOrderCount(int onlineOrderCount) {
+        this.onlineOrderCount = onlineOrderCount;
+    }
+
+    public BigDecimal getOnlineRevenue() {
+        return onlineRevenue;
+    }
+
+    public void setOnlineRevenue(BigDecimal onlineRevenue) {
+        this.onlineRevenue = onlineRevenue;
+    }
+
+    public int getCounterOrderCount() {
+        return orderCount - onlineOrderCount;
+    }
+
+    public BigDecimal getCounterRevenue() {
+        return revenue.subtract(onlineRevenue);
     }
 
     public int getOrderCount() {

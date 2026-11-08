@@ -125,8 +125,8 @@
 </main>
 
 <c:if test="${not empty report}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" data-modal>
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-2xl p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto" data-modal>
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-2xl p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
                href="${ctx}/manager/equipment-reports${fn:escapeXml(listQuery)}" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
@@ -162,6 +162,8 @@
             <form method="post" action="${ctx}/manager/equipment-reports${fn:escapeXml(listQuery)}" novalidate class="space-y-space-md">
                 <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                 <input type="hidden" name="reportId" value="${report.reportId}"/>
+                <%-- E2: trạng thái lúc mở form; Manager khác đổi trước thì lần lưu này bị từ chối --%>
+                <input type="hidden" name="currentStatus" value="${report.status}"/>
                 <c:if test="${not resolved}">
                     <div>
                         <label class="block text-label-md text-on-surface-variant mb-1" for="newStatus">Cập nhật trạng thái</label>
@@ -175,8 +177,8 @@
                 </c:if>
                 <div>
                     <label class="block text-label-md text-on-surface-variant mb-1" for="note">Ghi chú tiến độ</label>
-                    <textarea class="${inputClass} py-2" id="note" name="note" rows="3" maxlength="500"
-                              placeholder="VD: Đã gọi kỹ thuật, dự kiến sửa xong trong hôm nay"><c:out value="${form.note}"/></textarea>
+                    <textarea class="${inputClass} py-2" id="note" name="note" rows="3" minlength="5" maxlength="500"
+                              placeholder="Không bắt buộc. Nếu nhập: từ 5 đến 500 ký tự và phải có chữ.&#10;VD: Đã gọi kỹ thuật, dự kiến sửa xong trong hôm nay"><c:out value="${form.note}"/></textarea>
                     <c:if test="${not empty errors.note}"><p class="form-error"><c:out value="${errors.note}"/></p></c:if>
                 </div>
                 <label class="flex items-start gap-space-sm cursor-pointer">

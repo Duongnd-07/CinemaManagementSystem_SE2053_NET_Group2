@@ -31,6 +31,9 @@
             </div>
             <h1 class="text-headline-lg text-on-surface">Thống kê &amp; Báo cáo</h1>
             <p class="text-body-sm text-on-surface-variant mt-space-xs">Kỳ báo cáo: <c:out value="${periodLabel}"/></p>
+            <p class="text-body-sm text-on-surface-variant mt-space-xs">Dashboard tổng hợp theo ngày tạo đơn và điều chỉnh gắn với đơn.
+                <c:if test="${allowedPermissions.contains('VIEW_ONLINE_REPORTS')}"><a class="text-primary underline" href="${ctx}/manager/online-reports">Xem bán online theo ngày thanh toán và ngày hoàn trả</a></c:if>
+            </p>
         </div>
     </div>
 
@@ -70,6 +73,12 @@
         <div class="cl-card p-space-lg">
             <div class="text-body-sm text-on-surface-variant mb-space-xs">Doanh thu</div>
             <div class="text-headline-md text-on-surface"><fmt:formatNumber value="${summary.revenue}" maxFractionDigits="0"/>đ</div>
+            <div class="text-body-sm mt-space-xs flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-primary"></span>
+                <span class="text-on-surface-variant">Online:</span> <fmt:formatNumber value="${summary.onlineRevenue}" maxFractionDigits="0"/>đ
+                <span class="text-on-surface-variant">· ${summary.onlineOrderCount} đơn</span></div>
+            <div class="text-body-sm flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-sky-400"></span>
+                <span class="text-on-surface-variant">Tại quầy:</span> <fmt:formatNumber value="${summary.counterRevenue}" maxFractionDigits="0"/>đ
+                <span class="text-on-surface-variant">· ${summary.counterOrderCount} đơn</span></div>
             <div class="text-body-sm text-on-surface-variant mt-space-xs">Trong đó bắp nước: <fmt:formatNumber value="${summary.concessionRevenue}" maxFractionDigits="0"/>đ</div>
         </div>
         <div class="cl-card p-space-lg">
@@ -111,13 +120,22 @@
             <h2 class="text-headline-sm text-on-surface">Doanh thu theo ${period == 'year' ? 'tháng' : 'ngày'}</h2>
             <p class="text-body-sm text-on-surface-variant mb-space-md">Tính theo thời điểm thanh toán, đã trừ tiền hoàn. Cao nhất:
                 <fmt:formatNumber value="${revenueMax}" maxFractionDigits="0"/>đ</p>
+            <div class="flex gap-space-md text-body-sm text-on-surface-variant mb-space-sm">
+                <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-primary"></span>Online</span>
+                <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-sky-400"></span>Tại quầy</span>
+            </div>
+            <%-- Cột chồng: online ở dưới, tại quầy ở trên; chiều cao cả cột = tổng doanh thu của mốc --%>
             <div class="flex items-end gap-[2px] h-48 border-b border-white/10" role="img"
-                 aria-label="Biểu đồ cột doanh thu theo thời gian, số liệu chi tiết ở bảng bên dưới">
+                 aria-label="Biểu đồ cột chồng doanh thu online và tại quầy theo thời gian, số liệu chi tiết ở bảng bên dưới">
                 <c:forEach var="point" items="${revenueSeries}">
+                    <c:set var="online" value="${point.value[0]}"/>
+                    <c:set var="counter" value="${point.value[1]}"/>
                     <div class="flex-1 h-full flex items-end justify-center"
-                         title="${point.key}: <fmt:formatNumber value='${point.value}' maxFractionDigits='0'/>đ">
-                        <div class="w-full max-w-[40px] bg-primary hover:bg-secondary rounded-t transition-colors"
-                             style="height: ${revenueMax > 0 ? point.value * 100 / revenueMax : 0}%; min-height: ${point.value > 0 ? 2 : 0}px"></div>
+                         title="${point.key} · Online: <fmt:formatNumber value='${online}' maxFractionDigits='0'/>đ · Tại quầy: <fmt:formatNumber value='${counter}' maxFractionDigits='0'/>đ">
+                        <div class="w-full max-w-[40px] h-full flex flex-col justify-end">
+                            <div class="bg-sky-400 rounded-t" style="height: ${revenueMax > 0 ? counter * 100 / revenueMax : 0}%; min-height: ${counter > 0 ? 2 : 0}px"></div>
+                            <div class="bg-primary ${counter > 0 ? '' : 'rounded-t'}" style="height: ${revenueMax > 0 ? online * 100 / revenueMax : 0}%; min-height: ${online > 0 ? 2 : 0}px"></div>
+                        </div>
                     </div>
                 </c:forEach>
             </div>
@@ -134,14 +152,18 @@
                     <thead>
                     <tr class="text-on-surface-variant text-left border-b border-white/10">
                         <th class="py-2 font-normal">${period == 'year' ? 'Tháng' : 'Ngày'}</th>
-                        <th class="py-2 font-normal text-right">Doanh thu</th>
+                        <th class="py-2 font-normal text-right">Online</th>
+                        <th class="py-2 font-normal text-right">Tại quầy</th>
+                        <th class="py-2 font-normal text-right">Tổng</th>
                     </tr>
                     </thead>
                     <tbody>
                     <c:forEach var="point" items="${revenueSeries}">
                         <tr class="border-b border-white/5">
                             <td class="py-1.5">${point.key}</td>
-                            <td class="py-1.5 text-right"><fmt:formatNumber value="${point.value}" maxFractionDigits="0"/>đ</td>
+                            <td class="py-1.5 text-right"><fmt:formatNumber value="${point.value[0]}" maxFractionDigits="0"/>đ</td>
+                            <td class="py-1.5 text-right"><fmt:formatNumber value="${point.value[1]}" maxFractionDigits="0"/>đ</td>
+                            <td class="py-1.5 text-right"><fmt:formatNumber value="${point.value[0] + point.value[1]}" maxFractionDigits="0"/>đ</td>
                         </tr>
                     </c:forEach>
                     </tbody>
@@ -175,14 +197,15 @@
     <section class="cl-card p-space-lg">
         <h2 class="text-headline-sm text-on-surface">Hiệu quả theo phim</h2>
         <p class="text-body-sm text-on-surface-variant mb-space-md">
-            Bán chạy: lấp đầy từ ${topThreshold}% trở lên. Bán chậm: lấp đầy dưới ${lowThreshold}%. Sắp theo số chỗ đã bán (ghế đôi tính 2).</p>
+            Bán chạy: lấp đầy từ ${topThreshold}% trở lên. Bán chậm: lấp đầy dưới ${lowThreshold}%. Sắp theo số chỗ đã bán (ghế đôi tính 2).
+            Giá trị vé tính theo giá in trên vé còn hiệu lực, chưa trừ voucher, điểm và tiền hoàn; tiền thực thu xem ở ô Doanh thu.</p>
         <table class="w-full text-body-md">
             <thead>
             <tr class="text-on-surface-variant text-body-sm text-left border-b border-white/10">
                 <th class="py-2 font-normal">Phim</th>
                 <th class="py-2 font-normal text-right">Suất chiếu</th>
                 <th class="py-2 font-normal text-right" title="Ghế đôi tính 2 chỗ">Chỗ đã bán</th>
-                <th class="py-2 font-normal text-right">Doanh thu vé</th>
+                <th class="py-2 font-normal text-right" title="Giá in trên vé, chưa trừ voucher, điểm và tiền hoàn">Giá trị vé (niêm yết)</th>
                 <th class="py-2 pl-space-lg font-normal w-64">Tỷ lệ lấp đầy</th>
                 <th class="py-2 pl-space-md font-normal">Xếp loại</th>
             </tr>

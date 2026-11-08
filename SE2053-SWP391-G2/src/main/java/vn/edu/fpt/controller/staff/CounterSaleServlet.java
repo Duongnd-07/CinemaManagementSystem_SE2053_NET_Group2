@@ -35,19 +35,23 @@ import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
 
 // UC-19: Sell Ticket & Concession at Counter
-// GET: chưa mở ca -> form mở ca; ?showtimeId -> màn hình bán; ?receipt -> hóa đơn; còn lại -> danh sách suất chiếu
-// POST action: openShift, quote (tính tiền), confirm (xác nhận đã thu tiền)
+// GET: chưa mở ca -> form mở ca; ?showtimeId -> màn hình bán; ?mode=concession -> bán riêng bắp nước;
+// ?receipt -> hóa đơn; còn lại -> danh sách suất chiếu
+// POST action: openShift, quote (tính tiền), confirm (xác nhận đã thu tiền); mode=concession cho đơn chỉ bắp nước
 @WebServlet("/staff/counter")
 public class CounterSaleServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(CounterSaleServlet.class.getName());
     private static final String VIEW = "/WEB-INF/views/staff/counter-sale.jsp";
+    private static final String CONCESSION_VIEW = "/WEB-INF/views/staff/concession-sale.jsp";
     private static final String RECEIPT_VIEW = "/WEB-INF/views/staff/counter-receipt.jsp";
+    private static final String MODE_CONCESSION = "concession";
     private static final String FLASH_SUCCESS = "flashSuccess";
     private static final String FLASH_ERROR = "flashError";
     private static final String FLASH_CHANGE = "counterChangeDue";
     private static final String STAFF_ONLY = "Chỉ nhân viên quầy mới được bán vé.";
     private static final String SHIFT_OPENED = "Đã mở ca, bạn có thể bắt đầu bán vé.";
     private static final String SALE_DONE = "Bán vé thành công.";
+    private static final String CONCESSION_DONE = "Bán bắp nước thành công.";
     private static final String RECEIPT_NOT_FOUND = "Không tìm thấy đơn bán tại quầy.";
     private static final String QTY_PREFIX = "qty_";
 
@@ -68,6 +72,12 @@ public class CounterSaleServlet extends HttpServlet {
                 return;
             }
             Shift shift = shiftService.findOpenShift(currentUserId(request));
+            if (shift != null && MODE_CONCESSION.equals(request.getParameter("mode"))) {
+                CounterSaleForm form = new CounterSaleForm();
+                form.setConcessionOnly(true);
+                renderSale(request, response, shift, form, null, new LinkedHashMap<>());
+                return;
+            }
             int showtimeId = parseInt(request.getParameter("showtimeId"));
             if (shift != null && showtimeId > 0) {
                 CounterSaleForm form = new CounterSaleForm();
@@ -126,13 +136,14 @@ public class CounterSaleServlet extends HttpServlet {
         try {
             if (confirm) {
                 CounterQuote paid = saleService.confirm(form, staffId);
-                ActivityLogger.info(request, LogEventType.COUNTER, "Bán vé tại quầy", "Booking", paid.getBookingId(),
+                ActivityLogger.info(request, LogEventType.COUNTER,
+                        form.isConcessionOnly() ? "Bán bắp nước tại quầy" : "Bán vé tại quầy", "Booking", paid.getBookingId(),
                         // getConcessions() gồm cả món số lượng 0 trong menu nên cộng theo số lượng đã bán
                         paid.getSeats().size() + " ghế, "
                                 + paid.getConcessions().stream().mapToInt(line -> line.getQuantity()).sum()
                                 + " món bắp nước, thu "
                                 + paid.getFinalAmount() + " VND (" + form.getPaymentMethod() + ")");
-                flash(request, FLASH_SUCCESS, SALE_DONE);
+                flash(request, FLASH_SUCCESS, form.isConcessionOnly() ? CONCESSION_DONE : SALE_DONE);
                 request.getSession().setAttribute(FLASH_CHANGE, paid.getChangeDue());
                 redirect(request, response, "?receipt=" + paid.getBookingId());
                 return;
@@ -187,12 +198,14 @@ public class CounterSaleServlet extends HttpServlet {
     private void renderSale(HttpServletRequest request, HttpServletResponse response, Shift shift,
                             CounterSaleForm form, CounterQuote quote, Map<String, String> errors)
             throws SQLException, ServletException, IOException {
-        try {
-            request.setAttribute("booking", saleService.loadSeats(form.getShowtimeId()));
-        } catch (ValidationException e) {
-            flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());
-            redirect(request, response, "");
-            return;
+        if (!form.isConcessionOnly()) {
+            try {
+                request.setAttribute("booking", saleService.loadSeats(form.getShowtimeId()));
+            } catch (ValidationException e) {
+                flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());
+                redirect(request, response, "");
+                return;
+            }
         }
         moveFlash(request);
         shiftAttributes(request, shift);
@@ -202,7 +215,7 @@ public class CounterSaleServlet extends HttpServlet {
         request.setAttribute("concessions", quote != null ? quote.getConcessions() : saleService.listConcessions());
         request.setAttribute("paymentMethods", CounterSaleService.PAYMENT_METHODS);
         request.setAttribute("selectedSeats", String.join(",", form.getSeatIds()));
-        forward(request, response, VIEW);
+        forward(request, response, form.isConcessionOnly() ? CONCESSION_VIEW : VIEW);
     }
 
     // Ca đang mở, giờ ca tự kết và cờ sắp hết giờ (báo trước WARNING_MINUTES phút, UC-22)
@@ -254,9 +267,9 @@ public class CounterSaleServlet extends HttpServlet {
         form.setPoints(trim(request.getParameter("points")));
         form.setPaymentMethod(trim(request.getParameter("paymentMethod")));
         form.setCashReceived(trim(request.getParameter("cashReceived")));
-        form.setPaymentReference(trim(request.getParameter("paymentReference")));
         form.setTransferNote(trim(request.getParameter("transferNote")));
         form.setAgeConfirmed("1".equals(request.getParameter("ageConfirmed")));
+        form.setConcessionOnly(MODE_CONCESSION.equals(trim(request.getParameter("mode"))));
         return form;
     }
 

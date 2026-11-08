@@ -1,0 +1,104 @@
+/* UC-36: vé giấy khổ 80 mm (máy in nhiệt) hoặc giấy thường. Trên màn hình chỉ thấy giao diện quét; khi in chỉ in vé. */
+#printArea {
+    display: none;
+}
+
+@media print {
+    @page {
+        size: 80mm auto;
+        margin: 4mm;
+    }
+
+    html, body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .screen-only {
+        display: none !important;
+    }
+
+    #printArea {
+        display: block;
+        width: 72mm;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #000;
+    }
+
+    .paper-ticket {
+        padding: 2mm 0 4mm;
+        border-bottom: 1px dashed #000;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .paper-ticket:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    .pt-brand {
+        text-align: center;
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 1px;
+    }
+
+    .pt-sub {
+        text-align: center;
+        font-size: 11px;
+        margin-bottom: 2mm;
+    }
+
+    .pt-reprint {
+        text-align: center;
+        font-size: 12px;
+        font-weight: 800;
+        border: 1px solid #000;
+        padding: 1mm 0;
+        margin-bottom: 2mm;
+    }
+
+    .pt-movie {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 2mm;
+    }
+
+    .pt-movie span {
+        font-weight: 400;
+        font-size: 11px;
+    }
+
+    .pt-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    .pt-table td {
+        padding: 0.6mm 0;
+        vertical-align: top;
+    }
+
+    .pt-table td:first-child {
+        width: 22mm;
+        color: #333;
+    }
+
+    .pt-seat {
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+    .pt-code {
+        font-family: "Courier New", monospace;
+        font-weight: 700;
+    }
+
+    .pt-foot {
+        margin-top: 2mm;
+        font-size: 10px;
+        color: #333;
+    }
+}

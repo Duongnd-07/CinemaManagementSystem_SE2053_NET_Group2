@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import vn.edu.fpt.model.BookingChannel;
 import vn.edu.fpt.model.BookingStatus;
@@ -86,8 +87,10 @@ public class ShiftDAO {
                 + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN b.FinalAmount END), 0) AS Card, "
                 + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN b.FinalAmount END), 0) AS Transfer "
                 + "FROM Booking b "
+                // Chỉ vé bán ra lúc đầu: vé cấp mới khi đổi ghế (UC-20) không phải doanh thu mới
                 + "OUTER APPLY (SELECT COUNT(*) AS Tickets, SUM(t.Price) AS TicketRevenue "
-                + "FROM Ticket t WHERE t.BookingID = b.BookingID) tk "
+                + "FROM Ticket t WHERE t.BookingID = b.BookingID AND NOT EXISTS (SELECT 1 FROM TicketExchange x "
+                + "WHERE t.TicketID IN (x.NewTicketID, x.NewTicketID2))) tk "
                 + "OUTER APPLY (SELECT SUM(bc.SubtotalPrice) AS Revenue, SUM(bc.Quantity) AS Items "
                 + "FROM Booking_Concession bc WHERE bc.BookingID = b.BookingID) cs "
                 + "WHERE b.ShiftID = ? AND b.Status = ? AND b.Channel = ?";
@@ -111,52 +114,128 @@ public class ShiftDAO {
                 report.setTransferTotal(rs.getBigDecimal("Transfer"));
             }
         }
-        // Tiền hoàn trả khách tại quầy trong ca (Ticket.RefundShiftID)
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT ISNULL(SUM(RefundAmount), 0) FROM Ticket WHERE RefundShiftID = ?")) {
+        // Điều chỉnh sau bán thuộc ca đã trả tiền / xử lý, kể cả đơn bán ở ca khác:
+        // tiền hoàn tại quầy (Ticket.RefundShiftID) và số lần đổi ghế nhân viên làm trong khung giờ ca
+        String adjustSql = "SELECT (SELECT ISNULL(SUM(RefundAmount), 0) FROM Ticket WHERE RefundShiftID = sh.ShiftID) "
+                + "AS Refund, (SELECT COUNT(*) FROM Ticket WHERE RefundShiftID = sh.ShiftID) AS Refunded, "
+                + "(SELECT COUNT(*) FROM TicketExchange x WHERE x.StaffID = sh.StaffID AND x.ExchangeType <> 'Refund' "
+                + "AND x.CreatedAt >= sh.StartedAt AND (sh.EndedAt IS NULL OR x.CreatedAt < sh.EndedAt)) AS Exchanged "
+                + "FROM Shift sh WHERE sh.ShiftID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(adjustSql)) {
             ps.setInt(1, shiftId);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
-                report.setRefundTotal(rs.getBigDecimal(1));
+                report.setRefundTotal(rs.getBigDecimal("Refund"));
+                report.setRefundedTickets(rs.getInt("Refunded"));
+                report.setExchangedTickets(rs.getInt("Exchanged"));
             }
         }
     }
 
-    // Đơn của ca kèm danh sách ghế; ghế gộp bằng Java để không phụ thuộc STRING_AGG (SQL Server 2017+)
+    // Lần đổi / hoàn (UC-20) thuộc ca: do nhân viên của ca làm trong khung giờ ca (đổi cùng hạng không gắn ShiftID),
+    // cùng cách đếm số vé đổi ở summarize
+    private static final String IN_SHIFT = "x.StaffID = sh.StaffID AND x.CreatedAt >= sh.StartedAt "
+            + "AND (sh.EndedAt IS NULL OR x.CreatedAt < sh.EndedAt)";
+    // Đơn hiện trong báo cáo ca: đơn bán tại quầy trong ca, và đơn (kể cả mua online hay bán ở ca khác) có đổi / hoàn
+    // trong ca. Tham số: shiftId, Paid, Counter
+    private static final String ORDER_SET = "SELECT b.BookingID FROM Booking b JOIN Shift sh ON sh.ShiftID = ? "
+            + "WHERE (b.ShiftID = sh.ShiftID AND b.Status = ? AND b.Channel = ?) OR EXISTS (SELECT 1 FROM TicketExchange x "
+            + "JOIN Ticket xt ON xt.TicketID = x.OldTicketID WHERE xt.BookingID = b.BookingID AND " + IN_SHIFT + ")";
+
+    // Đơn của ca kèm 3 cột ghế: ghế lúc bán, đổi ghế (cũ -> mới), hoàn tiền (ghế · số tiền). Cột đổi ghế / hoàn tiền
+    // chỉ ghi việc làm trong ca này để đối chiếu với két. Gộp bằng Java để không phụ thuộc STRING_AGG (SQL Server 2017+)
     public void findOrders(Connection conn, int shiftId, ShiftReport report) throws SQLException {
         Map<Integer, StringBuilder> seats = new LinkedHashMap<>();
-        String seatSql = "SELECT t.BookingID, se.RowName, se.ColNumber FROM Ticket t "
-                + "JOIN Booking b ON b.BookingID = t.BookingID JOIN Seat se ON se.SeatID = t.SeatID "
-                + "WHERE b.ShiftID = ? ORDER BY t.BookingID, se.RowName, se.ColNumber";
+        Map<Integer, StringBuilder> exchanges = new LinkedHashMap<>();
+        Map<Integer, StringBuilder> refunds = new LinkedHashMap<>();
+        Map<Integer, StringBuilder> concessions = new LinkedHashMap<>();
+        // Vé cấp khi đổi ghế không phải ghế bán ra; nó chỉ xuất hiện ở cột đổi ghế
+        String seatSql = "SELECT t.BookingID, CONCAT(se.RowName, se.ColNumber) AS Seat FROM Ticket t "
+                + "JOIN Seat se ON se.SeatID = t.SeatID WHERE t.BookingID IN (" + ORDER_SET + ") AND NOT EXISTS "
+                + "(SELECT 1 FROM TicketExchange n WHERE t.TicketID IN (n.NewTicketID, n.NewTicketID2)) "
+                + "ORDER BY t.BookingID, se.RowName, se.ColNumber";
         try (PreparedStatement ps = conn.prepareStatement(seatSql)) {
-            ps.setInt(1, shiftId);
+            bindOrderSet(ps, 1, shiftId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    StringBuilder label = seats.computeIfAbsent(rs.getInt("BookingID"), id -> new StringBuilder());
-                    label.append(label.length() == 0 ? "" : ", ").append(rs.getString("RowName"))
-                            .append(rs.getInt("ColNumber"));
+                    append(seats, rs.getInt("BookingID"), rs.getString("Seat"));
                 }
             }
         }
-        String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.PaymentReference, b.FinalAmount, "
-                + "c.FullName AS CustomerName "
-                + "FROM Booking b LEFT JOIN [User] c ON c.UserID = b.CustomerID "
-                + "WHERE b.ShiftID = ? AND b.Status = ? AND b.Channel = ? ORDER BY b.BookingTime DESC, b.BookingID DESC";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        String exchangeSql = "SELECT xt.BookingID, x.ExchangeType, x.CashRefund, CONCAT(so.RowName, so.ColNumber) AS Seat, "
+                + "CONCAT(s1.RowName, s1.ColNumber) AS NewSeat, CONCAT(s2.RowName, s2.ColNumber) AS NewSeat2 "
+                + "FROM TicketExchange x JOIN Shift sh ON sh.ShiftID = ? JOIN Ticket xt ON xt.TicketID = x.OldTicketID "
+                + "JOIN Seat so ON so.SeatID = xt.SeatID "
+                + "LEFT JOIN Ticket n1 ON n1.TicketID = x.NewTicketID LEFT JOIN Seat s1 ON s1.SeatID = n1.SeatID "
+                + "LEFT JOIN Ticket n2 ON n2.TicketID = x.NewTicketID2 LEFT JOIN Seat s2 ON s2.SeatID = n2.SeatID "
+                + "WHERE " + IN_SHIFT + " ORDER BY x.CreatedAt, x.ExchangeID";
+        try (PreparedStatement ps = conn.prepareStatement(exchangeSql)) {
             ps.setInt(1, shiftId);
-            ps.setString(2, BookingStatus.PAID);
-            ps.setString(3, BookingChannel.COUNTER);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     int bookingId = rs.getInt("BookingID");
-                    StringBuilder label = seats.get(bookingId);
-                    report.getOrders().add(new ShiftReport.Order(bookingId,
-                            rs.getTimestamp("BookingTime").toLocalDateTime(), label == null ? "" : label.toString(),
-                            rs.getString("CustomerName"), rs.getString("PaymentMethod"), rs.getString("PaymentReference"),
-                            rs.getBigDecimal("FinalAmount")));
+                    String seat = rs.getString("Seat");
+                    boolean refund = "Refund".equals(rs.getString("ExchangeType"));
+                    if (!refund) {
+                        String newSeat2 = rs.getString("NewSeat2");
+                        append(exchanges, bookingId, seat + " → " + rs.getString("NewSeat")
+                                + (newSeat2.isEmpty() ? "" : " + " + newSeat2));
+                    }
+                    BigDecimal cash = rs.getBigDecimal("CashRefund");
+                    // Hoàn vé luôn ghi (kể cả 0đ khi chỉ trả điểm); đổi xuống ghế thường chỉ ghi khi có trả tiền mặt
+                    if (refund || cash.signum() > 0) {
+                        append(refunds, bookingId, seat + " · "
+                                + String.format(Locale.forLanguageTag("vi-VN"), "%,.0fđ", cash));
+                    }
                 }
             }
         }
+        String itemSql = "SELECT bc.BookingID, c.Name, bc.Quantity FROM Booking_Concession bc "
+                + "JOIN Concession c ON c.ConcessionID = bc.ConcessionID WHERE bc.BookingID IN (" + ORDER_SET + ") "
+                + "ORDER BY bc.BookingID, c.Name";
+        try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
+            bindOrderSet(ps, 1, shiftId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    append(concessions, rs.getInt("BookingID"), rs.getString("Name") + " × " + rs.getInt("Quantity"));
+                }
+            }
+        }
+        String sql = "SELECT b.BookingID, b.BookingTime, b.PaymentMethod, b.PaymentReference, b.FinalAmount, b.Channel, "
+                + "c.FullName AS CustomerName, CASE WHEN b.ShiftID = ? AND b.Channel = ? THEN 1 ELSE 0 END AS Sold "
+                + "FROM Booking b LEFT JOIN [User] c ON c.UserID = b.CustomerID WHERE b.BookingID IN (" + ORDER_SET + ") "
+                + "ORDER BY b.BookingTime DESC, b.BookingID DESC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, shiftId);
+            ps.setString(2, BookingChannel.COUNTER);
+            bindOrderSet(ps, 3, shiftId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int bookingId = rs.getInt("BookingID");
+                    report.getOrders().add(new ShiftReport.Order(bookingId,
+                            rs.getTimestamp("BookingTime").toLocalDateTime(), text(seats, bookingId),
+                            text(exchanges, bookingId), text(refunds, bookingId), text(concessions, bookingId),
+                            rs.getString("CustomerName"), rs.getString("PaymentMethod"), rs.getString("PaymentReference"),
+                            rs.getBigDecimal("FinalAmount"), rs.getString("Channel"), rs.getInt("Sold") == 1));
+                }
+            }
+        }
+    }
+
+    private static void bindOrderSet(PreparedStatement ps, int from, int shiftId) throws SQLException {
+        ps.setInt(from, shiftId);
+        ps.setString(from + 1, BookingStatus.PAID);
+        ps.setString(from + 2, BookingChannel.COUNTER);
+    }
+
+    private static void append(Map<Integer, StringBuilder> labels, int bookingId, String value) {
+        StringBuilder label = labels.computeIfAbsent(bookingId, id -> new StringBuilder());
+        label.append(label.length() == 0 ? "" : ", ").append(value);
+    }
+
+    private static String text(Map<Integer, StringBuilder> labels, int bookingId) {
+        StringBuilder label = labels.get(bookingId);
+        return label == null ? "" : label.toString();
     }
 
     // Kết ca và chốt số liệu (BR-03). autoHours != null: hệ thống tự kết, giờ kết = giờ mở + autoHours;

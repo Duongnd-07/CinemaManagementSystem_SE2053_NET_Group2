@@ -303,3 +303,44 @@
     background: var(--cl-accent);
     border-color: var(--cl-accent);
 }
+
+.movie-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+.page-link {
+    min-width: 38px;
+    height: 38px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #8e919f;
+    border: 1px solid var(--cl-border);
+    background: var(--cl-card);
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.page-link:hover {
+    color: #fff;
+    background: var(--cl-card-raised);
+}
+
+.page-link.active {
+    color: #fff;
+    background: var(--cl-accent);
+    border-color: var(--cl-accent);
+}
+
+.page-link.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}

@@ -72,6 +72,7 @@ public class CustomerBookingDAO {
     public CancellableTicket findCancellationCandidate(Connection conn, int ticketId, int customerId)
             throws SQLException {
         String sql = "SELECT t.TicketID, b.BookingID, t.SeatID, b.ShowtimeID, t.Price, b.PointsEarned, "
+                + "b.TotalPrice AS BookingTotalPrice, "
                 + "(SELECT SUM(allTicket.Price) FROM Ticket allTicket WHERE allTicket.BookingID = b.BookingID) "
                 + "AS BookingTicketTotal, "
                 + "(SELECT COUNT(*) FROM Ticket upcoming WHERE upcoming.BookingID = b.BookingID "
@@ -95,6 +96,7 @@ public class CustomerBookingDAO {
                 ticket.setShowtimeId(rs.getInt("ShowtimeID"));
                 ticket.setPrice(rs.getBigDecimal("Price"));
                 ticket.setBookingTicketTotal(rs.getBigDecimal("BookingTicketTotal"));
+                ticket.setBookingTotalPrice(rs.getBigDecimal("BookingTotalPrice"));
                 ticket.setBookingPointsEarned(rs.getInt("PointsEarned"));
                 ticket.setUpcomingTicketCount(rs.getInt("UpcomingTicketCount"));
                 ticket.setTicketStatus(rs.getString("TicketStatus"));
@@ -121,6 +123,24 @@ public class CustomerBookingDAO {
             ps.setBigDecimal(1, refundAmount);
             ps.setInt(2, ticketId);
             return ps.executeUpdate();
+        }
+    }
+
+    // UC-37: immutable link to the issued voucher; written inside the cancellation transaction.
+    public void recordCancellation(Connection conn, int ticketId, String voucherCode,
+                                   java.math.BigDecimal voucherAmount, int customerId,
+                                   java.time.LocalDateTime cancelledAt) throws SQLException {
+        String sql = "INSERT INTO TicketCancellation (TicketID, VoucherID, VoucherAmount, ActorID, CancelledAt) "
+                + "SELECT ?, VoucherID, ?, ?, ? FROM Voucher WHERE VoucherCode = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ticketId);
+            ps.setBigDecimal(2, voucherAmount);
+            ps.setInt(3, customerId);
+            ps.setTimestamp(4, Timestamp.valueOf(cancelledAt.withNano(0)));
+            ps.setString(5, voucherCode);
+            if (ps.executeUpdate() != 1) {
+                throw new SQLException("Cancellation voucher link could not be recorded.");
+            }
         }
     }
 

@@ -20,6 +20,9 @@ public class ShiftReport {
     private BigDecimal cardTotal = BigDecimal.ZERO;
     private BigDecimal transferTotal = BigDecimal.ZERO;
     private BigDecimal refundTotal = BigDecimal.ZERO;
+    // Vé hoàn tiền mặt / đổi ghế xử lý trong ca, kể cả vé bán ở ca khác
+    private int refundedTickets;
+    private int exchangedTickets;
     // Tổng voucher + điểm của các đơn, đọc từ Booking.DiscountAmount
     private BigDecimal discountTotal = BigDecimal.ZERO;
     private final List<Order> orders = new ArrayList<>();
@@ -33,18 +36,32 @@ public class ShiftReport {
     public static final class Order {
         private final int bookingId;
         private final LocalDateTime bookingTime;
+        // Ghế lúc bán; đổi ghế "A1 → A3"; hoàn tiền mặt "D3 · 98.333đ" (rỗng nếu không có)
         private final String seats;
+        private final String exchanges;
+        private final String refunds;
+        // Món bắp nước "Combo nhỏ × 2, Coca × 1" (rỗng nếu không mua)
+        private final String concessions;
         private final String customerName;
         private final String paymentMethod;
-        // Mã chuẩn chi POS / mã giao dịch ngân hàng để đối chiếu khi kết ca; null với tiền mặt
+        // Mã giao dịch ngân hàng để đối chiếu khi kết ca; null với tiền mặt
         private final String paymentReference;
         private final BigDecimal finalAmount;
+        private final String channel;
+        // false: đơn chỉ hiện vì có đổi / hoàn trong ca (mua online hoặc bán ở ca khác), tiền không tính vào thu của ca
+        private final boolean soldInShift;
 
-        public Order(int bookingId, LocalDateTime bookingTime, String seats, String customerName,
-                     String paymentMethod, String paymentReference, BigDecimal finalAmount) {
+        public Order(int bookingId, LocalDateTime bookingTime, String seats, String exchanges, String refunds,
+                     String concessions, String customerName, String paymentMethod, String paymentReference,
+                     BigDecimal finalAmount, String channel, boolean soldInShift) {
+            this.channel = channel;
+            this.soldInShift = soldInShift;
             this.bookingId = bookingId;
             this.bookingTime = bookingTime;
             this.seats = seats;
+            this.exchanges = exchanges;
+            this.refunds = refunds;
+            this.concessions = concessions;
             this.customerName = customerName;
             this.paymentMethod = paymentMethod;
             this.paymentReference = paymentReference;
@@ -55,6 +72,14 @@ public class ShiftReport {
             return paymentReference;
         }
 
+        public String getChannel() {
+            return channel;
+        }
+
+        public boolean isSoldInShift() {
+            return soldInShift;
+        }
+
         public int getBookingId() {
             return bookingId;
         }
@@ -63,8 +88,20 @@ public class ShiftReport {
             return bookingTime;
         }
 
+        public String getConcessions() {
+            return concessions;
+        }
+
         public String getSeats() {
             return seats;
+        }
+
+        public String getExchanges() {
+            return exchanges;
+        }
+
+        public String getRefunds() {
+            return refunds;
         }
 
         public String getCustomerName() {
@@ -207,5 +244,21 @@ public class ShiftReport {
 
     public void setDiscountTotal(BigDecimal discountTotal) {
         this.discountTotal = discountTotal;
+    }
+
+    public int getRefundedTickets() {
+        return refundedTickets;
+    }
+
+    public void setRefundedTickets(int refundedTickets) {
+        this.refundedTickets = refundedTickets;
+    }
+
+    public int getExchangedTickets() {
+        return exchangedTickets;
+    }
+
+    public void setExchangedTickets(int exchangedTickets) {
+        this.exchangedTickets = exchangedTickets;
     }
 }

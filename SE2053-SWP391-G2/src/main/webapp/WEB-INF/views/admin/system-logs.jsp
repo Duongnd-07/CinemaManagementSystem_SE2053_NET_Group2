@@ -54,6 +54,9 @@
         </div>
 
         <div class="flex items-center gap-4">
+            <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
+                <jsp:param name="href" value="${ctx}/admin/notifications"/>
+            </jsp:include>
             <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                 <span class="material-symbols-outlined text-[#ffb95f] text-lg">shield_person</span>
                 <span class="text-xs font-semibold text-white">

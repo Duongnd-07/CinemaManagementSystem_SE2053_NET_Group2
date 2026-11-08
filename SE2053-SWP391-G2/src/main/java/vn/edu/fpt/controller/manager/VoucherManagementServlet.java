@@ -24,6 +24,7 @@ import vn.edu.fpt.model.VoucherType;
 import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.service.VoucherForm;
+import vn.edu.fpt.service.MovieService;
 import vn.edu.fpt.service.VoucherService;
 import vn.edu.fpt.util.CsrfToken;
 import vn.edu.fpt.util.Messages;
@@ -37,6 +38,7 @@ public class VoucherManagementServlet extends HttpServlet {
     private static final String FLASH_ERROR = "flashError";
 
     private final VoucherService voucherService = new VoucherService();
+    private final MovieService movieService = new MovieService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -98,7 +100,8 @@ public class VoucherManagementServlet extends HttpServlet {
             boolean created = voucherId == null || voucherId <= 0;
             ActivityLogger.info(request, LogEventType.CATALOG, created ? "Thêm voucher" : "Cập nhật voucher",
                     "Voucher", created ? null : voucherId, "Mã " + form.getVoucherCode() + ", giảm "
-                            + form.getDiscountValue() + " (" + form.getDiscountType() + "), hết hạn " + form.getExpiryDate());
+                            + form.getDiscountValue() + " (" + form.getDiscountType() + "), tối đa "
+                            + form.getPerUserUsageLimit() + " lượt/tài khoản, hết hạn " + form.getExpiryDate());
             request.getSession().setAttribute(FLASH_SUCCESS,
                     voucherId == null || voucherId <= 0 ? Messages.VOUCHER_SAVED : Messages.VOUCHER_UPDATED);
             response.sendRedirect(request.getContextPath() + "/manager/vouchers" + listQuery(request));
@@ -138,6 +141,7 @@ public class VoucherManagementServlet extends HttpServlet {
             }
         }
         request.setAttribute("voucherPage", voucherPage);
+        request.setAttribute("movies", movieService.listAllTitles());
         request.setAttribute("keyword", keyword);
         request.setAttribute("typeFilter", type);
         request.setAttribute("voucherTypes", VoucherType.ALL);
@@ -176,6 +180,10 @@ public class VoucherManagementServlet extends HttpServlet {
         form.setStartDate(toDateTimeInput(voucher.getStartDate()));
         form.setExpiryDate(toDateTimeInput(voucher.getExpiryDate()));
         form.setUsageLimit(voucher.getUsageLimit() == null ? "" : voucher.getUsageLimit().toString());
+        form.setPerUserUsageLimit(voucher.getPerUserUsageLimit() == null
+                ? "1" : voucher.getPerUserUsageLimit().toString());
+        form.setScope(voucher.getMovieId() == null ? VoucherService.SCOPE_ALL : VoucherService.SCOPE_MOVIE);
+        form.setMovieId(voucher.getMovieId() == null ? "" : voucher.getMovieId().toString());
         return form;
     }
 
@@ -188,6 +196,9 @@ public class VoucherManagementServlet extends HttpServlet {
         form.setStartDate(trim(request.getParameter("startDate")));
         form.setExpiryDate(trim(request.getParameter("expiryDate")));
         form.setUsageLimit(trim(request.getParameter("usageLimit")));
+        form.setPerUserUsageLimit(trim(request.getParameter("perUserUsageLimit")));
+        form.setScope(trim(request.getParameter("scope")));
+        form.setMovieId(trim(request.getParameter("movieId")));
         return form;
     }
 

@@ -7,7 +7,9 @@ import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+import vn.edu.fpt.dao.MovieDAO;
 import vn.edu.fpt.dao.VoucherDAO;
+import vn.edu.fpt.model.Movie;
 import vn.edu.fpt.model.Voucher;
 import vn.edu.fpt.model.VoucherType;
 import vn.edu.fpt.util.Messages;
@@ -21,6 +23,8 @@ public class VoucherService {
     public static final String DISABLED = "Disabled";
     public static final String AMOUNT = "Amount";
     public static final String PERCENT = "Percent";
+    public static final String SCOPE_ALL = "All";
+    public static final String SCOPE_MOVIE = "Movie";
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999999999.99");
     private static final int MAX_CODE_LENGTH = 32;
     private static final Pattern CODE_PATTERN = Pattern.compile("[A-Z0-9-]{4,32}");
@@ -28,6 +32,7 @@ public class VoucherService {
     private static final int SQL_UNIQUE_INDEX_VIOLATION = 2601;
 
     private final VoucherDAO voucherDAO = new VoucherDAO();
+    private final MovieDAO movieDAO = new MovieDAO();
 
     public Page<Voucher> list(String keyword, String voucherType, int page) throws SQLException {
         String normalizedKeyword = keyword == null ? "" : keyword.trim();
@@ -82,9 +87,11 @@ public class VoucherService {
         voucher.setStartDate(LocalDateTime.parse(form.getStartDate().trim()));
         voucher.setExpiryDate(LocalDateTime.parse(form.getExpiryDate().trim()));
         voucher.setUsageLimit(Integer.valueOf(form.getUsageLimit().trim()));
+        voucher.setPerUserUsageLimit(Integer.valueOf(form.getPerUserUsageLimit().trim()));
         voucher.setVoucherType(VoucherType.PROMOTION);
         voucher.setStatus(ACTIVE);
         voucher.setCreatedByUserId(createdByUserId);
+        voucher.setMovieId(SCOPE_MOVIE.equals(form.getScope()) ? Integer.valueOf(form.getMovieId().trim()) : null);
 
         try {
             if (voucherId == null) {
@@ -98,6 +105,10 @@ public class VoucherService {
                     if (voucherDAO.countActiveUses(voucherId) > voucher.getUsageLimit()) {
                         throw new ValidationException(Map.of(
                                 "usageLimit", Messages.VOUCHER_USAGE_LIMIT_BELOW_USAGE));
+                    }
+                    if (voucherDAO.maxActiveUsesPerUser(voucherId) > voucher.getPerUserUsageLimit()) {
+                        throw new ValidationException(Map.of(
+                                "perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_BELOW_USAGE));
                     }
                     throw new ValidationException(Map.of("general", Messages.VOUCHER_NOT_FOUND));
                 }
@@ -154,6 +165,21 @@ public class VoucherService {
             errors.put("discountType", Messages.VOUCHER_DISCOUNT_TYPE_INVALID);
         }
 
+        String scope = form.getScope() == null ? "" : form.getScope().trim();
+        if (!SCOPE_ALL.equals(scope) && !SCOPE_MOVIE.equals(scope)) {
+            errors.put("scope", Messages.VOUCHER_SCOPE_INVALID);
+        } else if (SCOPE_MOVIE.equals(scope)) {
+            try {
+                int movieId = Integer.parseInt(form.getMovieId() == null ? "" : form.getMovieId().trim());
+                Movie movie = movieId > 0 ? movieDAO.findById(movieId) : null;
+                if (movie == null) {
+                    errors.put("movieId", Messages.VOUCHER_MOVIE_INVALID);
+                }
+            } catch (NumberFormatException e) {
+                errors.put("movieId", Messages.VOUCHER_MOVIE_INVALID);
+            }
+        }
+
         BigDecimal discountValue = parseDecimal(form.getDiscountValue(), "discountValue", errors);
         if (discountValue != null) {
             if (discountValue.signum() <= 0 || (PERCENT.equals(discountType)
@@ -197,6 +223,17 @@ public class VoucherService {
             }
         } catch (NumberFormatException e) {
             errors.put("usageLimit", Messages.VOUCHER_USAGE_LIMIT_INVALID);
+        }
+        try {
+            int perUserUsageLimit = Integer.parseInt(
+                    form.getPerUserUsageLimit() == null ? "" : form.getPerUserUsageLimit().trim());
+            if (perUserUsageLimit < 1) {
+                errors.put("perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_INVALID);
+            } else if (voucherId != null && voucherDAO.maxActiveUsesPerUser(voucherId) > perUserUsageLimit) {
+                errors.put("perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_BELOW_USAGE);
+            }
+        } catch (NumberFormatException e) {
+            errors.put("perUserUsageLimit", Messages.VOUCHER_PER_USER_USAGE_LIMIT_INVALID);
         }
         return errors;
     }

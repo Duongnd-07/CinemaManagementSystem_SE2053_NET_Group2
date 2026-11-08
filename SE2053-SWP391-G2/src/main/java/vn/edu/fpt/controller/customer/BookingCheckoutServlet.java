@@ -53,7 +53,14 @@ public class BookingCheckoutServlet extends HttpServlet {
         }
         BookingFlow.moveFlashToRequest(session, request);
         try {
-            CheckoutView view = bookingService.loadCheckout(BookingFlow.currentUser(session), checkout);
+            CheckoutView view;
+            synchronized (checkout) {
+                if (checkout.getBookingId() != null) {
+                    response.sendRedirect(BookingFlow.paymentUrl(request, checkout.getBookingId()));
+                    return;
+                }
+                view = bookingService.loadCheckout(BookingFlow.currentUser(session), checkout);
+            }
             @SuppressWarnings("unchecked")
             Map<String, String> flashErrors = (Map<String, String>) session.getAttribute(
                     BookingFlow.SESSION_CHECKOUT_ERRORS);
@@ -88,8 +95,14 @@ public class BookingCheckoutServlet extends HttpServlet {
         CheckoutForm form = readForm(request);
         try {
             if (ACTION_CANCEL.equals(action)) {
-                bookingService.releaseCheckout(checkout);
-                session.removeAttribute(BookingFlow.SESSION_CHECKOUT);
+                synchronized (checkout) {
+                    if (checkout.getBookingId() != null) {
+                        response.sendRedirect(BookingFlow.paymentUrl(request, checkout.getBookingId()));
+                        return;
+                    }
+                    bookingService.releaseCheckout(checkout);
+                    session.removeAttribute(BookingFlow.SESSION_CHECKOUT);
+                }
                 session.setAttribute(BookingFlow.FLASH_SUCCESS, Messages.BOOKING_CANCELLED);
                 response.sendRedirect(BookingFlow.seatPageUrl(request, checkout.getShowtimeId()));
                 return;
@@ -111,7 +124,14 @@ public class BookingCheckoutServlet extends HttpServlet {
                 response.sendRedirect(BookingFlow.paymentUrl(request, bookingId));
                 return;
             }
-            CheckoutView view = bookingService.applyOptions(BookingFlow.currentUser(session), checkout, form);
+            CheckoutView view;
+            synchronized (checkout) {
+                if (checkout.getBookingId() != null) {
+                    response.sendRedirect(BookingFlow.paymentUrl(request, checkout.getBookingId()));
+                    return;
+                }
+                view = bookingService.applyOptions(BookingFlow.currentUser(session), checkout, form);
+            }
             if (request.getHeader(AJAX_HEADER) != null) {
                 render(request, response, session, checkout, view, null, voucherInput(view.getErrors(), form));
                 return;

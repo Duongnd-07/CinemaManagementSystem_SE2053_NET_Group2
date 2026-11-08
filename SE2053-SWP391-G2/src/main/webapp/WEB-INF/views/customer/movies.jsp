@@ -99,7 +99,43 @@
             </c:if>
         </div>
 
-        <ui:movie-grid movies="${comingSoonTab ? comingSoon : nowShowing}" emptyMessage="${emptyMessage}"/>
+        <ui:movie-grid movies="${moviePage.items}" emptyMessage="${emptyMessage}"/>
+
+        <%-- Phân trang tab đang xem; link trang giữ nguyên bộ lọc và tab --%>
+        <c:if test="${moviePage.totalPages > 1}">
+            <c:set var="pageBase" value="${comingSoonTab ? comingSoonUrl : nowShowingUrl}"/>
+            <nav class="movie-pager" aria-label="Phân trang phim">
+                <p class="text-sm text-[#8e919f]">
+                    Hiển thị ${moviePage.fromItem}-${moviePage.toItem} trong tổng số ${moviePage.totalItems} phim
+                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <c:choose>
+                        <c:when test="${moviePage.page > 1}">
+                            <a class="page-link" href="<c:out value='${pageBase}'/>&page=${moviePage.page - 1}" aria-label="Trang trước">
+                                <span class="material-symbols-outlined text-base">chevron_left</span>
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="page-link disabled" aria-hidden="true"><span class="material-symbols-outlined text-base">chevron_left</span></span>
+                        </c:otherwise>
+                    </c:choose>
+                    <c:forEach var="p" begin="1" end="${moviePage.totalPages}">
+                        <a class="page-link ${p == moviePage.page ? 'active' : ''}" href="<c:out value='${pageBase}'/>&page=${p}"
+                           ${p == moviePage.page ? 'aria-current="page"' : ''}>${p}</a>
+                    </c:forEach>
+                    <c:choose>
+                        <c:when test="${moviePage.page < moviePage.totalPages}">
+                            <a class="page-link" href="<c:out value='${pageBase}'/>&page=${moviePage.page + 1}" aria-label="Trang sau">
+                                <span class="material-symbols-outlined text-base">chevron_right</span>
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="page-link disabled" aria-hidden="true"><span class="material-symbols-outlined text-base">chevron_right</span></span>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </nav>
+        </c:if>
     </main>
 
     <jsp:include page="/WEB-INF/views/common/public-footer.jsp"/>

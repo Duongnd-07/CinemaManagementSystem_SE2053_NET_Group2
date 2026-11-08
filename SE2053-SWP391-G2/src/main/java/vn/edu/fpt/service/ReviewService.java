@@ -3,6 +3,7 @@ package vn.edu.fpt.service;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import vn.edu.fpt.dao.CustomerNotificationDAO;
 import vn.edu.fpt.dao.MovieDAO;
@@ -21,8 +22,13 @@ import vn.edu.fpt.util.Page;
 public class ReviewService {
     public static final int PAGE_SIZE = 5;
     public static final int MANAGER_PAGE_SIZE = 15;
+    public static final String SORT_NEWEST = "newest";
+    public static final String SORT_HIGHEST = "highest";
+    public static final String SORT_LOWEST = "lowest";
+    public static final List<String> SORTS = List.of(SORT_NEWEST, SORT_HIGHEST, SORT_LOWEST);
     private static final int RATING_MIN = 1;
     private static final int RATING_MAX = 5;
+    private static final int MIN_COMMENT = 10;
     private static final int MAX_COMMENT = 1000;
     private static final int MAX_REASON = 255;
     private static final int SQL_UNIQUE_VIOLATION = 2627;
@@ -40,9 +46,36 @@ public class ReviewService {
         return userId > 0 ? reviewDAO.findByMovieAndUser(movieId, userId) : null;
     }
 
-    public Page<ReviewView> listOthers(int movieId, int excludeUserId, int page) throws SQLException {
-        return Page.of(page, PAGE_SIZE, reviewDAO.countVisibleByMovie(movieId, excludeUserId),
-                (offset, limit) -> reviewDAO.findVisibleByMovie(movieId, excludeUserId, offset, limit));
+    // View Movie Rating & Review: lọc theo số sao (null = tất cả) và sắp xếp theo normalizeSort
+    public Page<ReviewView> listOthers(int movieId, int excludeUserId, Integer star, String sort, int page)
+            throws SQLException {
+        String orderBy = orderBy(sort);
+        return Page.of(page, PAGE_SIZE, reviewDAO.countVisibleByMovie(movieId, excludeUserId, star),
+                (offset, limit) -> reviewDAO.findVisibleByMovie(movieId, excludeUserId, star, orderBy, offset,
+                        limit));
+    }
+
+    // Số sao lọc không hợp lệ (ngoài 1-5) coi như không lọc
+    public Integer normalizeStar(String value) {
+        try {
+            int star = Integer.parseInt(value == null ? "" : value.trim());
+            return star >= RATING_MIN && star <= RATING_MAX ? star : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    public String normalizeSort(String value) {
+        // List.of(...).contains(null) ném NPE nên phải kiểm tra null trước
+        return value != null && SORTS.contains(value) ? value : SORT_NEWEST;
+    }
+
+    private String orderBy(String sort) {
+        return switch (normalizeSort(sort)) {
+            case SORT_HIGHEST -> "r.Rating DESC, r.CreatedAt DESC, r.ReviewID DESC";
+            case SORT_LOWEST -> "r.Rating ASC, r.CreatedAt DESC, r.ReviewID DESC";
+            default -> "r.CreatedAt DESC, r.ReviewID DESC";
+        };
     }
 
     // Phim phải tồn tại, chưa bị Manager ẩn, và người dùng đã xem xong phim (GB-07)
@@ -116,7 +149,11 @@ public class ReviewService {
             errors.put("rating", Messages.REVIEW_RATING_INVALID);
         }
         String comment = form.getComment() == null ? "" : form.getComment().trim();
-        if (comment.length() > MAX_COMMENT) {
+        if (comment.isEmpty()) {
+            errors.put("comment", Messages.format(Messages.MSG02, "Nhận xét"));
+        } else if (comment.length() < MIN_COMMENT) {
+            errors.put("comment", Messages.REVIEW_COMMENT_TOO_SHORT);
+        } else if (comment.length() > MAX_COMMENT) {
             errors.put("comment", Messages.format(Messages.MSG08, MAX_COMMENT));
         }
         return errors;
@@ -125,18 +162,30 @@ public class ReviewService {
     // ===== Manager: xử lý review vi phạm =====
 
     public Page<ReviewView> listAll(String status, int page) throws SQLException {
+        return listAll(status, null, page);
+    }
+
+    public Page<ReviewView> listAll(String status, Integer movieId, int page) throws SQLException {
         String filter = ReviewStatus.isValid(status) ? status : null;
-        return Page.of(page, MANAGER_PAGE_SIZE, reviewDAO.countAll(filter),
-                (offset, limit) -> reviewDAO.findAll(filter, offset, limit));
+        return Page.of(page, MANAGER_PAGE_SIZE, reviewDAO.countAll(filter, movieId),
+                (offset, limit) -> reviewDAO.findAll(filter, movieId, offset, limit));
     }
 
     public Map<String, Integer> countAllByStatus() throws SQLException {
-        Map<String, Integer> counts = reviewDAO.countAllByStatus();
+        return countAllByStatus(null);
+    }
+
+    public Map<String, Integer> countAllByStatus(Integer movieId) throws SQLException {
+        Map<String, Integer> counts = reviewDAO.countAllByStatus(movieId);
         Map<String, Integer> result = new LinkedHashMap<>();
         for (String status : ReviewStatus.ALL) {
             result.put(status, counts.getOrDefault(status, 0));
         }
         return result;
+    }
+
+    public List<Movie> listMoviesForModeration() throws SQLException {
+        return movieDAO.findAllTitles();
     }
 
     public ReviewView findById(int reviewId) throws SQLException {

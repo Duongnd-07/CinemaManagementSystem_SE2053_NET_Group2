@@ -18,12 +18,12 @@ public class CounterSaleForm {
     private String points = "";
     private String paymentMethod = "";
     private String cashReceived = "";
-    // Thẻ: mã chuẩn chi trên hóa đơn POS; chuyển khoản: mã giao dịch ngân hàng
-    private String paymentReference = "";
     // Nội dung khách ghi khi chuyển khoản để nhân viên tìm đúng giao dịch trên app ngân hàng; giữ nguyên qua các lần
     // Tính tiền của cùng một đơn nhờ ô ẩn trên form
     private String transferNote = newTransferNote();
     private boolean ageConfirmed;
+    // Bán riêng bắp nước, không kèm vé (showtimeId = 0)
+    private boolean concessionOnly;
 
     private static final String NOTE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -100,14 +100,6 @@ public class CounterSaleForm {
         this.cashReceived = cashReceived;
     }
 
-    public String getPaymentReference() {
-        return paymentReference;
-    }
-
-    public void setPaymentReference(String paymentReference) {
-        this.paymentReference = paymentReference;
-    }
-
     public String getTransferNote() {
         return transferNote;
     }
@@ -125,5 +117,13 @@ public class CounterSaleForm {
 
     public void setAgeConfirmed(boolean ageConfirmed) {
         this.ageConfirmed = ageConfirmed;
+    }
+
+    public boolean isConcessionOnly() {
+        return concessionOnly;
+    }
+
+    public void setConcessionOnly(boolean concessionOnly) {
+        this.concessionOnly = concessionOnly;
     }
 }

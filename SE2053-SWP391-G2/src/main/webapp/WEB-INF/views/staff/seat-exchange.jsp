@@ -118,8 +118,8 @@
 
                 <section class="${cardClass}">
                     <label class="block text-label-md text-on-surface-variant mb-1" for="reason">Tình trạng ghế hỏng <span class="req">*</span></label>
-                    <textarea class="${inputClass} py-2" id="reason" name="reason" rows="2" maxlength="500" required
-                              placeholder="VD: Gãy tựa lưng, không ngả được"><c:out value="${reason}"/></textarea>
+                    <textarea class="${inputClass} py-2" id="reason" name="reason" rows="2" minlength="5" maxlength="500" required
+                              placeholder="Bắt buộc, từ 5 đến 500 ký tự và phải có chữ.&#10;VD: Gãy tựa lưng, không ngả được"><c:out value="${reason}"/></textarea>
                     <c:if test="${not empty errors.reason}"><p class="form-error"><c:out value="${errors.reason}"/></p></c:if>
                     <p class="text-body-sm text-on-surface-variant mt-1">Ghế ${tk.seatLabel} sẽ bị khóa bảo trì và tạo báo cáo sự cố cho quản lý.</p>
                 </section>
@@ -136,7 +136,7 @@
                             <h2 class="text-title-md mb-1">${group[2]}</h2>
                             <p class="text-body-sm text-on-surface-variant mb-space-md">
                                 <c:choose>
-                                    <c:when test="${group[0] == 'D'}">Trả khách <b><fmt:formatNumber value="${options.vipDifference.min(options.refundCash)}" maxFractionDigits="0"/>đ</b> tiền mặt chênh lệch (cần đang trong ca)</c:when>
+                                    <c:when test="${group[0] == 'D'}">Trả khách <b><fmt:formatNumber value="${options.downgradeCash}" maxFractionDigits="0"/>đ</b> tiền mặt chênh lệch<c:if test="${tk.member and options.downgradePoints > 0}"> + <b>${options.downgradePoints} điểm</b></c:if> (cần đang trong ca)</c:when>
                                     <c:otherwise>Không thu thêm tiền</c:otherwise>
                                 </c:choose>
                                 <c:if test="${group[3] and options.voucherEligible}"> · tặng voucher <b><fmt:formatNumber value="${options.voucherValue}" maxFractionDigits="0"/>đ</b></c:if>
@@ -169,10 +169,10 @@
                         </h2>
                         <ul class="text-body-md space-y-1 my-space-md">
                             <li>Hoàn tiền mặt từ két: <b><fmt:formatNumber value="${options.refundCash}" maxFractionDigits="0"/>đ</b>
-                                <span class="text-body-sm text-on-surface-variant">(số tiền khách thực trả cho vé, không gồm phần giảm giá voucher và bắp nước)</span></li>
-                            <c:if test="${tk.member and options.refundPoints > 0}"><li>Trả lại <b>${options.refundPoints} điểm</b> khách đã dùng</li></c:if>
+                                <span class="text-body-sm text-on-surface-variant">(toàn bộ tiền khách thực trả cho cả đơn, kể cả bắp nước; trừ phần đơn đã được hoàn trước đó)</span></li>
+                            <c:if test="${tk.member and options.refundPoints > 0}"><li>Trả lại <b>${options.refundPoints} điểm</b> khách đã dùng cho đơn</li></c:if>
                             <c:if test="${options.voucherEligible}"><li>Tặng voucher đền bù <b><fmt:formatNumber value="${options.voucherValue}" maxFractionDigits="0"/>đ</b></li></c:if>
-                            <li class="text-body-sm text-on-surface-variant">Vé sẽ bị hủy. Cần đang trong ca để lấy tiền trong két.</li>
+                            <li class="text-body-sm text-on-surface-variant">Vé này sẽ bị hủy; các vé khác và bắp nước của đơn khách vẫn giữ. Cần đang trong ca để lấy tiền trong két.</li>
                         </ul>
                         <button type="submit" name="action" value="refund"
                                 onclick="return confirm('Hoàn tiền vé và hủy vé này?');"

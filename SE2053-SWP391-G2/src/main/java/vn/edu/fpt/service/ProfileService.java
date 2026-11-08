@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import vn.edu.fpt.dao.UserDAO;
 import vn.edu.fpt.model.Gender;
@@ -67,7 +68,7 @@ public class ProfileService {
         if (!form.getDateOfBirth().isEmpty()) {
             try {
                 dateOfBirth = LocalDate.parse(form.getDateOfBirth());
-                if (dateOfBirth.isBefore(MIN_DATE_OF_BIRTH) || dateOfBirth.isAfter(LocalDate.now())) {
+                if (dateOfBirth.isBefore(MIN_DATE_OF_BIRTH) || !dateOfBirth.isBefore(LocalDate.now())) {
                     errors.put("dateOfBirth", Messages.format(Messages.PROFILE_DOB_OUT_OF_RANGE, MIN_DOB_LABEL));
                 }
             } catch (DateTimeParseException e) {
@@ -137,15 +138,16 @@ public class ProfileService {
     }
 
     /**
-     * AF1 bước 4: phiên đăng nhập chỉ còn hiệu lực khi mật khẩu băm lưu lúc đăng nhập vẫn trùng với DB.
-     * Đổi mật khẩu ở một phiên sẽ làm mọi phiên khác của tài khoản đó hết hiệu lực.
+     * Phiên chỉ còn hiệu lực khi tài khoản Active, vai trò và mật khẩu chưa thay đổi trong DB.
      */
     public boolean isSessionCredentialCurrent(User sessionUser) throws SQLException {
         if (sessionUser == null || sessionUser.getPasswordHash() == null) {
             return false;
         }
         User user = userDAO.findById(sessionUser.getUserId());
-        return user != null && sessionUser.getPasswordHash().equals(user.getPasswordHash());
+        return user != null && "Active".equals(user.getStatus())
+                && Objects.equals(sessionUser.getRole(), user.getRole())
+                && sessionUser.getPasswordHash().equals(user.getPasswordHash());
     }
 
     private User requireUser(int userId) throws SQLException, ValidationException {

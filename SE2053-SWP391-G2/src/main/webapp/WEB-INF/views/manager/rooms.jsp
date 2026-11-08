@@ -38,6 +38,10 @@
         </a>
     </div>
 
+    <jsp:include page="/WEB-INF/views/manager/room-tabs.jsp">
+        <jsp:param name="active" value="rooms"/>
+    </jsp:include>
+
     <div class="bg-surface-container-low rounded-xl overflow-hidden shadow-xl border border-white/5">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -123,8 +127,8 @@
 <c:if test="${not empty infoForm}">
     <c:set var="inputClass" value="form-input bg-surface-container-high text-on-surface px-4 rounded-lg border border-white/10 focus:border-primary outline-none w-full"/>
     <c:set var="maintenance" value="${infoRoom.status == 'Maintenance'}"/>
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" data-modal>
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-md p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto" data-modal>
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-md p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface" href="${ctx}/manager/rooms" title="Đóng">
                 <span class="material-symbols-outlined">close</span>
             </a>

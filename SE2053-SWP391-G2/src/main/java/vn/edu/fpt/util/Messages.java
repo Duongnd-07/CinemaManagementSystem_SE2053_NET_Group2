@@ -33,6 +33,13 @@ public final class Messages {
     public static final String MOVIE_END_DATE_HAS_SHOWTIMES =
             "Phim còn suất chiếu sau ngày kết thúc chiếu mới. Vui lòng hủy các suất đó trước.";
     public static final String MOVIE_FORMAT_INVALID = "Định dạng chiếu không hợp lệ.";
+    public static final String MOVIE_HAS_SOLD_SHOWTIMES =
+            "Phim còn suất chiếu đã có vé, không thể ẩn. Hãy xử lý các suất đó trước.";
+    public static final String MOVIE_ARCHIVED_SHOWTIMES = "Đã ẩn phim và hủy {0} suất chiếu chưa có vé.";
+    public static final String MOVIE_RELEASE_DATE_HAS_SHOWTIMES =
+            "Còn suất chiếu trước ngày khởi chiếu mới. Hãy hủy hoặc đổi các suất đó trước.";
+    public static final String MOVIE_FORMAT_HAS_SHOWTIMES =
+            "Còn suất chiếu sử dụng định dạng {0}. Hãy hủy hoặc đổi các suất đó trước.";
     public static final String MOVIE_GENRE_INVALID = "Thể loại không hợp lệ.";
     public static final String MOVIE_POSTER_INVALID = "Poster không hợp lệ. Vui lòng chọn ảnh poster từ máy.";
     public static final String MOVIE_POSTER_FILE_INVALID = "Poster chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.";
@@ -176,6 +183,8 @@ public final class Messages {
     public static final String VOUCHER_CODE_INVALID = "Mã chỉ gồm chữ in hoa, chữ số, dấu gạch ngang; dài 4-32 ký tự.";
     public static final String VOUCHER_CODE_DUPLICATE = "Mã voucher đã tồn tại trong hệ thống.";
     public static final String VOUCHER_DISCOUNT_TYPE_INVALID = "Loại giảm giá không hợp lệ.";
+    public static final String VOUCHER_SCOPE_INVALID = "Phạm vi áp dụng voucher không hợp lệ.";
+    public static final String VOUCHER_MOVIE_INVALID = "Vui lòng chọn phim hợp lệ.";
     public static final String VOUCHER_DISCOUNT_VALUE_INVALID =
             "Mức giảm phải lớn hơn 0; giảm theo phần trăm không vượt quá 100%, giảm tiền phải là số nguyên.";
     public static final String VOUCHER_MIN_ORDER_INVALID = "Giá trị đơn tối thiểu phải là số nguyên không âm.";
@@ -185,6 +194,10 @@ public final class Messages {
     public static final String VOUCHER_USAGE_LIMIT_INVALID = "Giới hạn lượt dùng phải là số nguyên dương.";
     public static final String VOUCHER_USAGE_LIMIT_BELOW_USAGE =
             "Giới hạn lượt dùng không được thấp hơn số lượt đã dùng hoặc đang giữ.";
+    public static final String VOUCHER_PER_USER_USAGE_LIMIT_INVALID =
+            "Giới hạn lượt dùng trên mỗi tài khoản phải là số nguyên dương.";
+    public static final String VOUCHER_PER_USER_USAGE_LIMIT_BELOW_USAGE =
+            "Giới hạn mỗi tài khoản không được thấp hơn số lượt đã dùng hoặc đang giữ.";
     public static final String CUSTOMER_DATA_NOT_FOUND = "Không tìm thấy dữ liệu tài khoản.";
     public static final String BOOKING_HISTORY_EMPTY = "Bạn chưa có lịch sử đặt vé nào.";
     public static final String VOUCHER_WALLET_EMPTY = "Ví voucher của bạn hiện đang trống.";
@@ -248,11 +261,11 @@ public final class Messages {
     public static final String PROFILE_CURRENT_PASSWORD_WRONG = "Mật khẩu hiện tại không chính xác.";
     public static final String PROFILE_PASSWORD_SAME_AS_OLD = "Mật khẩu mới không được trùng với mật khẩu hiện tại.";
     public static final String PROFILE_NOT_FOUND = "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.";
-    public static final String PROFILE_SESSION_REVOKED =
-            "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại.";
     public static final String FULLNAME_INVALID = "Họ và tên chỉ được chứa chữ cái và khoảng trắng.";
+    public static final String SESSION_REVOKED =
+            "Phiên đăng nhập đã hết hiệu lực do tài khoản hoặc thông tin bảo mật thay đổi. Vui lòng đăng nhập lại.";
     public static final String PROFILE_DOB_INVALID = "Ngày sinh không hợp lệ.";
-    public static final String PROFILE_DOB_OUT_OF_RANGE = "Ngày sinh phải từ {0} đến hôm nay.";
+    public static final String PROFILE_DOB_OUT_OF_RANGE = "Ngày sinh phải từ {0} và trước ngày hôm nay.";
     public static final String PROFILE_GENDER_INVALID = "Giới tính không hợp lệ.";
     public static final String EMAIL_CHANGE_SAME = "Email mới phải khác email hiện tại.";
     public static final String EMAIL_CHANGE_OTP_SENT = "Mã xác thực đã được gửi tới {0}. Vui lòng kiểm tra hộp thư.";
@@ -331,6 +344,9 @@ public final class Messages {
 
     // UC-17 Rate & Review Movie
     public static final String REVIEW_RATING_INVALID = "Số sao đánh giá phải từ 1 đến 5.";
+    public static final String REVIEW_COMMENT_TOO_SHORT = "Nhận xét phải có ít nhất 10 ký tự.";
+    public static final String REVIEW_COMMENT_LENGTH_POLICY = "Nhận xét phải có từ 10 đến 1.000 ký tự.";
+    public static final String BOOKING_SEATS_BUSY = "Hệ thống đang xử lý ghế của suất chiếu này. Vui lòng thử lại.";
     public static final String REVIEW_NOT_ELIGIBLE =
             "Bạn cần có vé đã thanh toán và suất chiếu đã kết thúc mới có thể đánh giá phim này.";
     public static final String REVIEW_MOVIE_UNAVAILABLE = "Phim hiện không khả dụng để đánh giá.";
@@ -376,6 +392,38 @@ public final class Messages {
     public static final String LOG_INVALID_FILTER = "Bộ lọc không hợp lệ. Vui lòng kiểm tra lại khoảng ngày.";
     public static final String LOG_LOAD_FAILED = "Không thể tải nhật ký hệ thống. Vui lòng thử lại sau.";
 
+
+    // UC-09: Manage Notifications
+    public static final String ANNOUNCEMENT_TARGET_INVALID = "Vui lòng chọn đối tượng nhận hợp lệ.";
+    public static final String ANNOUNCEMENT_TYPE_INVALID = "Loại thông báo không hợp lệ với đối tượng đã chọn.";
+    public static final String ANNOUNCEMENT_PHONE_REQUIRED = "Vui lòng nhập số điện thoại khách hàng.";
+    public static final String ANNOUNCEMENT_PHONE_INVALID = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0.";
+    public static final String ANNOUNCEMENT_PHONE_NOT_FOUND = "Không tìm thấy tài khoản có số điện thoại này.";
+    public static final String ANNOUNCEMENT_PHONE_NOT_CUSTOMER = "Số điện thoại này không thuộc tài khoản khách hàng.";
+    public static final String ANNOUNCEMENT_CUSTOMER_INACTIVE = "Tài khoản khách hàng không hoạt động.";
+    public static final String ANNOUNCEMENT_TITLE_INVALID = "Tiêu đề phải có từ 1 đến 150 ký tự.";
+    public static final String ANNOUNCEMENT_MESSAGE_INVALID = "Nội dung phải có từ 1 đến 1.000 ký tự.";
+    public static final String ANNOUNCEMENT_NO_RECIPIENTS = "Không có tài khoản hoạt động phù hợp để nhận thông báo.";
+    public static final String ANNOUNCEMENT_DUPLICATE = "Thông báo này đã được gửi trong 60 giây gần nhất. Vui lòng không gửi lại.";
+    public static final String ANNOUNCEMENT_NOT_FOUND = "Thông báo không tồn tại hoặc đã được thu hồi.";
+    public static final String ANNOUNCEMENT_SENT = "Đã gửi thông báo đến {0} tài khoản.";
+    public static final String ANNOUNCEMENT_RECALLED = "Đã thu hồi thông báo.";
+    public static final String ANNOUNCEMENT_MANAGER_REQUIRED = "Chỉ quản lý đang hoạt động được gửi hoặc thu hồi thông báo.";
+    public static final String ANNOUNCEMENT_SEND_ACTION = "Gửi thông báo";
+    public static final String ANNOUNCEMENT_RECALL_ACTION = "Thu hồi thông báo";
+    public static final String ANNOUNCEMENT_LOG_DESCRIPTION = "Đối tượng: {0}; loại: {1}; số người nhận: {2}.";
+
+    // UC-37: online sales reporting validation and consistency warnings.
+    public static final String ONLINE_REPORT_RANGE = "Chọn ngày kết thúc không trước ngày bắt đầu, tối đa 366 ngày.";
+    public static final String ONLINE_REPORT_DATE = "Ngày không hợp lệ (yyyy-MM-dd), năm từ 1900 đến 9998.";
+    public static final String ONLINE_REPORT_GROUP = "Chỉ hỗ trợ tổng hợp tiền thu theo ngày hoặc theo tháng.";
+    public static final String ONLINE_REPORT_ID = "Vui lòng nhập số nguyên dương hợp lệ.";
+    public static final String ONLINE_REPORT_TAB = "Loại báo cáo không hợp lệ.";
+    public static final String ONLINE_REPORT_STATUS = "Trạng thái thanh toán không hợp lệ.";
+    public static final String ONLINE_REPORT_EXPORT = "Định dạng xuất báo cáo không hợp lệ.";
+    public static final String ONLINE_REPORT_EXPORT_LIMIT = "Báo cáo có hơn 10.000 dòng. Vui lòng thu hẹp bộ lọc để xuất CSV.";
+    public static final String ONLINE_REPORT_REVIEW = "Giao dịch cần kiểm tra; chưa xác nhận doanh số.";
+    public static final String ONLINE_REPORT_MISMATCH = "Thanh toán và đơn hàng không khớp hoặc có nhiều giao dịch Paid.";
 
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 

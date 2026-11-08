@@ -357,8 +357,8 @@
 
 <%-- MODAL LÊN LỊCH SUẤT CHIẾU (HỖ TRỢ HÀNG LOẠT VÀ TẠO LẺ) --%>
 <c:if test="${showForm}">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-3xl p-space-xl shadow-2xl relative my-8">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto">
+        <div class="bg-surface-container-low border border-white/10 rounded-2xl w-full max-w-3xl p-space-xl shadow-2xl relative my-auto">
             <a class="absolute right-5 top-5 text-on-surface-variant hover:text-on-surface transition-colors"
                href="${ctx}/manager/showtimes${listQuery}" title="Đóng">
                 <span class="material-symbols-outlined text-[24px]">close</span>

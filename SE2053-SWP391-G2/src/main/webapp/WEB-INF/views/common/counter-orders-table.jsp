@@ -10,24 +10,37 @@
 <c:set var="ticketLabels" value="${{'Watched':'Đã xem','Exchanged':'Đã đổi','Cancelled':'Đã hủy'}}"/>
 <c:set var="showStaff" value="${param.showStaff == '1'}"/>
 
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-lg">
+<%-- Khách luôn được hoàn bằng tiền mặt: tiền hoàn trừ vào tiền mặt, chuyển khoản giữ nguyên --%>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-sm">
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Số đơn</div>
         <div class="text-headline-sm">${result.orderCount}</div>
+        <div class="text-body-sm text-on-surface-variant mt-1">${result.cashOrders} tiền mặt · ${result.transferOrders} chuyển khoản</div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Đã thu của khách</div>
         <div class="text-headline-sm"><fmt:formatNumber value="${result.collected}" maxFractionDigits="0"/>đ</div>
+        <div class="text-body-sm mt-1 flex justify-between gap-space-sm"><span class="text-on-surface-variant">Tiền mặt</span>
+            <span><fmt:formatNumber value="${result.cashCollected}" maxFractionDigits="0"/>đ</span></div>
+        <div class="text-body-sm flex justify-between gap-space-sm"><span class="text-on-surface-variant">Chuyển khoản</span>
+            <span><fmt:formatNumber value="${result.transferCollected}" maxFractionDigits="0"/>đ</span></div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Đã hoàn trả khách</div>
         <div class="text-headline-sm text-amber-300"><fmt:formatNumber value="${result.refunded}" maxFractionDigits="0"/>đ</div>
+        <div class="text-body-sm text-on-surface-variant mt-1">Tiền mặt · ${result.refundedTickets} vé</div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Thực thu sau hoàn</div>
         <div class="text-headline-sm text-emerald-300"><fmt:formatNumber value="${result.net}" maxFractionDigits="0"/>đ</div>
+        <div class="text-body-sm mt-1 flex justify-between gap-space-sm"><span class="text-on-surface-variant">Tiền mặt</span>
+            <span><fmt:formatNumber value="${result.cashNet}" maxFractionDigits="0"/>đ</span></div>
+        <div class="text-body-sm flex justify-between gap-space-sm"><span class="text-on-surface-variant">Chuyển khoản</span>
+            <span><fmt:formatNumber value="${result.transferCollected}" maxFractionDigits="0"/>đ</span></div>
     </div>
 </div>
+<p class="text-body-sm text-on-surface-variant mb-space-lg">Danh sách gồm đơn bán tại quầy và đơn (kể cả mua online) được đổi ghế / hoàn vé tại quầy
+    trong phạm vi đang xem. Tiền hoàn tính theo lúc hoàn, không theo lúc bán. Đối chiếu tiền mặt trong két theo từng ca ở Báo cáo ca.</p>
 
 <c:choose>
     <c:when test="${empty result.page.items}">
@@ -43,7 +56,7 @@
                     <th class="px-space-md py-2">Đơn</th>
                     <c:if test="${showStaff}"><th>Nhân viên</th></c:if>
                     <th>Khách hàng</th>
-                    <th>Vé</th>
+                    <th>Vé / bắp nước</th>
                     <th>Voucher / điểm</th>
                     <th>Thanh toán</th>
                     <th class="px-space-md text-right">Hoàn trả</th>
@@ -55,8 +68,18 @@
                         <td class="px-space-md py-3">
                             <div class="font-label-lg">#${o.bookingId}</div>
                             <div class="text-body-sm text-on-surface-variant">${fn:substring(o.bookingTime, 11, 16)} ${fn:substring(o.bookingTime, 8, 10)}/${fn:substring(o.bookingTime, 5, 7)}</div>
-                            <div class="text-body-sm mt-1"><c:out value="${o.movieTitle}"/></div>
-                            <div class="text-body-sm text-on-surface-variant"><c:out value="${o.roomName}"/> · ${fn:substring(o.startTime, 11, 16)} ${fn:substring(o.startTime, 8, 10)}/${fn:substring(o.startTime, 5, 7)}</div>
+                            <c:if test="${not o.soldInScope}">
+                                <span class="cl-pill cl-pill--warning mt-1">${o.channel == 'Counter' ? 'Bán ở ca / ngày khác' : 'Mua online'} · đổi / hoàn tại quầy</span>
+                            </c:if>
+                            <c:choose>
+                                <c:when test="${empty o.movieTitle}">
+                                    <span class="cl-pill cl-pill--warning mt-1">Chỉ bắp nước</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="text-body-sm mt-1"><c:out value="${o.movieTitle}"/></div>
+                                    <div class="text-body-sm text-on-surface-variant"><c:out value="${o.roomName}"/> · ${fn:substring(o.startTime, 11, 16)} ${fn:substring(o.startTime, 8, 10)}/${fn:substring(o.startTime, 5, 7)}</div>
+                                </c:otherwise>
+                            </c:choose>
                         </td>
                         <c:if test="${showStaff}">
                             <td class="py-3">
@@ -89,6 +112,9 @@
                                     </c:if>
                                 </div>
                             </c:forEach>
+                            <c:forEach var="item" items="${o.concessions}">
+                                <div class="text-body-sm"><c:out value="${item}"/></div>
+                            </c:forEach>
                         </td>
                         <td class="py-3 text-body-sm">
                             <c:if test="${not empty o.voucherCode}">
@@ -108,7 +134,10 @@
                             <c:if test="${o.discountAmount > 0}">
                                 <div class="text-body-sm text-on-surface-variant line-through"><fmt:formatNumber value="${o.totalPrice}" maxFractionDigits="0"/>đ</div>
                             </c:if>
-                            <div class="text-body-sm text-on-surface-variant">${paymentLabels[o.paymentMethod]}</div>
+                            <div class="text-body-sm text-on-surface-variant">${o.channel == 'Counter' ? paymentLabels[o.paymentMethod] : 'Thanh toán online'}</div>
+                            <c:if test="${not o.soldInScope}">
+                                <div class="text-body-sm text-amber-300">Không tính vào tiền thu ở đây</div>
+                            </c:if>
                             <c:if test="${not empty o.paymentReference}">
                                 <div class="text-body-sm text-on-surface-variant">Mã GD: <c:out value="${o.paymentReference}"/></div>
                             </c:if>
@@ -121,6 +150,7 @@
                             <c:choose>
                                 <c:when test="${o.refundTotal > 0}">
                                     <span class="text-amber-300 font-label-lg"><fmt:formatNumber value="${o.refundTotal}" maxFractionDigits="0"/>đ</span>
+                                    <span class="block text-body-sm text-on-surface-variant">tiền mặt</span>
                                 </c:when>
                                 <c:otherwise><span class="text-on-surface-variant">-</span></c:otherwise>
                             </c:choose>

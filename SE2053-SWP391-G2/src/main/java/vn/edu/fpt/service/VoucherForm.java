@@ -8,6 +8,9 @@ public class VoucherForm {
     private String startDate;
     private String expiryDate;
     private String usageLimit;
+    private String perUserUsageLimit = "1";
+    private String scope;
+    private String movieId;
 
     public String getVoucherCode() {
         return voucherCode;
@@ -63,5 +66,29 @@ public class VoucherForm {
 
     public void setUsageLimit(String usageLimit) {
         this.usageLimit = usageLimit;
+    }
+
+    public String getPerUserUsageLimit() {
+        return perUserUsageLimit;
+    }
+
+    public void setPerUserUsageLimit(String perUserUsageLimit) {
+        this.perUserUsageLimit = perUserUsageLimit;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
+    public String getMovieId() {
+        return movieId;
+    }
+
+    public void setMovieId(String movieId) {
+        this.movieId = movieId;
     }
 }

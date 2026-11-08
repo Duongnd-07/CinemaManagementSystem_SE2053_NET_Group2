@@ -71,14 +71,15 @@ public class AnalyticsService {
         return analyticsDAO.summarize(start.atStartOfDay(), end.atStartOfDay());
     }
 
-    // Doanh thu theo từng ngày của kỳ (kỳ năm thì theo tháng); mốc không có đơn vẫn xuất hiện với giá trị 0
-    public Map<String, BigDecimal> revenueSeries(String period, LocalDate start, LocalDate end) throws SQLException {
+    // Doanh thu {online, tại quầy} theo từng ngày của kỳ (kỳ năm thì theo tháng); mốc không có đơn vẫn có với giá trị 0
+    public Map<String, BigDecimal[]> revenueSeries(String period, LocalDate start, LocalDate end) throws SQLException {
         boolean byMonth = YEAR.equals(period);
-        Map<LocalDate, BigDecimal> revenue = analyticsDAO.revenueByDate(start.atStartOfDay(), end.atStartOfDay(),
+        Map<LocalDate, BigDecimal[]> revenue = analyticsDAO.revenueByDate(start.atStartOfDay(), end.atStartOfDay(),
                 byMonth);
-        Map<String, BigDecimal> series = new LinkedHashMap<>();
+        BigDecimal[] none = {BigDecimal.ZERO, BigDecimal.ZERO};
+        Map<String, BigDecimal[]> series = new LinkedHashMap<>();
         for (LocalDate date = start; date.isBefore(end); date = byMonth ? date.plusMonths(1) : date.plusDays(1)) {
-            series.put(date.format(byMonth ? MONTH_LABEL : DAY_LABEL), revenue.getOrDefault(date, BigDecimal.ZERO));
+            series.put(date.format(byMonth ? MONTH_LABEL : DAY_LABEL), revenue.getOrDefault(date, none));
         }
         return series;
     }

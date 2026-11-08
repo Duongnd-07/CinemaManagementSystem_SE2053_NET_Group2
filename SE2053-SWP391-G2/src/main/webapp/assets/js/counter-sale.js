@@ -16,7 +16,7 @@
     var cashField = document.getElementById('cashField');
     var referenceField = document.getElementById('referenceField');
     // Hình thức thu, tiền khách đưa và mã giao dịch không đổi số tiền cần thu; server vẫn kiểm tra lại khi xác nhận
-    var PAYMENT_FIELDS = ['paymentMethod', 'cashReceived', 'paymentReference'];
+    var PAYMENT_FIELDS = ['paymentMethod', 'cashReceived'];
 
     function money(value) {
         return Math.round(value).toLocaleString('vi-VN') + 'đ';
@@ -52,11 +52,8 @@
     form.querySelectorAll('input[name="paymentMethod"]').forEach(function (radio) {
         radio.addEventListener('change', function () {
             cashField.hidden = radio.value !== 'Cash';
-            // Thẻ và chuyển khoản cần mã giao dịch; hiện nhãn / nội dung chuyển khoản đúng hình thức đang chọn
-            referenceField.hidden = radio.value === 'Cash';
-            referenceField.querySelectorAll('[data-method]').forEach(function (part) {
-                part.hidden = part.dataset.method !== radio.value;
-            });
+            // Chuyển khoản hiện nội dung khách cần ghi
+            referenceField.hidden = radio.value !== 'Transfer';
         });
     });
     form.addEventListener('input', function (event) {

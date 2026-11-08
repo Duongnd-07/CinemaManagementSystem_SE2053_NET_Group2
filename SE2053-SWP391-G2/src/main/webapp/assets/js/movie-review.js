@@ -23,11 +23,30 @@ document.querySelectorAll('[data-review-form] textarea[name="comment"]').forEach
     var counter = document.createElement('p');
     counter.className = 'text-xs text-[#8e919f] text-right';
     var updateCounter = function () {
-        counter.textContent = textarea.value.length + '/1000';
+        counter.textContent = textarea.value.trim().length + '/1000';
     };
     textarea.insertAdjacentElement('afterend', counter);
     textarea.addEventListener('input', updateCounter);
     updateCounter();
+});
+
+document.querySelectorAll('[data-review-form]').forEach(function (form) {
+    var feedback = document.createElement('p');
+    feedback.className = 'text-sm text-red-300';
+    feedback.setAttribute('role', 'alert');
+    feedback.hidden = true;
+    form.appendChild(feedback);
+    form.addEventListener('submit', function (event) {
+        var comment = form.querySelector('textarea[name="comment"]');
+        var length = comment.value.trim().length;
+        var message = !form.querySelector('input[name="rating"]:checked') ? form.dataset.ratingMessage
+            : length < 10 || length > 1000 ? form.dataset.commentMessage : '';
+        feedback.textContent = message;
+        feedback.hidden = !message;
+        if (message) {
+            event.preventDefault();
+        }
+    });
 });
 
 // Xác nhận trước khi xóa đánh giá (trang khách hàng không nạp manager-common.js)
