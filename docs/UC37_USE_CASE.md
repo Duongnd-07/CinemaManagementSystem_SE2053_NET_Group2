@@ -1,10 +1,10 @@
-# UC-37 — View Online Ticket Sales Report
+# UC-37 — View Online Ticket Sales History
 
 Source: [Google Docs SRS](https://docs.google.com/document/d/17T0gNOSK2dXy32OZps6nHkysTtHXuXEUJdG0dGS2ap0/edit).
 
 ## UC ID and Name
 
-UC-37: View Online Ticket Sales Report
+UC-37: View Online Ticket Sales History
 
 ## Created By
 
@@ -20,72 +20,77 @@ Manager
 
 ## Trigger
 
-The actor selects Online Sales Report in the management menu.
+The actor selects Reports & Revenue → Online Ticket Sales History (“Báo cáo & doanh thu” → “Lịch sử bán vé online”) from the management sidebar.
 
 ## Description
 
-Provides a read-only operational report of online bookings, ticket/concession values, discounts, successful collections, cash refunds, cancellation vouchers and payment attempts. Summary figures, paginated details, order history and CSV exports share the selected filters. This UC does not perform refunds, settle payments or reconcile bank settlements.
+Allows an authorized actor to view completed online ticket orders, filter them by payment date, and review four summary figures together with a daily or monthly collections chart. The actor can browse the paginated paid-order history, view an order’s ticket/concession details and export the matching orders to CSV.
 
 ## Preconditions
 
-PRE-01: The actor has an Active authenticated account and VIEW_ONLINE_REPORTS permission.
-PRE-02: UC-37 reporting migration has been applied; booking/payment/cancellation records are available.
-PRE-03: Payment and refund operations remain governed by UC-14, UC-16 and UC-20.
+PRE-01: The actor is logged in with an Active Manager or Staff account.
+PRE-02: The actor has VIEW_ONLINE_REPORTS permission. Manager has this permission by default; Staff must be granted it through UC-31.
 
 ## Postconditions
 
-POST-01: The requested online report or CSV is returned for valid filters; viewing/exporting does not change orders, tickets or payments.
-POST-02: Totals cover all matching records, independently of the displayed page.
-POST-03: Missing historical timestamps are explicitly disclosed and excluded from period-based totals rather than assigned an invented date.
-POST-04: Invalid filters or access failures do not expose report data; database failures are not represented as zero sales.
+POST-01: For valid filters, System displays the matching paid online orders, four summary figures and the collections chart, or returns the requested order details/CSV.
+POST-02: Summary figures and chart totals cover the entire selected period, independently of the displayed history page.
+POST-03: Viewing, filtering, paging and exporting do not change bookings, tickets or payment records.
+POST-04: Invalid requests or unavailable data produce the corresponding validation/access/system response; a data-loading failure is not presented as zero sales.
 
 ## Normal Flow
 
-1. The actor opens Online Sales Report.
-2. System checks authentication/permission and defaults to today's calendar date in Asia/Ho_Chi_Minh.
-3. The actor selects a date range and optionally filters by movie, showtime or booking ID.
-4. System validates the filters and retrieves a consistent read of online sales, adjustments and data-quality counts.
-5. System displays successful booking count, original ticket count, ticket/concession value before discounts, total discounts, collections, cash refunds and cancellation-voucher value.
-6. System displays paginated successful orders and a daily collections series, including zero-sales days.
-7. The actor opens an online order to inspect its original tickets, concessions, payment attempts and exchange/refund/cancellation history.
-8. System displays the order history, clearly including events outside the selected reporting period when applicable.
+1. The actor opens Reports & Revenue and selects Online Ticket Sales History.
+2. System checks authentication and permission, then opens the history with Today selected by default.
+3. The actor keeps Today or selects another quick period, or enters From Date and To Date and selects View History.
+4. System validates the date range and retrieves only online orders whose payment is completed and verified.
+5. System displays four summary figures for the selected period: Successful Orders, Tickets Sold, Amount Before Discounts and Amount Collected.
+6. System displays collections by day for Today, Last 7 Days and This Month, or by month for This Quarter and This Year. The actor may expand View Full Data Table to read the chart values.
+7. System displays up to 10 paid orders per page, sorted by payment time from newest to oldest. Each row shows order/payment information, movie/showtime, ticket count, ticket value before discounts, concessions, discount and amount collected.
+8. The actor reviews the history and may change the period, move between pages, open an order or export CSV through the alternative flows.
 
 ## Alternative Flows
 
-AF1: View Adjustments
-1. The actor opens the Adjustments tab.
-2. System uses adjustment occurrence dates and includes cash refunds or cancellation vouchers for online orders sold in earlier periods.
-3. Cash amounts, voucher amounts, reasons and handling shift/staff where available are displayed separately.
-AF2: Inspect Payment Attempts
-1. The actor opens Payments and optionally chooses a payment status.
-2. System filters attempts by their creation date and shows references, amounts, PaidAt, status and internal consistency warnings.
-3. The attempt-status filter affects this tab only; it does not alter sales KPI definitions or mark a payment Paid.
-AF3: Export CSV
-1. The actor selects Export CSV on the current tab.
-2. System rechecks access and filters and exports all matching rows within the disclosed export limit, including filter/time-basis metadata.
-3. CSV escapes text and neutralizes spreadsheet formula injection; an oversized export requests a narrower range without silent truncation.
-AF4: Zero-value Booking
-1. A successfully confirmed zero-value online booking has no VNPay transaction.
-2. System includes its booking/tickets/discounts and records zero collected, labelled Fully covered by voucher/points.
-AF5: No Matching Data
-1. System displays zero totals, an empty-state message and zero-filled dates where relevant.
+AF1: Select a Quick Period
+1. At Step 3, the actor selects Today, Last 7 Days, This Month, This Quarter or This Year.
+2. System sets the period from today, six days before today, the first day of the current month, the first day of the current calendar quarter or the first day of the current year, respectively, through today.
+3. System uses daily chart buckets for the first three options and monthly buckets for the last two, resets the history to page 1 and repeats Steps 4–7.
+AF2: Select a Custom Date Range
+1. The actor enters From Date and To Date and selects View History.
+2. System validates the dates, retains the current daily/monthly chart interval and reloads the summaries, chart and first history page for that range.
+AF3: Browse History Pages
+1. At Step 7, the actor selects Next Page or Previous Page when available.
+2. System keeps the selected dates and chart interval, displays the requested page with at most 10 orders, and preserves the full-period summary/chart totals.
+AF4: View a Paid Order’s Details
+1. The actor selects an order number in the history.
+2. System displays the movie, room/showtime, creation/payment times, paid status, customer, ticket/concession values, discount, amount collected and payment method.
+3. System lists the order’s ticket codes, seats, ticket statuses and prices, together with concession products, quantities and subtotals when present.
+4. The actor selects Back to Sales History. System restores the selected period, chart interval and history page.
+AF5: Export CSV
+1. The actor selects Export CSV from the history.
+2. System checks the same permission and date filters, then exports all matching paid online orders, including rows beyond the current page, when the total is at most 10,000.
+3. System returns a UTF-8 CSV containing the reporting period, generation information and order details.
+AF6: No Matching Orders
+1. At Step 4, no completed online order matches the selected period.
+2. System displays zero in all four summary figures, zero chart buckets and an empty-history message.
 
 ## Exceptions
 
-EF1: Invalid Filters
-1. A date/identifier/status/tab/page is malformed, the start date exceeds the end date, or the range exceeds 366 inclusive days.
-2. System displays validation errors with the submitted filters and does not execute the report query.
-EF2: Access Denied or Unavailable Order
-1. Missing authentication redirects to login; missing permission denies access, including direct detail/export URLs.
-2. A missing or Counter order requested through online detail is not returned.
-EF3: Payment Anomaly
-1. A payment requires review, has mismatched amounts, or is inconsistent with the booking.
-2. System displays a warning and excludes unconfirmed attempts from successful collections; the actor cannot force settlement here.
-EF4: Historical Data Incomplete
-1. A legacy booking has no reliable PaidAt or a legacy voucher cancellation has no occurrence/link record.
-2. System discloses incomplete-record counts; it does not fabricate dates or guess a voucher-to-ticket link.
-EF5: Database/Export Failure
-1. System preserves filter context and reports the error; no partial CSV or misleading zero report is returned.
+EF1: Invalid Date Range or Request Parameters
+1. System detects an invalid date, a year outside 1900–9998, a From Date after To Date, or a range longer than 366 inclusive days. A malformed/non-positive page value or unsupported chart interval is also rejected.
+2. System displays the relevant validation errors and retains the submitted dates for correction; the invalid report request is not executed.
+EF2: Authentication or Permission Failure
+1. An unauthenticated actor is redirected to login. An actor without VIEW_ONLINE_REPORTS is denied access.
+2. The same checks apply to direct history, order-detail and CSV requests.
+EF3: Invalid or Unavailable Order
+1. A malformed/non-positive order identifier is rejected.
+2. A nonexistent order, a counter-sale order, or an online order without the required completed payment/date is not returned through this function.
+EF4: Unsupported or Oversized Export
+1. The requested export format is unsupported, or more than 10,000 paid orders match the period.
+2. System reports the error. For an oversized CSV, the actor must narrow the date range; System does not silently truncate the export.
+EF5: Data-Loading Failure
+1. System cannot retrieve the required data.
+2. System displays a system-error response instead of a successful history or misleading zero totals. The actor may retry the request.
 
 ## Priority
 
@@ -97,24 +102,25 @@ Daily and on demand
 
 ## Business Rules
 
-BR-37-01: Online membership is Booking.Channel = Online, regardless of where a ticket is printed, exchanged or refunded.
-BR-37-02: Sales periods use Booking.PaidAt; calendar-day boundaries are Asia/Ho_Chi_Minh, start inclusive/end exclusive. Payment attempts use their creation timestamps; showtime date is a separate dimension.
-BR-37-03: Count distinct successfully completed bookings, including zero-value bookings. Repeated attempts/callbacks and replacement tickets do not create new sales.
-BR-37-04: Original ticket value + concession value - Booking.DiscountAmount = Booking.FinalAmount. DiscountAmount already includes voucher/point reductions; do not subtract points again or apply current prices to historical transactions.
-BR-37-05: Collections S = sum FinalAmount for successful online bookings paid in the period. Cash refunds R = sum actual TicketExchange.CashRefund events in the period for online bookings, including downgrade refunds. Cancellation vouchers V are displayed separately and are not cash outflows.
-BR-37-06: Collections less cash refunds = S - R and may be negative. This is not profit, tax-exclusive accounting revenue or the amount remitted by VNPay. Compensation vouchers are separate from cancellation vouchers and are not subtracted as cash.
-BR-37-07: A cash refund for an online order is associated with the original online channel and the shift that paid it; an all-cinema consolidation must not subtract it twice. Do not add Ticket.RefundAmount and TicketExchange.CashRefund for the same event.
-BR-37-08: ReviewRequired/failed/expired/initiated attempts do not independently create successful sales. The report checks internal records; real provider reconciliation requires an independent statement/API and is outside scope.
-BR-37-09: Historical PaidAt is backfilled only from one matching verified Paid transaction. New zero-value confirmations and voucher cancellations persist their occurrence times atomically. Historical missing data is disclosed.
-BR-37-10: One original Sweetbox ticket and two expected seats are different measures; replacement/split tickets are excluded from new-sale counts. Current valid tickets are not an attendance/check-in count.
-BR-37-11: Default page size is 15; date ranges are at most 366 inclusive days; CSV exports support at most 10,000 matching rows per request. All report operations are read-only and require the same permission.
+BR-37-01: Include only bookings with Channel = Online, Status = Paid and a recorded PaidAt. For a nonzero final amount, at least one Paid online-payment record must have matching requested/received amounts and a recorded payment time. A zero-value paid booking does not require a payment-gateway transaction.
+BR-37-02: Filter by booking payment date, not order-creation date or showtime date. Both selected calendar dates are included, using Vietnam local-date boundaries. Orders without a reliable PaidAt are excluded from period-based results.
+BR-37-03: Quick periods run through today. Last 7 Days includes today and the preceding six days; This Quarter starts on 1 January, 1 April, 1 July or 1 October as applicable; This Year starts on 1 January.
+BR-37-04: Today, Last 7 Days and This Month use daily chart buckets. This Quarter and This Year use monthly buckets labelled MM/YYYY. Empty buckets show zero; each bucket includes only payments inside the selected period. Custom ranges retain the currently selected chart interval.
+BR-37-05: Successful Orders counts each qualifying booking once. Tickets Sold counts original tickets; replacement/split tickets issued during seat exchanges do not create additional sales. Repeated payment attempts do not multiply orders or ticket values. A Sweetbox ticket is counted as one ticket record, not two seats.
+BR-37-06: Amount Before Discounts is the sum of original ticket prices and concession subtotals. Amount Collected is the sum of the matching bookings’ stored FinalAmount. Use stored transaction values; do not reapply current prices or subtract voucher/point discounts again.
+BR-37-07: The page has exactly four summary figures: Successful Orders, Tickets Sold, Amount Before Discounts and Amount Collected. All four and the chart use the full matching set, not only the displayed page. Collections are not reduced by cash refunds or cancellation-voucher values in this function.
+BR-37-08: History contains paid online orders only, with at most 10 orders per page, ordered by PaidAt descending and BookingID descending for equal payment times. An out-of-range positive page is clamped to the last available page. Missing displayed numeric values are shown as 0 or 0đ.
+BR-37-09: A qualifying zero-value booking still contributes to Successful Orders and Tickets Sold, contributes zero to Amount Collected, and is labelled as fully covered by vouchers/points.
+BR-37-10: Date ranges contain at most 366 calendar days. Dates must be valid and use years 1900–9998; page numbers must be positive integers.
+BR-37-11: CSV exports contain all matching paid orders, subject to a 10,000-row limit, and use the same access/date rules as the screen. CSV text is escaped and protected against spreadsheet formula interpretation. All UC-37 operations are read-only.
 
 ## Other Information
 
-Dependencies: UC-13/14 online booking/payment, UC-16 customer cancellation, UC-20 broken-seat exchange/refund, UC-22 shift cash reporting, UC-29 dashboard and UC-31 permissions. UC-29 currently uses booking-creation dates and booking-linked refunds; its figures are not silently redefined by UC-37. Implementation follows JSP → Servlet → Service → DAO → SQL Server. Public industry references informed the design; provider fee/settlement reporting, PDF/XLSX and multi-cinema support are future extensions.
+Related use cases: UC-13/UC-14 provide online booking/payment data; UC-31 controls access. This history has no movie, showtime-ID, booking-ID, content-tab or payment-attempt-status filters, and no adjustment/payment-inspection sections.
+Traceability: /manager/online-reports → OnlineSalesReportServlet → OnlineSalesReportService → OnlineSalesReportDAO → Booking, Ticket, Booking_Concession, OnlinePayment, Showtime, Movie, Room and User. TicketExchange is read only to identify replacement tickets. View: /WEB-INF/views/manager/online-reports.jsp.
 
 ## Assumptions
 
-Stored prices, payment results and adjustment records are authoritative operational inputs. New records use explicit Vietnam-time reporting conventions; legacy UTC payment-creation timestamps are converted at query boundaries. The migration must precede deployment of the updated payment/cancellation write paths. Existing cancellation eligibility and compensation policy are preserved.
+Stored booking/payment times and historical ticket/concession amounts are accurate, and the reporting schema, including Booking.PaidAt, is available. Payment confirmation and changes to ticket states are handled by their existing use cases; UC-37 reads the resulting records.
 
 
