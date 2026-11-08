@@ -113,7 +113,7 @@ public class CounterHistoryService {
 
     private Result list(CounterHistoryDAO.Filter filter, int page) throws SQLException {
         BigDecimal[] totals = historyDAO.summarize(filter);
-        Page<CounterOrder> orders = Page.of(page, PAGE_SIZE, totals[0].intValue(),
+        Page<CounterOrder> orders = Page.of(page, PAGE_SIZE, totals[8].intValue(),
                 (offset, limit) -> historyDAO.search(filter, offset, limit));
         return new Result(orders, totals);
     }

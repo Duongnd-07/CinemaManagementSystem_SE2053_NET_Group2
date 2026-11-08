@@ -39,8 +39,8 @@
             <span><fmt:formatNumber value="${result.transferCollected}" maxFractionDigits="0"/>đ</span></div>
     </div>
 </div>
-<p class="text-body-sm text-on-surface-variant mb-space-lg">Tiền hoàn tính theo đơn được bán trong danh sách này, kể cả khi hoàn vào ngày khác.
-    Đối chiếu tiền mặt trong két theo từng ca ở Báo cáo ca.</p>
+<p class="text-body-sm text-on-surface-variant mb-space-lg">Danh sách gồm đơn bán tại quầy và đơn (kể cả mua online) được đổi ghế / hoàn vé tại quầy
+    trong phạm vi đang xem. Tiền hoàn tính theo lúc hoàn, không theo lúc bán. Đối chiếu tiền mặt trong két theo từng ca ở Báo cáo ca.</p>
 
 <c:choose>
     <c:when test="${empty result.page.items}">
@@ -68,6 +68,9 @@
                         <td class="px-space-md py-3">
                             <div class="font-label-lg">#${o.bookingId}</div>
                             <div class="text-body-sm text-on-surface-variant">${fn:substring(o.bookingTime, 11, 16)} ${fn:substring(o.bookingTime, 8, 10)}/${fn:substring(o.bookingTime, 5, 7)}</div>
+                            <c:if test="${not o.soldInScope}">
+                                <span class="cl-pill cl-pill--warning mt-1">${o.channel == 'Counter' ? 'Bán ở ca / ngày khác' : 'Mua online'} · đổi / hoàn tại quầy</span>
+                            </c:if>
                             <c:choose>
                                 <c:when test="${empty o.movieTitle}">
                                     <span class="cl-pill cl-pill--warning mt-1">Chỉ bắp nước</span>
@@ -131,7 +134,10 @@
                             <c:if test="${o.discountAmount > 0}">
                                 <div class="text-body-sm text-on-surface-variant line-through"><fmt:formatNumber value="${o.totalPrice}" maxFractionDigits="0"/>đ</div>
                             </c:if>
-                            <div class="text-body-sm text-on-surface-variant">${paymentLabels[o.paymentMethod]}</div>
+                            <div class="text-body-sm text-on-surface-variant">${o.channel == 'Counter' ? paymentLabels[o.paymentMethod] : 'Thanh toán online'}</div>
+                            <c:if test="${not o.soldInScope}">
+                                <div class="text-body-sm text-amber-300">Không tính vào tiền thu ở đây</div>
+                            </c:if>
                             <c:if test="${not empty o.paymentReference}">
                                 <div class="text-body-sm text-on-surface-variant">Mã GD: <c:out value="${o.paymentReference}"/></div>
                             </c:if>

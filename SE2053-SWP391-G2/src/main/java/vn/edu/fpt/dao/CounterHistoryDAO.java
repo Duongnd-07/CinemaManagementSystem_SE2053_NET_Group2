@@ -17,18 +17,16 @@ import vn.edu.fpt.model.PaymentMethod;
 import vn.edu.fpt.service.CounterOrder;
 import vn.edu.fpt.util.DBContext;
 
-// Lịch sử bán tại quầy (UC-19): đơn Channel = Counter, lọc theo nhân viên / ca / khoảng thời gian / từ khóa.
+// Lịch sử bán tại quầy (UC-19): đơn Channel = Counter bán trong phạm vi lọc (nhân viên / ca / khoảng thời gian), cùng
+// các đơn (kể cả mua online) có đổi ghế / hoàn vé tại quầy (UC-20) trong phạm vi đó; lọc thêm theo từ khóa.
 // Staff chỉ truyền ca của mình (kiểm tra ở Service); Manager lọc theo ngày
 public class CounterHistoryDAO {
 
     // LEFT JOIN suất chiếu: đơn chỉ bắp nước không có suất
-    private static final String FROM = "FROM Booking b LEFT JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
+    private static final String JOINS = "FROM Booking b LEFT JOIN Showtime s ON s.ShowtimeID = b.ShowtimeID "
             + "LEFT JOIN Movie m ON m.MovieID = s.MovieID LEFT JOIN Room r ON r.RoomID = s.RoomID "
             + "LEFT JOIN [User] c ON c.UserID = b.CustomerID LEFT JOIN [User] st ON st.UserID = b.StaffID "
-            + "LEFT JOIN Voucher v ON v.VoucherID = b.VoucherID LEFT JOIN Shift sh ON sh.ShiftID = b.ShiftID "
-            + "OUTER APPLY (SELECT SUM(ISNULL(t.RefundAmount, 0)) AS Refund, "
-            + "SUM(CASE WHEN t.RefundAmount > 0 THEN 1 ELSE 0 END) AS Refunded FROM Ticket t "
-            + "WHERE t.BookingID = b.BookingID) rf ";
+            + "LEFT JOIN Voucher v ON v.VoucherID = b.VoucherID LEFT JOIN Shift sh ON sh.ShiftID = b.ShiftID ";
 
     // Bộ lọc; trường null / rỗng thì bỏ qua
     public static final class Filter {
@@ -60,25 +58,27 @@ public class CounterHistoryDAO {
         }
     }
 
-    // Tổng của mọi đơn khớp bộ lọc: {số đơn, đã thu, tiền đã hoàn, thu tiền mặt, thu chuyển khoản,
-    // số đơn tiền mặt, số đơn chuyển khoản, số vé đã hoàn}
+    // Tổng của mọi đơn khớp bộ lọc: {số đơn bán, đã thu, tiền đã hoàn, thu tiền mặt, thu chuyển khoản,
+    // số đơn tiền mặt, số đơn chuyển khoản, số vé đã hoàn, số dòng (đơn bán + đơn chỉ có đổi / hoàn trong phạm vi)}.
+    // Tiền thu chỉ tính đơn bán tại quầy trong phạm vi; tiền hoàn tính theo lần hoàn làm trong phạm vi (giống Báo cáo ca)
     public BigDecimal[] summarize(Filter filter) throws SQLException {
         List<Object> params = new ArrayList<>();
         params.add(PaymentMethod.CASH);
         params.add(PaymentMethod.TRANSFER);
         params.add(PaymentMethod.CASH);
         params.add(PaymentMethod.TRANSFER);
-        String sql = "SELECT COUNT(*), ISNULL(SUM(b.FinalAmount), 0), ISNULL(SUM(rf.Refund), 0), "
-                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN b.FinalAmount ELSE 0 END), 0), "
-                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN b.FinalAmount ELSE 0 END), 0), "
-                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
-                + "ISNULL(SUM(CASE WHEN b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
-                + "ISNULL(SUM(rf.Refunded), 0) " + FROM + where(filter, params);
+        String sql = "SELECT ISNULL(SUM(sl.Sold), 0), ISNULL(SUM(sl.Sold * b.FinalAmount), 0), "
+                + "ISNULL(SUM(ex.Refund), 0), "
+                + "ISNULL(SUM(CASE WHEN sl.Sold = 1 AND b.PaymentMethod = ? THEN b.FinalAmount ELSE 0 END), 0), "
+                + "ISNULL(SUM(CASE WHEN sl.Sold = 1 AND b.PaymentMethod = ? THEN b.FinalAmount ELSE 0 END), 0), "
+                + "ISNULL(SUM(CASE WHEN sl.Sold = 1 AND b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
+                + "ISNULL(SUM(CASE WHEN sl.Sold = 1 AND b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
+                + "ISNULL(SUM(ex.Refunded), 0), COUNT(*) " + query(filter, params);
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             bind(ps, params);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
-                BigDecimal[] totals = new BigDecimal[8];
+                BigDecimal[] totals = new BigDecimal[9];
                 for (int i = 0; i < totals.length; i++) {
                     totals[i] = rs.getBigDecimal(i + 1);
                 }
@@ -87,14 +87,15 @@ public class CounterHistoryDAO {
         }
     }
 
-    // Đơn mới nhất trước, kèm danh sách vé của từng đơn
+    // Mới nhất trước theo lúc bán (đơn bán trong phạm vi) hoặc lúc đổi / hoàn gần nhất, kèm danh sách vé của từng đơn
     public List<CounterOrder> search(Filter filter, int offset, int limit) throws SQLException {
         List<Object> params = new ArrayList<>();
         String sql = "SELECT b.BookingID, b.BookingTime, b.Status, b.ShiftID, sh.CounterNo, st.FullName AS StaffName, "
                 + "b.CustomerID, c.FullName AS CustomerName, c.Phone, c.Email, m.Title, r.RoomName, s.StartTime, "
                 + "b.TotalPrice, b.DiscountAmount, v.VoucherCode, b.PointsRedeemed, b.PointsEarned, b.FinalAmount, "
-                + "b.PaymentMethod, b.PaymentReference, b.CashReceived, ISNULL(rf.Refund, 0) AS Refund " + FROM
-                + where(filter, params) + "ORDER BY b.BookingTime DESC, b.BookingID DESC "
+                + "b.PaymentMethod, b.PaymentReference, b.CashReceived, b.Channel, sl.Sold, "
+                + "ISNULL(ex.Refund, 0) AS Refund " + query(filter, params)
+                + "ORDER BY CASE WHEN sl.Sold = 1 THEN b.BookingTime ELSE ex.LastAt END DESC, b.BookingID DESC "
                 + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
         params.add(offset);
         params.add(limit);
@@ -158,23 +159,47 @@ public class CounterHistoryDAO {
         }
     }
 
-    // Từ khóa khớp mã đơn (#45 hoặc 45), mã vé, SĐT / email / tên khách
-    private String where(Filter filter, List<Object> params) {
-        StringBuilder sql = new StringBuilder("WHERE b.Channel = ? ");
+    // FROM ... WHERE dùng chung. sl.Sold = 1: đơn bán tại quầy trong phạm vi lọc. ex: các lần đổi / hoàn (UC-20) làm
+    // trong phạm vi lọc trên vé của đơn, kể cả đơn mua online hay bán ở ca / ngày khác. Phạm vi ca: nhân viên của ca
+    // trong khung giờ ca (đổi cùng hạng không gắn ShiftID), giống Báo cáo ca. Dòng hiện khi đơn được bán hoặc có
+    // đổi / hoàn trong phạm vi. Từ khóa khớp mã đơn (#45 hoặc 45), mã vé, SĐT / email / tên khách
+    private String query(Filter filter, List<Object> params) {
+        StringBuilder sold = new StringBuilder("b.Channel = ?");
         params.add(BookingChannel.COUNTER);
         if (filter.staffId != null) {
-            sql.append("AND b.StaffID = ? ");
+            sold.append(" AND b.StaffID = ?");
             params.add(filter.staffId);
         }
         if (filter.shiftId != null) {
-            sql.append("AND b.ShiftID = ? ");
+            sold.append(" AND b.ShiftID = ?");
             params.add(filter.shiftId);
         }
         if (filter.from != null && filter.to != null) {
-            sql.append("AND b.BookingTime >= ? AND b.BookingTime < ? ");
+            sold.append(" AND b.BookingTime >= ? AND b.BookingTime < ?");
             params.add(Timestamp.valueOf(filter.from));
             params.add(Timestamp.valueOf(filter.to));
         }
+        StringBuilder sql = new StringBuilder(JOINS)
+                .append("CROSS APPLY (SELECT CASE WHEN ").append(sold).append(" THEN 1 ELSE 0 END AS Sold) sl ")
+                .append("OUTER APPLY (SELECT COUNT(*) AS Actions, SUM(x.CashRefund) AS Refund, ")
+                .append("SUM(CASE WHEN x.CashRefund > 0 THEN 1 ELSE 0 END) AS Refunded, MAX(x.CreatedAt) AS LastAt ")
+                .append("FROM TicketExchange x JOIN Ticket xt ON xt.TicketID = x.OldTicketID ");
+        if (filter.shiftId != null) {
+            sql.append("JOIN Shift xs ON xs.ShiftID = ? AND x.StaffID = xs.StaffID AND x.CreatedAt >= xs.StartedAt ")
+                    .append("AND (xs.EndedAt IS NULL OR x.CreatedAt < xs.EndedAt) ");
+            params.add(filter.shiftId);
+        }
+        sql.append("WHERE xt.BookingID = b.BookingID");
+        if (filter.staffId != null) {
+            sql.append(" AND x.StaffID = ?");
+            params.add(filter.staffId);
+        }
+        if (filter.from != null && filter.to != null) {
+            sql.append(" AND x.CreatedAt >= ? AND x.CreatedAt < ?");
+            params.add(Timestamp.valueOf(filter.from));
+            params.add(Timestamp.valueOf(filter.to));
+        }
+        sql.append(") ex WHERE (sl.Sold = 1 OR ex.Actions > 0) ");
         if (!filter.keyword.isEmpty()) {
             String keyword = filter.keyword.startsWith("#") ? filter.keyword.substring(1) : filter.keyword;
             sql.append("AND (CAST(b.BookingID AS VARCHAR(12)) = ? OR c.Phone = ? OR c.Email = ? "
@@ -221,6 +246,8 @@ public class CounterHistoryDAO {
         order.setPaymentReference(rs.getString("PaymentReference"));
         order.setCashReceived(rs.getBigDecimal("CashReceived"));
         order.setRefundTotal(rs.getBigDecimal("Refund"));
+        order.setChannel(rs.getString("Channel"));
+        order.setSoldInScope(rs.getInt("Sold") == 1);
         return order;
     }
 }
