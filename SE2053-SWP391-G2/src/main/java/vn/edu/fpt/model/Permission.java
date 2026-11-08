@@ -23,9 +23,7 @@ public enum Permission {
     VIEW_REPORTS(Group.MANAGEMENT, "Xem báo cáo thống kê", "Xem doanh thu và thống kê phim.", "/manager/reports"),
     VIEW_ONLINE_REPORTS(Group.MANAGEMENT, "Xem lịch sử bán vé online",
             "Xem đơn online đã thanh toán và thống kê tiền thu theo ngày.", "/manager/online-reports"),
-    VIEW_ROOM_CONDITIONS(Group.MANAGEMENT, "Xem tình trạng phòng trước ca", "Xem kết quả nhân viên kiểm tra phòng trước ca.", "/manager/room-conditions"),
 
-    ROOM_CONDITION_CHECK(Group.OPERATION, "Báo cáo tình trạng phòng trước ca", "Kiểm tra phòng chiếu và gửi báo cáo trước khi mở ca.", "/staff/room-conditions"),
     COUNTER_SALE(Group.OPERATION, "Bán vé tại quầy", "Mở ca và bán vé, bắp nước tại quầy.", "/staff/counter"),
     OWN_COUNTER_HISTORY(Group.OPERATION, "Lịch sử bán vé của mình", "Xem các đơn do chính nhân viên đã bán.", "/staff/counter-history"),
     OWN_SHIFTS(Group.OPERATION, "Ca làm việc", "Xem báo cáo và đóng ca của chính nhân viên.", "/staff/shifts"),

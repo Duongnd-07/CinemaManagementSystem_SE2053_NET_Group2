@@ -367,15 +367,6 @@ public final class Messages {
     public static final String PERMISSION_NO_CHANGES = "Không có thay đổi nào để lưu.";
     public static final String PERMISSION_INVALID = "Phân quyền chưa được lưu do dữ liệu gửi lên không hợp lệ. Vui lòng tải lại trang và thử lại.";
 
-    // UC-35: Report Room Condition Before Shift
-    public static final String ROOM_CONDITION_SAVED_GOOD = "Đã ghi nhận phòng đạt yêu cầu.";
-    public static final String ROOM_CONDITION_SAVED_ISSUE =
-            "Đã ghi nhận phòng có vấn đề. Thiết bị cần sửa, hãy báo ở mục Sự cố thiết bị để quản lý xử lý.";
-    public static final String ROOM_CONDITION_NOTE_REQUIRED = "Vui lòng mô tả vấn đề của {0}.";
-    public static final String ROOM_CONDITION_IN_SHIFT =
-            "Bạn đang trong ca nên không lập báo cáo trước ca được. Nếu phát hiện hỏng hóc, hãy báo ở mục Sự cố thiết bị.";
-    public static final String ROOM_CONDITION_DUPLICATE = "Bạn đã báo cáo phòng này cho ca sắp tới rồi.";
-
     // UC-33: Manage System Configurations
     public static final String CONFIG_SAVED = "Lưu cấu hình thành công ({0} tham số được cập nhật).";
     public static final String CONFIG_NO_CHANGES = "Không có thay đổi nào để lưu.";

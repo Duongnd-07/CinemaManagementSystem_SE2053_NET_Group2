@@ -96,20 +96,6 @@
 
         <!-- Chức năng nghiệp vụ Staff -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <c:if test="${allowedPermissions.contains('ROOM_CONDITION_CHECK')}">
-            <a href="${pageContext.request.contextPath}/staff/room-conditions"
-               class="block bg-[#171b26] border border-white/10 hover:border-lime-500/40 rounded-xl p-5 transition group hover:-translate-y-1 shadow-lg">
-                <div class="w-12 h-12 rounded-xl bg-lime-500/20 text-lime-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                    <span class="material-symbols-outlined text-2xl">fact_check</span>
-                </div>
-                <h3 class="font-bold text-white text-base mb-1">Kiểm tra phòng trước ca</h3>
-                <p class="text-xs text-[#8e919f] mb-4">Kiểm tra thiết bị, ghế và vệ sinh từng phòng trước khi mở ca.</p>
-                <span class="text-xs font-semibold text-lime-400 flex items-center gap-1 group-hover:underline">
-                    Kiểm tra phòng <span class="material-symbols-outlined text-xs">arrow_forward</span>
-                </span>
-            </a>
-            </c:if>
-
             <!-- 1. Bán vé tại quầy -->
             <c:if test="${allowedPermissions.contains('COUNTER_SALE')}">
             <a href="${pageContext.request.contextPath}/staff/counter" class="block">

@@ -28,7 +28,6 @@ import vn.edu.fpt.service.CounterQuote;
 import vn.edu.fpt.service.CounterReceipt;
 import vn.edu.fpt.service.CounterSaleForm;
 import vn.edu.fpt.service.CounterSaleService;
-import vn.edu.fpt.service.RoomConditionService;
 import vn.edu.fpt.service.ShiftService;
 import vn.edu.fpt.service.ValidationException;
 import vn.edu.fpt.util.CsrfToken;
@@ -56,7 +55,6 @@ public class CounterSaleServlet extends HttpServlet {
     private static final String QTY_PREFIX = "qty_";
 
     private final CounterSaleService saleService = new CounterSaleService();
-    private final RoomConditionService roomConditionService = new RoomConditionService();
     private final ShiftService shiftService = new ShiftService();
 
     @Override
@@ -185,10 +183,6 @@ public class CounterSaleServlet extends HttpServlet {
         request.setAttribute("counters", ShiftService.COUNTERS);
         request.setAttribute("date", date);
         request.setAttribute("today", LocalDate.now());
-        if (shift == null) {
-            // UC-35: nhắc kiểm tra phòng trước khi mở ca, không chặn
-            request.setAttribute("uncheckedRooms", roomConditionService.countUncheckedToday());
-        }
         if (shift != null) {
             request.setAttribute("showtimes", saleService.listShowtimes(date));
         }

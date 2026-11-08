@@ -56,8 +56,8 @@
                 </div>
             </details>
         </c:if>
-        <c:if test="${allowedPermissions.contains('MANAGE_ROOMS') or allowedPermissions.contains('VIEW_ROOM_INSPECTIONS') or allowedPermissions.contains('VIEW_ROOM_CONDITIONS') or allowedPermissions.contains('MANAGE_EQUIPMENT_REPORTS') or allowedPermissions.contains('VIEW_SHIFT_REPORTS')}">
-            <details class="manager-nav-group" name="manager-navigation" ${active == 'rooms' or active == 'room-inspections' or active == 'room-conditions' or active == 'equipment-reports' or active == 'shifts' ? 'open' : ''}>
+        <c:if test="${allowedPermissions.contains('MANAGE_ROOMS') or allowedPermissions.contains('VIEW_ROOM_INSPECTIONS') or allowedPermissions.contains('MANAGE_EQUIPMENT_REPORTS') or allowedPermissions.contains('VIEW_SHIFT_REPORTS')}">
+            <details class="manager-nav-group" name="manager-navigation" ${active == 'rooms' or active == 'room-inspections' or active == 'equipment-reports' or active == 'shifts' ? 'open' : ''}>
                 <summary class="manager-nav-summary text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-label-lg">
                     <span class="material-symbols-outlined" aria-hidden="true">settings</span>
                     <span class="manager-nav-label">Vận hành rạp</span>
@@ -71,11 +71,6 @@
                     <c:if test="${allowedPermissions.contains('VIEW_ROOM_INSPECTIONS')}">
                         <a class="manager-nav-link ${itemBase} ${active == 'room-inspections' ? itemActive : itemIdle}" href="${ctx}/manager/room-inspections" aria-current="${active == 'room-inspections' ? 'page' : 'false'}">
                             <span class="material-symbols-outlined mr-space-md" aria-hidden="true">cleaning_services</span>Kiểm tra phòng chiếu
-                        </a>
-                    </c:if>
-                    <c:if test="${allowedPermissions.contains('VIEW_ROOM_CONDITIONS')}">
-                        <a class="manager-nav-link ${itemBase} ${active == 'room-conditions' ? itemActive : itemIdle}" href="${ctx}/manager/room-conditions" aria-current="${active == 'room-conditions' ? 'page' : 'false'}">
-                            <span class="material-symbols-outlined mr-space-md" aria-hidden="true">fact_check</span>Tình trạng phòng
                         </a>
                     </c:if>
                     <c:if test="${allowedPermissions.contains('MANAGE_EQUIPMENT_REPORTS')}">
