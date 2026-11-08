@@ -137,11 +137,17 @@ public class ReviewDAO {
 
     // ===== Quản lý review vi phạm (Manager) =====
 
-    public int countAll(String status) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Review" + (status == null ? "" : " WHERE Status = ?");
+    public int countAll(String status, Integer movieId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Review WHERE 1 = 1"
+                + (status == null ? "" : " AND Status = ?")
+                + (movieId == null ? "" : " AND MovieID = ?");
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            int idx = 1;
             if (status != null) {
-                ps.setString(1, status);
+                ps.setString(idx++, status);
+            }
+            if (movieId != null) {
+                ps.setInt(idx, movieId);
             }
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : 0;
@@ -149,25 +155,35 @@ public class ReviewDAO {
         }
     }
 
-    public Map<String, Integer> countAllByStatus() throws SQLException {
-        String sql = "SELECT Status, COUNT(*) AS Cnt FROM Review GROUP BY Status";
+    public Map<String, Integer> countAllByStatus(Integer movieId) throws SQLException {
+        String sql = "SELECT Status, COUNT(*) AS Cnt FROM Review"
+                + (movieId == null ? "" : " WHERE MovieID = ?") + " GROUP BY Status";
         Map<String, Integer> counts = new LinkedHashMap<>();
-        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql);
-                ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                counts.put(rs.getString("Status"), rs.getInt("Cnt"));
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (movieId != null) {
+                ps.setInt(1, movieId);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    counts.put(rs.getString("Status"), rs.getInt("Cnt"));
+                }
             }
         }
         return counts;
     }
 
-    public List<ReviewView> findAll(String status, int offset, int limit) throws SQLException {
-        String sql = VIEW_SELECT + (status == null ? "" : "WHERE r.Status = ? ")
+    public List<ReviewView> findAll(String status, Integer movieId, int offset, int limit) throws SQLException {
+        String sql = VIEW_SELECT + "WHERE 1 = 1 "
+                + (status == null ? "" : "AND r.Status = ? ")
+                + (movieId == null ? "" : "AND r.MovieID = ? ")
                 + "ORDER BY r.CreatedAt DESC, r.ReviewID DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             int idx = 1;
             if (status != null) {
                 ps.setString(idx++, status);
+            }
+            if (movieId != null) {
+                ps.setInt(idx++, movieId);
             }
             ps.setInt(idx++, offset);
             ps.setInt(idx, limit);

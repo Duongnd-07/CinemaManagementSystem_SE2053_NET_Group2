@@ -162,18 +162,30 @@ public class ReviewService {
     // ===== Manager: xử lý review vi phạm =====
 
     public Page<ReviewView> listAll(String status, int page) throws SQLException {
+        return listAll(status, null, page);
+    }
+
+    public Page<ReviewView> listAll(String status, Integer movieId, int page) throws SQLException {
         String filter = ReviewStatus.isValid(status) ? status : null;
-        return Page.of(page, MANAGER_PAGE_SIZE, reviewDAO.countAll(filter),
-                (offset, limit) -> reviewDAO.findAll(filter, offset, limit));
+        return Page.of(page, MANAGER_PAGE_SIZE, reviewDAO.countAll(filter, movieId),
+                (offset, limit) -> reviewDAO.findAll(filter, movieId, offset, limit));
     }
 
     public Map<String, Integer> countAllByStatus() throws SQLException {
-        Map<String, Integer> counts = reviewDAO.countAllByStatus();
+        return countAllByStatus(null);
+    }
+
+    public Map<String, Integer> countAllByStatus(Integer movieId) throws SQLException {
+        Map<String, Integer> counts = reviewDAO.countAllByStatus(movieId);
         Map<String, Integer> result = new LinkedHashMap<>();
         for (String status : ReviewStatus.ALL) {
             result.put(status, counts.getOrDefault(status, 0));
         }
         return result;
+    }
+
+    public List<Movie> listMoviesForModeration() throws SQLException {
+        return movieDAO.findAllTitles();
     }
 
     public ReviewView findById(int reviewId) throws SQLException {
