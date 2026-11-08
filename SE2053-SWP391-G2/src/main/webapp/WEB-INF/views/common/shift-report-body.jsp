@@ -35,14 +35,14 @@
         <div class="form-error-banner"><c:out value="${errors.general}"/></div>
     </c:if>
 
-    <c:if test="${r.orderCount == 0}">
+    <c:if test="${empty r.orders}">
         <p class="text-body-sm text-on-surface-variant flex items-center gap-space-sm">
             <span class="material-symbols-outlined text-[18px]">info</span>Ca chưa có giao dịch nào, mọi số liệu bằng 0.
         </p>
     </c:if>
 
     <%-- Doanh thu --%>
-    <div class="grid grid-cols-2 lg:grid-cols-6 gap-space-md">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-space-md">
         <div class="${cardClass}"><div class="text-body-sm text-on-surface-variant">Số đơn</div>
             <div class="text-headline-sm">${r.orderCount}</div></div>
         <div class="${cardClass}"><div class="text-body-sm text-on-surface-variant">Số vé</div>
@@ -55,6 +55,10 @@
             <div class="text-title-lg">-<fmt:formatNumber value="${r.discountTotal}" maxFractionDigits="0"/>đ</div></div>
         <div class="${cardClass} border-primary/40"><div class="text-body-sm text-on-surface-variant">Thực thu</div>
             <div class="text-title-lg text-primary"><fmt:formatNumber value="${r.collectedTotal}" maxFractionDigits="0"/>đ</div></div>
+        <%-- Tiền mặt chi ra từ két trong ca (hoàn vé, đổi xuống ghế thường), kể cả cho đơn mua online --%>
+        <div class="${cardClass} border-amber-300/40"><div class="text-body-sm text-on-surface-variant">Hoàn trả khách</div>
+            <div class="text-title-lg text-amber-300">-<fmt:formatNumber value="${r.refundTotal}" maxFractionDigits="0"/>đ</div>
+            <div class="text-body-sm text-on-surface-variant">${r.refundedTickets} vé · tiền mặt</div></div>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-space-lg">
@@ -160,8 +164,10 @@
     <%-- Đơn trong ca --%>
     <section class="${cardClass}">
         <h2 class="text-title-md mb-space-md flex items-center gap-space-sm">
-            <span class="material-symbols-outlined text-primary-container">receipt_long</span>Đơn bán trong ca (${r.orderCount})
+            <span class="material-symbols-outlined text-primary-container">receipt_long</span>Đơn trong ca (${fn:length(r.orders)})
         </h2>
+        <p class="text-body-sm text-on-surface-variant -mt-2 mb-space-md">Gồm ${r.orderCount} đơn bán trong ca và các đơn (kể cả mua online)
+            được đổi ghế / hoàn vé trong ca. Cột đổi ghế và hoàn tiền chỉ ghi việc làm trong ca này.</p>
         <c:choose>
             <c:when test="${empty r.orders}">
                 <p class="text-body-sm text-on-surface-variant">Chưa có đơn nào.</p>
@@ -178,19 +184,28 @@
                             <tr>
                                 <td class="py-2">
                                     <c:choose>
-                                        <c:when test="${not empty receiptBase and allowedPermissions.contains('COUNTER_SALE')}"><a class="text-primary hover:underline" href="${receiptBase}${o.bookingId}">#${o.bookingId}</a></c:when>
+                                        <c:when test="${o.channel == 'Counter' and not empty receiptBase and allowedPermissions.contains('COUNTER_SALE')}"><a class="text-primary hover:underline" href="${receiptBase}${o.bookingId}">#${o.bookingId}</a></c:when>
                                         <c:otherwise>#${o.bookingId}</c:otherwise>
                                     </c:choose>
+                                    <c:if test="${not o.soldInShift}">
+                                        <span class="cl-pill cl-pill--warning block mt-1 w-fit">${o.channel == 'Counter' ? 'Bán ca khác' : 'Mua online'}</span>
+                                    </c:if>
                                 </td>
-                                <td>${fn:substring(o.bookingTime, 11, 16)}</td>
+                                <td>${o.soldInShift ? fn:substring(o.bookingTime, 11, 16) : ''}<c:if test="${not o.soldInShift}">${fn:substring(o.bookingTime, 11, 16)} ${fn:substring(o.bookingTime, 8, 10)}/${fn:substring(o.bookingTime, 5, 7)}</c:if></td>
                                 <td><c:out value="${empty o.seats ? '-' : o.seats}"/></td>
                                 <td><c:out value="${empty o.concessions ? '-' : o.concessions}"/></td>
                                 <td class="text-amber-300"><c:out value="${empty o.exchanges ? '-' : o.exchanges}"/></td>
                                 <td class="text-amber-300"><c:out value="${empty o.refunds ? '-' : o.refunds}"/></td>
                                 <td><c:out value="${empty o.customerName ? 'Khách vãng lai' : o.customerName}"/></td>
-                                <td>${paymentLabels[o.paymentMethod]}<c:if test="${not empty o.paymentReference}">
+                                <td>${o.channel == 'Counter' ? paymentLabels[o.paymentMethod] : 'Thanh toán online'}<c:if test="${not empty o.paymentReference and o.channel == 'Counter'}">
                                     <span class="block text-body-sm text-on-surface-variant">Mã GD: <c:out value="${o.paymentReference}"/></span></c:if></td>
-                                <td class="text-right"><fmt:formatNumber value="${o.finalAmount}" maxFractionDigits="0"/>đ</td>
+                                <td class="text-right">
+                                    <c:choose>
+                                        <c:when test="${o.soldInShift}"><fmt:formatNumber value="${o.finalAmount}" maxFractionDigits="0"/>đ</c:when>
+                                        <c:otherwise><span class="text-on-surface-variant">-</span>
+                                            <span class="block text-body-sm text-on-surface-variant">không thu trong ca</span></c:otherwise>
+                                    </c:choose>
+                                </td>
                             </tr>
                         </c:forEach>
                         </tbody>

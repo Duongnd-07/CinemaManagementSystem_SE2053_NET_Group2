@@ -47,10 +47,15 @@ public class ShiftReport {
         // Mã giao dịch ngân hàng để đối chiếu khi kết ca; null với tiền mặt
         private final String paymentReference;
         private final BigDecimal finalAmount;
+        private final String channel;
+        // false: đơn chỉ hiện vì có đổi / hoàn trong ca (mua online hoặc bán ở ca khác), tiền không tính vào thu của ca
+        private final boolean soldInShift;
 
         public Order(int bookingId, LocalDateTime bookingTime, String seats, String exchanges, String refunds,
                      String concessions, String customerName, String paymentMethod, String paymentReference,
-                     BigDecimal finalAmount) {
+                     BigDecimal finalAmount, String channel, boolean soldInShift) {
+            this.channel = channel;
+            this.soldInShift = soldInShift;
             this.bookingId = bookingId;
             this.bookingTime = bookingTime;
             this.seats = seats;
@@ -65,6 +70,14 @@ public class ShiftReport {
 
         public String getPaymentReference() {
             return paymentReference;
+        }
+
+        public String getChannel() {
+            return channel;
+        }
+
+        public boolean isSoldInShift() {
+            return soldInShift;
         }
 
         public int getBookingId() {
