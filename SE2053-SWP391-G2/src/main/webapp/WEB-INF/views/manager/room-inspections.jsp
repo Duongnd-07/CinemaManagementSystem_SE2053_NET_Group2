@@ -3,6 +3,8 @@
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%-- UC-35 A5: lịch sử kiểm tra phòng chiếu (chỉ xem) --%>
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<%-- Chỉ hiện nút sang màn Sự cố thiết bị khi tài khoản có quyền xử lý sự cố (UC-31), giống menu bên trái --%>
+<c:set var="canHandleReports" value="${allowedPermissions.contains('MANAGE_EQUIPMENT_REPORTS')}"/>
 <c:set var="inputClass" value="form-input bg-surface-container-high text-on-surface px-4 py-2 rounded-lg border border-white/10 focus:border-primary outline-none"/>
 <!DOCTYPE html>
 <html lang="vi" class="dark">
@@ -90,6 +92,21 @@
                                 ${slot.equipmentOk ? 'Thiết bị khác bình thường' : 'Chưa xác nhận thiết bị khác'}
                                 <c:if test="${slot.reportCount > 0}"> · ${slot.reportCount} báo cáo sự cố</c:if>
                                 <c:if test="${not empty slot.note}"><span class="block text-outline">“<c:out value="${slot.note}"/>”</span></c:if>
+                                <%-- Từng báo cáo đã gắn: mã + trạng thái, bấm để mở báo cáo trên màn Sự cố thiết bị (UC-26) --%>
+                                <c:if test="${not empty slot.linkedReports}">
+                                    <span class="block mt-1">
+                                        <c:forEach var="rep" items="${slot.linkedReports}" varStatus="loop">
+                                            <c:choose>
+                                                <c:when test="${canHandleReports}">
+                                                    <a class="underline ${rep.open ? 'text-amber-300' : 'text-outline'}"
+                                                       href="${ctx}/manager/equipment-reports?id=${rep.reportId}">#SC-${rep.reportId}</a>
+                                                </c:when>
+                                                <c:otherwise><span>#SC-${rep.reportId}</span></c:otherwise>
+                                            </c:choose>
+                                            (${rep.statusLabel})<c:if test="${not loop.last}">, </c:if>
+                                        </c:forEach>
+                                    </span>
+                                </c:if>
                             </c:if>
                         </td>
                         <td class="py-3 px-6 text-right">
@@ -97,6 +114,21 @@
                                 <jsp:param name="status" value="${slot.status}"/>
                                 <jsp:param name="late" value="${slot.late}"/>
                             </jsp:include>
+                            <%-- Có sự cố: nút mở thẳng báo cáo đầu tiên chưa xử lý; đã xử lý hết thì cho xem lại --%>
+                            <c:if test="${canHandleReports and not empty slot.linkedReports}">
+                                <c:choose>
+                                    <c:when test="${slot.firstOpenReportId > 0}">
+                                        <a href="${ctx}/manager/equipment-reports?id=${slot.firstOpenReportId}"
+                                           class="mt-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-md hover:opacity-90 transition-opacity">
+                                            <span class="material-symbols-outlined text-[16px]">build</span>Xử lý sự cố
+                                        </a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <a href="${ctx}/manager/equipment-reports?id=${slot.linkedReports[0].reportId}"
+                                           class="mt-2 inline-flex items-center gap-1 text-body-sm text-outline underline">Xem sự cố (đã xử lý)</a>
+                                    </c:otherwise>
+                                </c:choose>
+                            </c:if>
                         </td>
                     </tr>
                 </c:forEach>
