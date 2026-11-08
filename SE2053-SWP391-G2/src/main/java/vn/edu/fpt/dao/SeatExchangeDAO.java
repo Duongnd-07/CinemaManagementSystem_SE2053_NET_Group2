@@ -144,7 +144,8 @@ public class SeatExchangeDAO {
                               String reason, BigDecimal cashRefund, int pointsReturned, Integer voucherId,
                               int staffId, Integer shiftId) throws SQLException {
         String sql = "INSERT INTO TicketExchange (OldTicketID, ExchangeType, NewTicketID, NewTicketID2, Reason, "
-                + "CashRefund, PointsReturned, VoucherID, StaffID, ShiftID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "CashRefund, PointsReturned, VoucherID, StaffID, ShiftID, CreatedAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, oldTicketId);
             ps.setString(2, type);
@@ -156,6 +157,8 @@ public class SeatExchangeDAO {
             setNullableInt(ps, 8, voucherId);
             ps.setInt(9, staffId);
             setNullableInt(ps, 10, shiftId);
+            ps.setTimestamp(11, Timestamp.valueOf(java.time.LocalDateTime.now(
+                    java.time.ZoneId.of("Asia/Ho_Chi_Minh")).withNano(0)));
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (!keys.next()) {

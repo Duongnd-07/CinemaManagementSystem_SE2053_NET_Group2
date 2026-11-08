@@ -1,0 +1,57 @@
+.or-main { margin-left: 16rem; min-width: 0; padding: 6rem 2rem 3rem; }
+.or-header, .or-actions, .or-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.or-header { justify-content: space-between; margin-bottom: 1.5rem; }
+.or-filters { align-items: end; padding: 1rem; border-radius: .75rem; margin-bottom: 1rem; }
+.or-filters label { display: block; margin-bottom: .4rem; }
+.or-filters small { display: block; max-width: 16rem; }
+.or-filters input, .or-filters select { min-height: 44px; max-width: 100%; padding: .5rem .75rem; border: 1px solid var(--or-border); border-radius: .5rem; background: var(--or-raised); color: inherit; }
+.online-report-page { --or-border: #5e3f3b; --or-raised: #262a35; --or-muted: #e9bcb6; --or-card: #171b26; --or-accent: #ffb4aa; }
+.online-report-page :is(a, button, input, select, summary, [tabindex]):focus-visible { outline: 3px solid var(--or-accent); outline-offset: 3px; }
+.or-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .6rem 1rem; border-radius: .65rem; border: 1px solid var(--or-border); }
+.or-button:hover { background: var(--or-raised); }
+.or-presets { margin-bottom: 1rem; }
+.or-presets a[aria-current="true"] { background: var(--or-accent); color: #410001; border-color: var(--or-accent); }
+.or-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
+.or-card { background: var(--or-card); border: 1px solid var(--or-border); border-radius: .75rem; padding: 1rem; }
+.or-card dt, .or-muted { color: var(--or-muted); }
+.or-card dd { font-size: 1.35rem; font-weight: 700; margin: .4rem 0 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.or-notice { padding: 1rem; margin: 1rem 0; border: 1px solid var(--or-border); border-radius: .75rem; }
+.or-error { color: #ffb4ab; }
+.or-table-wrap { overflow-x: auto; border: 1px solid var(--or-border); border-radius: .75rem; margin: 1rem 0; }
+.or-history { margin-top: 1.5rem; }
+.or-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.or-table-wide { min-width: 1060px; table-layout: fixed; }
+.or-col-order { width: 17%; }
+.or-col-show { width: 25%; }
+.or-col-count { width: 6%; }
+.or-col-money { width: 13%; }
+.or-table caption { text-align: left; padding: 1rem; color: var(--or-muted); }
+.or-table :is(th, td) { padding: .85rem; text-align: left; border-bottom: 1px solid var(--or-border); vertical-align: top; }
+.or-table th { background: var(--or-card); }
+.or-table :is(.or-money, .or-number) { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.or-table-wide td:nth-child(-n+2) { overflow-wrap: anywhere; }
+.or-table .or-empty { text-align: center; padding: 2rem 1rem; color: var(--or-muted); }
+.or-table a { text-decoration: underline; color: var(--or-accent); }
+.or-table small { display: block; color: var(--or-muted); }
+.or-page-nav { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
+.or-daily { display: flex; gap: .5rem; height: 150px; overflow-x: auto; align-items: end; margin-top: 1rem; padding-bottom: 1.75rem; }
+.or-bar { min-width: 32px; flex: 1; height: max(2px, var(--bar)); background: var(--or-accent); position: relative; }
+.or-bar span { position: absolute; top: 100%; padding-top: .2rem; font-size: .65rem; color: var(--or-muted); white-space: nowrap; }
+.or-skip { position: fixed; top: -100px; left: 1rem; z-index: 100; padding: 1rem; background: var(--or-card); }
+.or-skip:focus { top: 1rem; }
+@media (max-width: 900px) {
+    .or-main { margin-left: 0; padding: 1.5rem 1rem; }
+    .online-report-page aside { position: static; width: 100%; height: auto; padding: .5rem; }
+    .online-report-page aside > div { display: none; }
+    .online-report-page aside .manager-nav { max-height: 55vh; overflow-y: auto; padding: .25rem; }
+    .online-report-page > header { position: static; padding: .5rem 1rem; height: auto; flex-wrap: wrap; }
+    .or-filters > div { flex: 1 1 145px; }
+    .or-filters :is(input, select) { width: 100%; }
+}
+@media (max-width: 1200px) {
+    .or-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 500px) {
+    .or-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .or-kpis dd { font-size: 1rem; overflow-wrap: anywhere; }
+}

@@ -31,6 +31,9 @@
             </div>
             <h1 class="text-headline-lg text-on-surface">Thống kê &amp; Báo cáo</h1>
             <p class="text-body-sm text-on-surface-variant mt-space-xs">Kỳ báo cáo: <c:out value="${periodLabel}"/></p>
+            <p class="text-body-sm text-on-surface-variant mt-space-xs">Dashboard tổng hợp theo ngày tạo đơn và điều chỉnh gắn với đơn.
+                <c:if test="${allowedPermissions.contains('VIEW_ONLINE_REPORTS')}"><a class="text-primary underline" href="${ctx}/manager/online-reports">Xem bán online theo ngày thanh toán và ngày hoàn trả</a></c:if>
+            </p>
         </div>
     </div>
 

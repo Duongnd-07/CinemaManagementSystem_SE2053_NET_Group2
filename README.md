@@ -186,3 +186,26 @@ Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `Serv
 - Số cột ghế chiếm trên sơ đồ: `SeatType.widthOf` (UC-09 cho ghế đôi trải 2 cột, UC-25 thiết kế theo ô).
 - Ghế đã bán vé cho suất chưa kết thúc không được đổi loại, khóa hay xóa (UC-25).
 - DB tạo trước quy ước này: chạy `SE2053-SWP391-G2/sql/UC25_sweetbox_two_cells.sql` (an toàn khi chạy lại).
+
+## 13. UC-37 — Lịch sử bán vé online
+
+- URL: `/manager/online-reports`; quyền `VIEW_ONLINE_REPORTS`, mặc định Manager, Staff chỉ khi Admin cấp qua UC-31.
+- Trang chỉ gồm đơn online đã thanh toán hoàn tất; lọc nhanh Hôm nay, 7 ngày gần nhất, Tháng này, Quý này, Năm này và chọn khoảng ngày. Không còn bộ lọc phim/suất/đơn/trạng thái hay phần đổi/hoàn, kiểm tra thanh toán.
+- Bốn ô thống kê: đơn thành công, số vé đã bán, số tiền trước giảm giá (vé + bắp nước), số tiền thực thu. Biểu đồ theo ngày cho Hôm nay/7 ngày gần nhất/Tháng này, theo tháng cho Quý này/Năm này; chi tiết đơn, tối đa 10 đơn/trang và CSV tối đa 10.000 dòng. Giá trị thiếu hiển thị 0.
+- Đơn 0đ vẫn tính đơn/vé; vé cấp lại do đổi ghế không tạo lượt bán mới. Tổng tiền thu không trừ điều chỉnh hoàn tiền.
+- UC-29 giữ cơ sở ngày tạo đơn và điều chỉnh gắn với đơn; giao diện có ghi rõ cơ sở này và liên kết sang UC-37.
+- Trước khi chạy WAR mới, áp dụng `SE2053-SWP391-G2/sql/UC37_online_sales_report.sql` sau các migration UC-14/UC-20. Script bổ sung `Booking.PaidAt`, lịch sử `TicketCancellation` và index; chạy lại an toàn. Các đường thanh toán/hủy vé mới cần schema này.
+- Dữ liệu cũ chỉ được backfill PaidAt khi có đúng một giao dịch Paid khớp số tiền. Đơn thiếu ngày thanh toán không được đoán ngày và không xuất hiện trong lịch sử theo kỳ.
+- Khoảng ngày và biểu đồ dùng ngày thanh toán theo giờ Việt Nam.
+- Đặc tả: `docs/UC37_USE_CASE.md`. Hướng dẫn và kết quả kiểm tra: `docs/UC37_IMPLEMENTATION_REVIEW.md`.
+
+Kiểm tra từ thư mục `SE2053-SWP391-G2` (Java 21, Maven, SQL Server đã cấu hình):
+
+```powershell
+mvn -o -q -DskipTests package
+./scripts/run-uc37-tests.ps1 -Database
+```
+
+Test runner không thêm thư viện test; kiểm thử tính toán/ngày/CSV và truy vấn SQL bằng dữ liệu tính tay, tự rollback fixture. Chỉ `mvn test` chưa chạy bộ checks này; dùng script trên. `-Database` cần kết nối DB trong `ConnectDB.properties`.
+
+HTTP/browser QA dùng Tomcat thử nghiệm riêng, không thay bản Tomcat đang chạy. `scripts/prepare-uc37-http-test.ps1` chuẩn bị app tại output chỉ định và bỏ các scheduled listener trong bản copy thử nghiệm. `scripts/test-uc37-http.py` dùng tài khoản test riêng, vô hiệu hóa chúng sau khi chạy và giữ audit log; không commit dữ liệu doanh số. Browser QA tùy chọn cần `playwright-core` trong output `browser-tools`, Chrome có sẵn và biến `UC37_BROWSER=1`.

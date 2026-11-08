@@ -404,6 +404,18 @@ public final class Messages {
     public static final String ANNOUNCEMENT_RECALL_ACTION = "Thu hồi thông báo";
     public static final String ANNOUNCEMENT_LOG_DESCRIPTION = "Đối tượng: {0}; loại: {1}; số người nhận: {2}.";
 
+    // UC-37: online sales reporting validation and consistency warnings.
+    public static final String ONLINE_REPORT_RANGE = "Chọn ngày kết thúc không trước ngày bắt đầu, tối đa 366 ngày.";
+    public static final String ONLINE_REPORT_DATE = "Ngày không hợp lệ (yyyy-MM-dd), năm từ 1900 đến 9998.";
+    public static final String ONLINE_REPORT_GROUP = "Chỉ hỗ trợ tổng hợp tiền thu theo ngày hoặc theo tháng.";
+    public static final String ONLINE_REPORT_ID = "Vui lòng nhập số nguyên dương hợp lệ.";
+    public static final String ONLINE_REPORT_TAB = "Loại báo cáo không hợp lệ.";
+    public static final String ONLINE_REPORT_STATUS = "Trạng thái thanh toán không hợp lệ.";
+    public static final String ONLINE_REPORT_EXPORT = "Định dạng xuất báo cáo không hợp lệ.";
+    public static final String ONLINE_REPORT_EXPORT_LIMIT = "Báo cáo có hơn 10.000 dòng. Vui lòng thu hẹp bộ lọc để xuất CSV.";
+    public static final String ONLINE_REPORT_REVIEW = "Giao dịch cần kiểm tra; chưa xác nhận doanh số.";
+    public static final String ONLINE_REPORT_MISMATCH = "Thanh toán và đơn hàng không khớp hoặc có nhiều giao dịch Paid.";
+
     public static final String SYSTEM_ERROR = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
 
     private Messages() {

@@ -14,6 +14,170 @@ body {
     vertical-align: middle;
 }
 
+/* Grouped manager navigation */
+aside.manager-sidebar {
+    --nav-background: #151a25;
+    --nav-panel: #1b2230;
+    --nav-hover: #252d3d;
+    --nav-border: #30394b;
+    --nav-text: #e4e8f1;
+    --nav-muted: #b6bfd1;
+    --nav-accent: #ffb4aa;
+    --nav-active: #e50914;
+    --nav-on-active: #fff7f6;
+    background: var(--nav-background);
+    border-right: 1px solid var(--nav-border);
+}
+
+.manager-sidebar .manager-sidebar-brand {
+    flex-shrink: 0;
+    gap: .75rem;
+    margin: 0 1.25rem 1.5rem;
+    padding: .5rem .25rem 1.75rem;
+    border-bottom: 1px solid var(--nav-border);
+}
+
+.manager-sidebar-brand > span {
+    color: var(--nav-text);
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+}
+
+.manager-sidebar .manager-nav {
+    min-height: 0;
+    padding: .25rem .875rem 1.5rem;
+    scroll-padding-block: 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--nav-border) transparent;
+}
+
+.manager-nav > * + * {
+    margin-top: 1.5rem;
+}
+
+.manager-nav > .manager-nav-group + .manager-nav-group {
+    margin-top: 3rem;
+}
+
+.manager-nav-group {
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: 1rem;
+    transition: background-color .16s ease, border-color .16s ease;
+}
+
+.manager-nav-group[open] {
+    background: var(--nav-panel);
+    border-color: var(--nav-border);
+}
+
+.manager-nav .manager-nav-summary {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-height: 56px;
+    padding: .875rem .5rem;
+    border-radius: 1rem;
+    color: var(--nav-text);
+    font-size: .875rem;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+    list-style: none;
+    transition: background-color .16s ease, color .16s ease;
+}
+
+.manager-nav-summary::-webkit-details-marker {
+    display: none;
+}
+
+.manager-nav .manager-nav-summary:hover {
+    background: var(--nav-hover);
+    color: var(--nav-text);
+}
+
+.manager-nav-summary > .material-symbols-outlined {
+    flex: 0 0 auto;
+    font-size: 20px;
+    color: var(--nav-muted);
+}
+
+.manager-nav-label {
+    flex: 1;
+    min-width: 0;
+    text-wrap: pretty;
+}
+
+.manager-nav-group[open] > summary > .material-symbols-outlined {
+    color: var(--nav-accent);
+}
+
+.manager-nav-children {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin: .5rem .5rem 1rem 1.125rem;
+    padding-left: .625rem;
+    border-color: var(--nav-border);
+}
+
+.manager-nav .manager-nav-link {
+    gap: .625rem;
+    min-height: 52px;
+    padding: .875rem .75rem;
+    border-radius: .75rem;
+    color: var(--nav-muted);
+    font-size: .875rem;
+    font-weight: 400;
+    line-height: 1.5;
+    box-shadow: none;
+    transition: background-color .16s ease, color .16s ease;
+}
+
+.manager-nav .manager-nav-link > .material-symbols-outlined {
+    flex: 0 0 auto;
+    margin-right: 0;
+    font-size: 20px;
+}
+
+.manager-nav .manager-nav-link:hover {
+    background: var(--nav-hover);
+    color: var(--nav-text);
+}
+
+.manager-nav-children .manager-nav-link {
+    padding: .75rem .625rem;
+}
+
+.manager-nav-children .manager-nav-link > .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.manager-nav .manager-nav-link[aria-current="page"] {
+    background: var(--nav-active);
+    color: var(--nav-on-active);
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgb(229 9 20 / .15);
+}
+
+.manager-nav > .manager-nav-link:last-child:not(:first-child) {
+    margin-top: 2rem;
+}
+
+.manager-nav :is(a, summary):focus-visible {
+    outline: 2px solid var(--nav-accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .manager-nav .manager-nav-link,
+    .manager-nav .manager-nav-summary,
+    .manager-nav .manager-nav-group {
+        transition: none;
+    }
+}
+
 /* ===== Form thêm/sửa phim ===== */
 /* Mọi ô nhập cùng chiều cao và cỡ chữ để các hàng thẳng lối */
 .form-input {

@@ -510,7 +510,8 @@ public class BookingService {
             if (booking.getFinalAmount() == null || booking.getFinalAmount().signum() != 0) {
                 throw error(ERROR_GENERAL, Messages.BOOKING_NOT_FREE);
             }
-            completeBookingPayment(conn, booking, customer.getUserId(), null, LocalDateTime.now());
+            completeBookingPayment(conn, booking, customer.getUserId(), null,
+                    LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
             return null;
         });
         sendConfirmationEmail(bookingId, customer.getUserId());
@@ -611,7 +612,7 @@ public class BookingService {
             ticket.setQrCode(UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
         }
         bookingDAO.updateTicketQrCodes(conn, tickets);
-        if (!bookingDAO.markBookingPaid(conn, bookingId, paymentMethod, pointsEarned)) {
+        if (!bookingDAO.markBookingPaid(conn, bookingId, paymentMethod, pointsEarned, paidAt)) {
             throw new SQLException("Booking status changed before payment settlement.");
         }
         bookingDAO.deleteHoldsBySession(conn, bookingHoldSession(bookingId));
