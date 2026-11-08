@@ -409,36 +409,39 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                             <div>
                                 <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalMovieId">Phim chiếu</label>
-                                <select id="modalMovieId" name="movieId" class="${inputClass}" required
+                                <select id="modalMovieId" name="showtimeMovieId" class="${inputClass}" required
                                         ${not empty editingShowtime and editingShowtime.bookedTickets > 0 ? 'disabled' : ''}>
                                     <c:forEach var="movie" items="${movies}">
                                         <option value="${movie.movieId}"
                                                 data-duration="${movie.durationMinutes}"
                                                 data-formats="<c:out value='${movie.formats}'/>"
-                                                ${form.movieId == movie.movieId ? 'selected' : ''}>
+                                                ${form.movieId == ''.concat(movie.movieId) ? 'selected' : ''}>
                                             <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
                                         </option>
                                     </c:forEach>
                                 </select>
                                 <c:if test="${not empty editingShowtime and editingShowtime.bookedTickets > 0}">
-                                    <input type="hidden" name="movieId" value="${form.movieId}"/>
+                                    <input type="hidden" name="showtimeMovieId" value="${form.movieId}"/>
+                                </c:if>
+                                <c:if test="${not empty errors.movieId}">
+                                    <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.movieId}"/></p>
                                 </c:if>
                             </div>
 
                             <div>
                                 <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalRoomId">Phòng chiếu</label>
-                                <select id="modalRoomId" name="roomId" class="${inputClass}" required
+                                <select id="modalRoomId" name="showtimeRoomId" class="${inputClass}" required
                                         ${not empty editingShowtime and editingShowtime.bookedTickets > 0 ? 'disabled' : ''}>
                                     <c:forEach var="room" items="${rooms}">
                                         <c:choose>
                                             <c:when test="${room.status == 'Active'}">
                                                 <option value="${room.roomId}"
                                                         data-format="${empty room.format ? '2D' : room.format}"
-                                                        ${form.roomId == room.roomId ? 'selected' : ''}>
+                                                        ${form.roomId == ''.concat(room.roomId) ? 'selected' : ''}>
                                                     <c:out value="${room.roomName}"/> (${empty room.format ? '2D' : room.format} - ${room.totalSeats} ghế)
                                                 </option>
                                             </c:when>
-                                            <c:when test="${form.roomId == room.roomId}">
+                                            <c:when test="${form.roomId == ''.concat(room.roomId)}">
                                                 <option value="${room.roomId}" disabled selected>
                                                     <c:out value="${room.roomName}"/> (${room.status == 'Maintenance' ? 'Đang bảo trì' : 'Đã dừng hoạt động'})
                                                 </option>
@@ -447,23 +450,32 @@
                                     </c:forEach>
                                 </select>
                                 <c:if test="${not empty editingShowtime and editingShowtime.bookedTickets > 0}">
-                                    <input type="hidden" name="roomId" value="${form.roomId}"/>
+                                    <input type="hidden" name="showtimeRoomId" value="${form.roomId}"/>
+                                </c:if>
+                                <c:if test="${not empty errors.roomId}">
+                                    <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.roomId}"/></p>
                                 </c:if>
                             </div>
+                        </div>
+
+                        <%-- Cảnh báo phim không hỗ trợ định dạng của phòng (JS cập nhật khi đổi phim/phòng) --%>
+                        <div id="singleFormatWarning" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-body-sm flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">warning</span>
+                            <span id="singleFormatWarningText"></span>
                         </div>
 
                         <div>
                             <label class="block text-label-md text-on-surface-variant mb-1.5 font-medium">Hình thức bản chiếu <span class="text-primary">*</span></label>
                             <div class="grid grid-cols-2 gap-3">
                                 <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
-                                    <input type="radio" name="translationType" value="Phụ đề" class="accent-primary" ${empty form.translationType or form.translationType == 'Phụ đề' ? 'checked' : ''}/>
+                                    <input type="radio" name="showtimeTranslationType" value="Phụ đề" class="accent-primary" ${empty form.translationType or form.translationType == 'Phụ đề' ? 'checked' : ''}/>
                                     <div>
                                         <div class="text-body-sm font-bold text-on-surface">Phụ đề</div>
                                         <div class="text-[11px] text-outline">Ngôn ngữ gốc + Phụ đề</div>
                                     </div>
                                 </label>
                                 <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
-                                    <input type="radio" name="translationType" value="Lồng tiếng" class="accent-primary" ${form.translationType == 'Lồng tiếng' ? 'checked' : ''}/>
+                                    <input type="radio" name="showtimeTranslationType" value="Lồng tiếng" class="accent-primary" ${form.translationType == 'Lồng tiếng' ? 'checked' : ''}/>
                                     <div>
                                         <div class="text-body-sm font-bold text-on-surface">Lồng tiếng</div>
                                         <div class="text-[11px] text-outline">Lồng tiếng Việt</div>
@@ -519,15 +531,20 @@
                 <%-- TẠO MỚI SUẤT CHIẾU (HỖ TRỢ 2 TAB: HÀNG LOẠT VÀ TẠO LẺ)  --%>
                 <%-- ======================================================= --%>
                 <c:otherwise>
+                    <%-- Tab hàng loạt báo lỗi qua thông báo sau khi chuyển trang, nên có lỗi ở đây là do form đơn lẻ:
+                         mở lại đúng tab đơn lẻ để người dùng thấy lỗi và dữ liệu vừa nhập --%>
+                    <c:set var="tabActiveClass" value="flex-1 py-2 px-4 rounded-lg font-label-md transition-all flex items-center justify-center gap-2 bg-primary text-on-primary shadow-md"/>
+                    <c:set var="tabIdleClass" value="flex-1 py-2 px-4 rounded-lg font-label-md transition-all flex items-center justify-center gap-2 text-on-surface-variant hover:text-on-surface"/>
+                    <c:set var="openSingleTab" value="${not empty errors}"/>
                     <%-- Tab Switcher --%>
                     <div class="flex items-center gap-2 p-1 bg-surface-container rounded-xl mb-space-lg border border-white/5">
                         <button type="button" id="tabBtnBatch" onclick="switchCreateTab('batch')"
-                                class="flex-1 py-2 px-4 rounded-lg font-label-md transition-all flex items-center justify-center gap-2 bg-primary text-on-primary shadow-md">
+                                class="${openSingleTab ? tabIdleClass : tabActiveClass}">
                             <span class="material-symbols-outlined text-[18px]">bolt</span>
                             <span>Lên lịch hàng loạt (Khuyên dùng)</span>
                         </button>
                         <button type="button" id="tabBtnSingle" onclick="switchCreateTab('single')"
-                                class="flex-1 py-2 px-4 rounded-lg font-label-md transition-all flex items-center justify-center gap-2 text-on-surface-variant hover:text-on-surface">
+                                class="${openSingleTab ? tabActiveClass : tabIdleClass}">
                             <span class="material-symbols-outlined text-[18px]">add</span>
                             <span>Tạo 1 suất đơn lẻ</span>
                         </button>
@@ -536,7 +553,7 @@
                     <%-- ---------------------------------------------------- --%>
                     <%-- TAB 1: FORM LÊN LỊCH HÀNG LOẠT                        --%>
                     <%-- ---------------------------------------------------- --%>
-                    <div id="tabContentBatch">
+                    <div id="tabContentBatch" class="${openSingleTab ? 'hidden' : ''}">
                         <form method="post" action="${ctx}/manager/showtimes${listQuery}" class="space-y-space-md" id="batchForm">
                             <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                             <input type="hidden" name="action" value="batch_save"/>
@@ -731,52 +748,66 @@
                     <%-- ---------------------------------------------------- --%>
                     <%-- TAB 2: FORM TẠO 1 SUẤT ĐƠN LẺ                        --%>
                     <%-- ---------------------------------------------------- --%>
-                    <div id="tabContentSingle" class="hidden">
+                    <div id="tabContentSingle" class="${openSingleTab ? '' : 'hidden'}">
                         <form method="post" action="${ctx}/manager/showtimes${listQuery}" class="space-y-space-md">
                             <input type="hidden" name="csrfToken" value="${csrfToken}"/>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                                 <div>
                                     <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalMovieId">Phim chiếu <span class="text-primary">*</span></label>
-                                    <select id="modalMovieId" name="movieId" class="${inputClass}" required>
+                                    <select id="modalMovieId" name="showtimeMovieId" class="${inputClass}" required>
                                         <option value="">-- Chọn phim --</option>
                                         <c:forEach var="movie" items="${movies}">
                                             <option value="${movie.movieId}"
                                                     data-duration="${movie.durationMinutes}"
-                                                    data-formats="<c:out value='${movie.formats}'/>">
+                                                    data-formats="<c:out value='${movie.formats}'/>"
+                                                    ${form.movieId == ''.concat(movie.movieId) ? 'selected' : ''}>
                                                 <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes} phút)
                                             </option>
                                         </c:forEach>
                                     </select>
+                                    <c:if test="${not empty errors.movieId}">
+                                        <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.movieId}"/></p>
+                                    </c:if>
                                 </div>
 
                                 <div>
                                     <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalRoomId">Phòng chiếu <span class="text-primary">*</span></label>
-                                    <select id="modalRoomId" name="roomId" class="${inputClass}" required>
+                                    <select id="modalRoomId" name="showtimeRoomId" class="${inputClass}" required>
                                         <option value="">-- Chọn phòng chiếu --</option>
                                         <c:forEach var="room" items="${rooms}">
                                             <c:if test="${room.status == 'Active'}">
-                                                <option value="${room.roomId}" data-format="${empty room.format ? '2D' : room.format}">
+                                                <option value="${room.roomId}" data-format="${empty room.format ? '2D' : room.format}"
+                                                        ${form.roomId == ''.concat(room.roomId) ? 'selected' : ''}>
                                                     <c:out value="${room.roomName}"/> (${empty room.format ? '2D' : room.format} - ${room.totalSeats} ghế)
                                                 </option>
                                             </c:if>
                                         </c:forEach>
                                     </select>
+                                    <c:if test="${not empty errors.roomId}">
+                                        <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.roomId}"/></p>
+                                    </c:if>
                                 </div>
+                            </div>
+
+                            <%-- Cảnh báo phim không hỗ trợ định dạng của phòng, giống tab hàng loạt --%>
+                            <div id="singleFormatWarning" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-body-sm flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px]">warning</span>
+                                <span id="singleFormatWarningText"></span>
                             </div>
 
                             <div>
                                 <label class="block text-label-md text-on-surface-variant mb-1.5 font-medium">Hình thức bản chiếu <span class="text-primary">*</span></label>
                                 <div class="grid grid-cols-2 gap-3">
                                     <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
-                                        <input type="radio" name="translationType" value="Phụ đề" checked class="accent-primary"/>
+                                        <input type="radio" name="showtimeTranslationType" value="Phụ đề" class="accent-primary" ${form.translationType == 'Lồng tiếng' ? '' : 'checked'}/>
                                         <div>
                                             <div class="text-body-sm font-bold text-on-surface">Phụ đề</div>
                                             <div class="text-[11px] text-outline">Ngôn ngữ gốc + Phụ đề</div>
                                         </div>
                                     </label>
                                     <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
-                                        <input type="radio" name="translationType" value="Lồng tiếng" class="accent-primary"/>
+                                        <input type="radio" name="showtimeTranslationType" value="Lồng tiếng" class="accent-primary" ${form.translationType == 'Lồng tiếng' ? 'checked' : ''}/>
                                         <div>
                                             <div class="text-body-sm font-bold text-on-surface">Lồng tiếng</div>
                                             <div class="text-[11px] text-outline">Lồng tiếng Việt</div>
@@ -787,7 +818,11 @@
 
                             <div>
                                 <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalStartTime">Thời gian bắt đầu <span class="text-primary">*</span></label>
-                                <input id="modalStartTime" name="startTime" class="${inputClass}" type="datetime-local" required min="${today}T00:00"/>
+                                <input id="modalStartTime" name="startTime" class="${inputClass}" type="datetime-local" required min="${today}T00:00"
+                                       value="<c:out value='${form.startTime}'/>"/>
+                                <c:if test="${not empty errors.startTime}">
+                                    <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.startTime}"/></p>
+                                </c:if>
                             </div>
 
                             <%-- Khung preview tính toán thời gian và giá vé --%>
@@ -808,7 +843,11 @@
                             <div>
                                 <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalBasePrice">Giá vé gốc (VND) <span class="text-primary">*</span></label>
                                 <input id="modalBasePrice" name="basePrice" class="${inputClass} font-mono"
-                                       type="number" min="10000" step="1000" required placeholder="VD: 85000"/>
+                                       type="number" min="10000" step="1000" required placeholder="VD: 85000"
+                                       value="<c:out value='${form.basePrice}'/>"/>
+                                <c:if test="${not empty errors.basePrice}">
+                                    <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.basePrice}"/></p>
+                                </c:if>
                             </div>
 
                             <div class="flex justify-end gap-space-sm pt-space-md border-t border-white/5">
@@ -1040,6 +1079,8 @@ function initSingleCalculations() {
     var previewEndTime = document.getElementById('previewEndTime');
     var previewPriceValue = document.getElementById('previewPriceValue');
     var btnApplyPrice = document.getElementById('btnApplyPrice');
+    var formatWarning = document.getElementById('singleFormatWarning');
+    var formatWarningText = document.getElementById('singleFormatWarningText');
 
     if (!movieSelect || !roomSelect || !startTimeInput) {
         return;
@@ -1047,7 +1088,34 @@ function initSingleCalculations() {
 
     var currentSuggestedPrice = 0;
 
+    // Cùng quy tắc với server (ShowtimeService): phim không khai báo định dạng thì chiếu được mọi phòng,
+    // phòng không khai báo định dạng tính là 2D, so khớp từng định dạng của phim
+    function checkFormat() {
+        if (!formatWarning) {
+            return;
+        }
+        var movieOpt = movieSelect.options[movieSelect.selectedIndex];
+        var roomOpt = roomSelect.options[roomSelect.selectedIndex];
+        var movieFormats = movieOpt && movieOpt.value ? (movieOpt.dataset.formats || '').trim() : '';
+        if (!movieFormats || !roomOpt || !roomOpt.value) {
+            formatWarning.classList.add('hidden');
+            return;
+        }
+        var roomFormat = (roomOpt.dataset.format || '2D').trim().toUpperCase();
+        var supported = movieFormats.split(/[,;\/]/).some(function (f) {
+            return f.trim().toUpperCase() === roomFormat;
+        });
+        if (supported) {
+            formatWarning.classList.add('hidden');
+        } else {
+            formatWarningText.textContent = 'Phim chỉ hỗ trợ định dạng [' + movieFormats + '], không tương thích với phòng ['
+                    + roomFormat + ']. Hãy chọn phòng khác.';
+            formatWarning.classList.remove('hidden');
+        }
+    }
+
     function recalculate() {
+        checkFormat();
         var startVal = startTimeInput.value;
         var movieOpt = movieSelect.options[movieSelect.selectedIndex];
         var roomOpt = roomSelect.options[roomSelect.selectedIndex];

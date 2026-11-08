@@ -278,13 +278,15 @@ public class ShowtimeManagementServlet extends HttpServlet {
         return form;
     }
 
+    // Form gửi tới URL còn giữ bộ lọc danh sách (movieId, roomId, translationType) và getParameter trả giá trị
+    // trên URL trước, nên các ô của form dùng tên riêng để không bị bộ lọc ghi đè (giống form hàng loạt)
     private ShowtimeForm readForm(HttpServletRequest request) {
         ShowtimeForm form = new ShowtimeForm();
-        form.setMovieId(trim(request.getParameter("movieId")));
-        form.setRoomId(trim(request.getParameter("roomId")));
+        form.setMovieId(trim(request.getParameter("showtimeMovieId")));
+        form.setRoomId(trim(request.getParameter("showtimeRoomId")));
         form.setStartTime(trim(request.getParameter("startTime")));
         form.setBasePrice(trim(request.getParameter("basePrice")));
-        form.setTranslationType(trim(request.getParameter("translationType")));
+        form.setTranslationType(trim(request.getParameter("showtimeTranslationType")));
         return form;
     }
 
