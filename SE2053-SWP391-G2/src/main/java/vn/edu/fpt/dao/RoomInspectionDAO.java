@@ -30,7 +30,11 @@ public class RoomInspectionDAO {
             + "AND CAST(p.StartTime AS DATE) = CAST(s.StartTime AS DATE)) AS PrevEnd, "
             + "i.InspectionID, i.StaffID, u.FullName AS StaffName, i.SeatsChecked, i.RoomCleaned, i.EquipmentOk, "
             + "i.HasIssue, i.IsLate, i.Note, i.InspectedAt, i.UpdatedAt, "
-            + "(SELECT COUNT(*) FROM RoomInspectionReport x WHERE x.InspectionID = i.InspectionID) AS ReportCount "
+            + "(SELECT COUNT(*) FROM RoomInspectionReport x WHERE x.InspectionID = i.InspectionID) AS ReportCount, "
+            // Mã + trạng thái các báo cáo đã gắn ("44:Resolved,46:Pending") để Manager mở thẳng màn xử lý sự cố
+            + "(SELECT STRING_AGG(CAST(x.ReportID AS VARCHAR(10)) + ':' + e.Status, ',') WITHIN GROUP (ORDER BY x.ReportID) "
+            + "FROM RoomInspectionReport x JOIN Equipment_Report e ON e.ReportID = x.ReportID "
+            + "WHERE x.InspectionID = i.InspectionID) AS ReportRefs "
             + "FROM Showtime s JOIN Room r ON r.RoomID = s.RoomID JOIN Movie m ON m.MovieID = s.MovieID "
             + "LEFT JOIN RoomInspection i ON i.ShowtimeID = s.ShowtimeID "
             + "LEFT JOIN [User] u ON u.UserID = i.StaffID ";
@@ -254,6 +258,7 @@ public class RoomInspectionDAO {
             slot.setInspectedAt(toLocal(rs.getTimestamp("InspectedAt")));
             slot.setUpdatedAt(toLocal(rs.getTimestamp("UpdatedAt")));
             slot.setReportCount(rs.getInt("ReportCount"));
+            slot.setReportRefs(rs.getString("ReportRefs"));
         }
         return slot;
     }
