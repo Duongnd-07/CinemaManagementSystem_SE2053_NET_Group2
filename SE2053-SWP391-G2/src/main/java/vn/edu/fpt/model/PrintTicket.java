@@ -139,6 +139,38 @@ public class PrintTicket implements Serializable {
         this.blockReason = blockReason;
     }
 
+    // Trạng thái ghế (Active / Maintenance); ghế đã báo hỏng ở UC-21 là Maintenance
+    private String seatStatus;
+    // Ghế đang hỏng: không in được, nhân viên chuyển sang đổi ghế / hoàn tiền (UC-20)
+    private boolean brokenSeat;
+
+    public String getSeatStatus() {
+        return seatStatus;
+    }
+
+    public void setSeatStatus(String seatStatus) {
+        this.seatStatus = seatStatus;
+    }
+
+    public boolean isBrokenSeat() {
+        return brokenSeat;
+    }
+
+    public void setBrokenSeat(boolean brokenSeat) {
+        this.brokenSeat = brokenSeat;
+    }
+
+    // Lý do in lại của lượt in đang chờ xác nhận (null nếu là lần in đầu)
+    private String printReason;
+
+    public String getPrintReason() {
+        return printReason;
+    }
+
+    public void setPrintReason(String printReason) {
+        this.printReason = printReason;
+    }
+
     // Lần in lại thứ mấy (lần in đầu là 0)
     public int getReprintNo() {
         return Math.max(0, printCount - 1);

@@ -12,7 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 import vn.edu.fpt.model.BookingStatus;
 import vn.edu.fpt.model.EquipmentReport;
+import vn.edu.fpt.model.EquipmentCategory;
 import vn.edu.fpt.model.InspectionSlot;
+import vn.edu.fpt.model.ReportStatus;
 import vn.edu.fpt.model.ShowtimeStatus;
 import vn.edu.fpt.model.TicketStatus;
 import vn.edu.fpt.util.DBContext;
@@ -133,6 +135,20 @@ public class RoomInspectionDAO {
             ps.setInt(2, staffId);
             ps.setTimestamp(3, Timestamp.valueOf(since));
             ps.setInt(4, inspectionId);
+            return readReports(ps);
+        }
+    }
+
+    // Báo cáo thiết bị khác (không phải ghế) của phòng chưa xử lý xong, ai gửi cũng được: thiết bị đã được báo hỏng
+    // thì không bắt nhân viên báo lại ở mỗi suất chiếu (BR-35-04)
+    public List<EquipmentReport> findOpenEquipmentReports(int roomId) throws SQLException {
+        String sql = REPORT_SELECT + "WHERE e.RoomID = ? AND e.EquipmentCategory <> ? AND e.Status IN (?, ?) "
+                + "ORDER BY e.ReportDate";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ps.setString(2, EquipmentCategory.SEAT);
+            ps.setString(3, ReportStatus.PENDING);
+            ps.setString(4, ReportStatus.IN_PROGRESS);
             return readReports(ps);
         }
     }

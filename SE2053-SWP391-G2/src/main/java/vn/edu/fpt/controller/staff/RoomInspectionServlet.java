@@ -137,8 +137,16 @@ public class RoomInspectionServlet extends HttpServlet {
         List<EquipmentReport> all = new ArrayList<>(linked);
         all.addAll(fresh);
         int affected = inspectionService.affectedTickets(all);
+        // Thiết bị của phòng đã được báo hỏng trước đó và chưa xử lý xong (không trùng các báo cáo ở trên)
+        List<EquipmentReport> open = new ArrayList<>();
+        for (EquipmentReport report : inspectionService.openEquipmentReports(slot)) {
+            if (all.stream().noneMatch(r -> r.getReportId() == report.getReportId())) {
+                open.add(report);
+            }
+        }
         request.setAttribute("linkedReports", linked);
         request.setAttribute("pendingReports", fresh);
+        request.setAttribute("openReports", open);
         request.setAttribute("affectedTickets", affected);
         request.setAttribute("affectedMessage", inspectionService.affectedMessage(affected));
         try {

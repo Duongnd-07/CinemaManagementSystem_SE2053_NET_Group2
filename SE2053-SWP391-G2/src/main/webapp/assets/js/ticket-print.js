@@ -108,9 +108,37 @@
         });
     }
 
-    // Lượt in vừa ghi nhận: mở hộp thoại in của trình duyệt
+    // Quay lại trang bằng Back: trình duyệt có thể lấy trang cũ từ bộ nhớ đệm (bfcache) -> tải lại để thấy đúng
+    // trạng thái in hiện tại và lượt in còn chờ xác nhận
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted) {
+            window.location.reload();
+        }
+    });
+
+    // Lượt in vừa tạo (chưa ghi DB): mở hộp thoại in của trình duyệt. Đóng hộp thoại (in hay hủy đều như nhau với
+    // trang) thì hỏi nhân viên vé đã ra giấy chưa; chỉ "Đã in xong" mới ghi lượt in.
+    var confirmModal = document.getElementById('printConfirmModal');
+    var showConfirm = function () {
+        if (confirmModal) {
+            confirmModal.classList.remove('hidden');
+            confirmModal.classList.add('flex');
+            document.getElementById('printConfirmDone').focus();
+        }
+    };
     if (document.querySelector('#printArea[data-auto-print]')) {
+        window.addEventListener('afterprint', showConfirm);
         window.addEventListener('load', function () {
+            window.print();
+            // window.print() chặn đến khi đóng hộp thoại; gọi thêm phòng trình duyệt không phát afterprint
+            showConfirm();
+        });
+    } else {
+        // Lượt in trước chưa được trả lời (vd. bấm Back khi đang in): hỏi lại ngay
+        showConfirm();
+    }
+    if (confirmModal) {
+        confirmModal.querySelector('[data-print-again]').addEventListener('click', function () {
             window.print();
         });
     }
