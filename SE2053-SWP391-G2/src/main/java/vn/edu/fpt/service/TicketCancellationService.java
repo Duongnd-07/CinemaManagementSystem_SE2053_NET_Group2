@@ -77,6 +77,8 @@ public class TicketCancellationService {
                             -pointsToRevoke, "Thu hồi điểm do hủy vé UC16 #" + ticketId);
                 }
                 voucherDAO.insertRefundVoucher(conn, voucher);
+                bookingDAO.recordCancellation(conn, ticketId, voucher.getVoucherCode(), voucherAmount, customerId,
+                        LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
                 notificationDAO.insert(conn, customerId, "Voucher hoàn tiền vé",
                         "Vé đã được hủy. Voucher " + voucher.getVoucherCode()
                                 + " trị giá " + voucherAmount.toPlainString() + "đ đã được thêm vào ví.",

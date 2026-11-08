@@ -126,6 +126,24 @@ public class CustomerBookingDAO {
         }
     }
 
+    // UC-37: immutable link to the issued voucher; written inside the cancellation transaction.
+    public void recordCancellation(Connection conn, int ticketId, String voucherCode,
+                                   java.math.BigDecimal voucherAmount, int customerId,
+                                   java.time.LocalDateTime cancelledAt) throws SQLException {
+        String sql = "INSERT INTO TicketCancellation (TicketID, VoucherID, VoucherAmount, ActorID, CancelledAt) "
+                + "SELECT ?, VoucherID, ?, ?, ? FROM Voucher WHERE VoucherCode = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ticketId);
+            ps.setBigDecimal(2, voucherAmount);
+            ps.setInt(3, customerId);
+            ps.setTimestamp(4, Timestamp.valueOf(cancelledAt.withNano(0)));
+            ps.setString(5, voucherCode);
+            if (ps.executeUpdate() != 1) {
+                throw new SQLException("Cancellation voucher link could not be recorded.");
+            }
+        }
+    }
+
     public int findCancellationVoucherDays(Connection conn) throws SQLException {
         String sql = "SELECT TRY_CONVERT(INT, ConfigValue) FROM SystemConfig "
                 + "WHERE ConfigKey = 'CANCELLATION_VOUCHER_DAYS'";

@@ -769,16 +769,18 @@ public class BookingDAO {
         }
     }
 
-    public boolean markBookingPaid(Connection conn, int bookingId, String paymentMethod, int pointsEarned)
+    public boolean markBookingPaid(Connection conn, int bookingId, String paymentMethod, int pointsEarned,
+                                   java.time.LocalDateTime paidAt)
             throws SQLException {
-        String sql = "UPDATE Booking SET Status = ?, PaymentMethod = ?, PointsEarned = ? "
+        String sql = "UPDATE Booking SET Status = ?, PaymentMethod = ?, PointsEarned = ?, PaidAt = ? "
                 + "WHERE BookingID = ? AND Status = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, BookingStatus.PAID);
             ps.setString(2, paymentMethod);
             ps.setInt(3, pointsEarned);
-            ps.setInt(4, bookingId);
-            ps.setString(5, BookingStatus.PENDING);
+            ps.setTimestamp(4, Timestamp.valueOf(paidAt.withNano(0)));
+            ps.setInt(5, bookingId);
+            ps.setString(6, BookingStatus.PENDING);
             return ps.executeUpdate() == 1;
         }
     }
