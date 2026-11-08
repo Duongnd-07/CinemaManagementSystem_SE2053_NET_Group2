@@ -37,7 +37,7 @@
                             <h2 class="text-xl font-bold text-white mb-4">
                                 <c:choose>
                                     <c:when test="${category == 'Active'}">Đang hiệu lực</c:when>
-                                    <c:when test="${category == 'Used'}">Đã sử dụng</c:when>
+                                    <c:when test="${category == 'Used'}">Đã hết</c:when>
                                     <c:when test="${category == 'Expired'}">Đã hết hạn</c:when>
                                     <c:otherwise>Không còn hiệu lực</c:otherwise>
                                 </c:choose>
@@ -57,7 +57,7 @@
                                                 <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-gray-200">
                                                     <c:choose>
                                                         <c:when test="${category == 'Active'}">Đang hiệu lực</c:when>
-                                                        <c:when test="${category == 'Used'}">Đã sử dụng</c:when>
+                                                        <c:when test="${category == 'Used'}">Đã hết</c:when>
                                                         <c:when test="${category == 'Expired'}">Đã hết hạn</c:when>
                                                         <c:otherwise>Không còn hiệu lực</c:otherwise>
                                                     </c:choose>
