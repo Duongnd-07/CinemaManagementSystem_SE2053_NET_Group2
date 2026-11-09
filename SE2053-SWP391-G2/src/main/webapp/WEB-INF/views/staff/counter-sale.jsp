@@ -360,12 +360,10 @@
                             <p class="mt-1 text-emerald-300">Tiền thối: <b><fmt:formatNumber value="${quote.changeDue}" maxFractionDigits="0"/>đ</b></p>
                         </c:if>
                     </div>
-                    <%-- Chuyển khoản: nhân viên thấy tiền về trên app ngân hàng rồi mới xác nhận; nội dung CK được lưu vào đơn để đối chiếu (UC-22) --%>
+                    <%-- Chuyển khoản: mã VietQR có sẵn số tiền và nội dung CK (mã đối chiếu lưu vào đơn, UC-22) --%>
                     <input type="hidden" name="transferNote" value="${form.transferNote}"/>
-                    <div id="referenceField" class="rounded-lg border border-white/10 bg-surface-container-high p-space-sm text-body-sm"
-                         ${form.paymentMethod == 'Transfer' ? '' : 'hidden'}>
-                        Nội dung chuyển khoản khách cần ghi: <b class="text-primary tracking-wider">${form.transferNote}</b>
-                        <span class="block text-on-surface-variant">Đợi app ngân hàng báo đã nhận đủ tiền rồi bấm xác nhận thanh toán.</span>
+                    <div id="referenceField" ${form.paymentMethod == 'Transfer' ? '' : 'hidden'}>
+                        <%@ include file="/WEB-INF/views/staff/transfer-qr.jspf" %>
                     </div>
                     <c:if test="${not empty errors.payment}"><p class="form-error"><c:out value="${errors.payment}"/></p></c:if>
 

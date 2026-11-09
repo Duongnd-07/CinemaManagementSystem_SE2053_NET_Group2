@@ -1,6 +1,8 @@
 package vn.edu.fpt.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 // UC-35: một suất chiếu cùng lần kiểm tra phòng của nó (nếu có). Trạng thái và khung giờ kiểm tra do
 // RoomInspectionService tính (BR-35-02); inspectionId = 0 nghĩa là chưa kiểm tra.
@@ -33,6 +35,7 @@ public class InspectionSlot {
     private LocalDateTime inspectedAt;
     private LocalDateTime updatedAt;
     private int reportCount;
+    private List<LinkedReport> linkedReports = new ArrayList<>();
 
     private String status;
     private boolean windowOpenNow;
@@ -209,6 +212,68 @@ public class InspectionSlot {
 
     public void setReportCount(int reportCount) {
         this.reportCount = reportCount;
+    }
+
+    // Đọc chuỗi "44:Resolved,46:Pending" từ DAO thành danh sách báo cáo đã gắn với lần kiểm tra
+    public void setReportRefs(String refs) {
+        linkedReports = new ArrayList<>();
+        if (refs == null || refs.isBlank()) {
+            return;
+        }
+        for (String part : refs.split(",")) {
+            int sep = part.indexOf(':');
+            if (sep > 0) {
+                linkedReports.add(new LinkedReport(Integer.parseInt(part.substring(0, sep).trim()),
+                        part.substring(sep + 1).trim()));
+            }
+        }
+    }
+
+    public List<LinkedReport> getLinkedReports() {
+        return linkedReports;
+    }
+
+    // Báo cáo đầu tiên chưa xử lý xong (để nút "Xử lý sự cố" mở thẳng); 0 nếu đã xử lý hết
+    public int getFirstOpenReportId() {
+        for (LinkedReport report : linkedReports) {
+            if (report.isOpen()) {
+                return report.getReportId();
+            }
+        }
+        return 0;
+    }
+
+    // Báo cáo sự cố gắn với lần kiểm tra: mã và trạng thái hiện tại (UC-26)
+    public static class LinkedReport {
+        private final int reportId;
+        private final String status;
+
+        public LinkedReport(int reportId, String status) {
+            this.reportId = reportId;
+            this.status = status;
+        }
+
+        public int getReportId() {
+            return reportId;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public boolean isOpen() {
+            return !ReportStatus.RESOLVED.equals(status);
+        }
+
+        public String getStatusLabel() {
+            if (ReportStatus.PENDING.equals(status)) {
+                return "Chờ xử lý";
+            }
+            if (ReportStatus.IN_PROGRESS.equals(status)) {
+                return "Đang xử lý";
+            }
+            return "Đã xử lý";
+        }
     }
 
     public String getStatus() {
