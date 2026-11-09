@@ -24,14 +24,17 @@ public class OnlineSalesReportDAO {
             + "LEFT JOIN [User] u ON u.UserID = b.CustomerID ";
     private static final String ORIGINAL_TICKET = "NOT EXISTS (SELECT 1 FROM TicketExchange x "
             + "WHERE t.TicketID = x.NewTicketID OR t.TicketID = x.NewTicketID2)";
+    private static final String CASH_ADJUSTMENTS = "OUTER APPLY (SELECT ISNULL(SUM(x.CashRefund), 0) AS CashRefund "
+            + "FROM TicketExchange x JOIN Ticket t ON t.TicketID = x.OldTicketID "
+            + "WHERE t.BookingID = b.BookingID) adj ";
     private static final String ORDER_FROM = " FROM Booking b " + CONTEXT
             + "OUTER APPLY (SELECT COUNT(*) AS Tickets, ISNULL(SUM(t.Price), 0) AS TicketValue "
             + "FROM Ticket t WHERE t.BookingID = b.BookingID AND " + ORIGINAL_TICKET + ") tk "
             + "OUTER APPLY (SELECT ISNULL(SUM(c.SubtotalPrice), 0) AS ConcessionValue "
-            + "FROM Booking_Concession c WHERE c.BookingID = b.BookingID) cs ";
+            + "FROM Booking_Concession c WHERE c.BookingID = b.BookingID) cs " + CASH_ADJUSTMENTS;
     private static final String ORDER_SELECT = "SELECT b.BookingID, b.BookingTime, b.PaidAt, b.Status, "
             + "b.PaymentMethod, b.FinalAmount, b.DiscountAmount, m.Title, r.RoomName, s.StartTime, "
-            + "u.FullName, tk.Tickets, tk.TicketValue, cs.ConcessionValue ";
+            + "u.FullName, tk.Tickets, tk.TicketValue, cs.ConcessionValue, adj.CashRefund ";
     private static final String PAID = " AND b.Status = 'Paid' AND (b.FinalAmount = 0 OR EXISTS "
             + "(SELECT 1 FROM OnlinePayment pay WHERE pay.BookingID = b.BookingID AND pay.Status = 'Paid' "
             + "AND pay.Amount = b.FinalAmount AND pay.ReceivedAmount = b.FinalAmount AND pay.PaidAt IS NOT NULL)) ";
@@ -40,7 +43,7 @@ public class OnlineSalesReportDAO {
         Query q = where(filter);
         String sql = "SELECT COUNT(*) AS Orders, ISNULL(SUM(tk.Tickets), 0) AS Tickets, "
                 + "ISNULL(SUM(tk.TicketValue), 0) AS TicketValue, ISNULL(SUM(cs.ConcessionValue), 0) AS ConcessionValue, "
-                + "ISNULL(SUM(b.FinalAmount), 0) AS Collected "
+                + "ISNULL(SUM(b.FinalAmount), 0) AS Collected, ISNULL(SUM(adj.CashRefund), 0) AS CashRefund "
                 + ORDER_FROM + q.sql + PAID;
         try (PreparedStatement ps = prepare(conn, sql, q.params); ResultSet rs = ps.executeQuery()) {
             rs.next();
@@ -49,18 +52,21 @@ public class OnlineSalesReportDAO {
             result.setTicketValue(rs.getBigDecimal("TicketValue"));
             result.setConcessionValue(rs.getBigDecimal("ConcessionValue"));
             result.setCollected(rs.getBigDecimal("Collected"));
+            result.setCashRefund(rs.getBigDecimal("CashRefund"));
         }
         return result;
     }
 
-    public Map<LocalDate, BigDecimal> dailyCollections(Connection conn, OnlineSalesFilter f) throws SQLException {
+    public Map<LocalDate, BigDecimal> dailyNetCollections(Connection conn, OnlineSalesFilter f) throws SQLException {
         Query q = where(f);
         Map<LocalDate, BigDecimal> result = new LinkedHashMap<>();
-        String sql = "SELECT CAST(b.PaidAt AS DATE) AS Day, SUM(b.FinalAmount) AS Amount FROM Booking b "
+        String sql = "SELECT CAST(b.PaidAt AS DATE) AS Day, SUM(b.FinalAmount) AS Collected, "
+                + "SUM(adj.CashRefund) AS CashRefund FROM Booking b " + CONTEXT + CASH_ADJUSTMENTS
                 + q.sql + PAID + " GROUP BY CAST(b.PaidAt AS DATE) ORDER BY Day";
         try (PreparedStatement ps = prepare(conn, sql, q.params); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                result.put(rs.getDate("Day").toLocalDate(), rs.getBigDecimal("Amount"));
+                result.put(rs.getDate("Day").toLocalDate(),
+                        money(rs, "Collected").subtract(money(rs, "CashRefund")));
             }
         }
         return result;
@@ -68,7 +74,7 @@ public class OnlineSalesReportDAO {
 
     public int count(Connection conn, OnlineSalesFilter f) throws SQLException {
         Query q = where(f);
-        try (PreparedStatement ps = prepare(conn, "SELECT COUNT(*) " + ORDER_FROM + q.sql + PAID, q.params);
+        try (PreparedStatement ps = prepare(conn, "SELECT COUNT(*) FROM Booking b " + CONTEXT + q.sql + PAID, q.params);
                 ResultSet rs = ps.executeQuery()) {
             rs.next();
             return rs.getInt(1);
@@ -151,6 +157,7 @@ public class OnlineSalesReportDAO {
         row.setConcessionValue(money(rs, "ConcessionValue"));
         row.setDiscount(money(rs, "DiscountAmount"));
         row.setAmount(money(rs, "FinalAmount"));
+        row.setCashRefund(money(rs, "CashRefund"));
         return row;
     }
 

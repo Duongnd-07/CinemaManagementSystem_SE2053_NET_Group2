@@ -135,6 +135,8 @@ public final class OnlineSalesReportChecks {
                 int replaced = ticket(c, paid, show, seats.get(4), 100000, "Upcoming", token + "new");
                 update(c, "UPDATE Ticket SET Status='Exchanged' WHERE TicketID=?", ticket);
                 update(c, "INSERT INTO TicketExchange(OldTicketID,ExchangeType,NewTicketID,Reason,CashRefund,StaffID,CreatedAt) VALUES (?,'Same',?,N'UC37 replacement',0,?,'2034-11-06T09:00:00')", ticket, replaced, staff);
+                update(c, "UPDATE Ticket SET Status='Cancelled',RefundAmount=200000,RefundShiftID=? WHERE TicketID=?", shift, replaced);
+                update(c, "INSERT INTO TicketExchange(OldTicketID,ExchangeType,Reason,CashRefund,StaffID,ShiftID,CreatedAt) VALUES (?,'Refund',N'UC37 full order refund',200000,?,?,'2034-11-07T08:30:00')", replaced, staff, shift);
                 int cancelled = booking(c, customer, show, 100000, 0, 100000, "Paid", "Online", "2034-11-05T10:00:00");
                 int cancelledTicket = ticket(c, cancelled, show, seats.get(5), 100000, "Cancelled", token + "can");
                 String voucherCode = "UC37" + UUID.randomUUID().toString().substring(0, 10);
@@ -150,22 +152,32 @@ public final class OnlineSalesReportChecks {
                 money(summary.getTicketValue(), "300000", "original ticket value");
                 money(summary.getConcessionValue(), "20000", "concession join not multiplied by payments");
                 money(summary.getCollected(), "200000", "collection independent of payment attempts");
+                money(summary.getCashRefund(), "200000", "cash refund follows original paid date and counts once");
+                money(summary.getNetAmount(), "0", "full-order refund offsets original collection");
                 check(dao.count(c, f) == 2 && dao.rows(c, f, 1, 1).size() == 1, "order pagination");
-                money(dao.dailyCollections(c, f).values().iterator().next(), "200000", "daily sales use paid date, not future show date");
+                Map<LocalDate, BigDecimal> dailyNet = dao.dailyNetCollections(c, f);
+                money(dailyNet.get(LocalDate.parse("2034-11-06")), "0", "chart nets full refund on original payment date");
+                OnlineSalesFilter monthly = SERVICE.filter(Map.of("from", "2034-11-01", "to", "2034-11-30", "groupBy", "month"));
+                money(OnlineSalesReportService.collectionSeries(monthly, dao.dailyNetCollections(c, monthly))
+                        .get(LocalDate.parse("2034-11-01")), "0", "monthly chart nets full refund");
                 check(dao.detail(c, counter) == null, "counter detail inaccessible");
                 check(dao.detail(c, pending) == null, "pending detail inaccessible");
                 check(dao.detail(c, legacy) == null, "unverified legacy paid date excluded");
                 check(dao.detail(c, paid).getTickets().size() == 3, "detail retains purchased tickets");
+                money(dao.detail(c, paid).getOrder().getNetAmount(), "0", "detail reflects full-order refund");
                 OnlineSalesRow freeRow = dao.rows(c, f, 0, 10).stream()
                         .filter(row -> row.getBookingId() == free).findFirst().orElseThrow();
                 money(freeRow.getConcessionValue(), "0", "missing concessions mapped to zero");
                 money(freeRow.getAmount(), "0", "fully discounted order retained");
+                money(freeRow.getCashRefund(), "0", "no cash adjustment on free order");
                 OnlineSalesResult export = new OnlineSalesResult();
                 export.setSummary(summary);
                 export.setGeneratedAt(LocalDateTime.parse("2034-11-06T12:00:00"));
                 export.setRows(dao.rows(c, f, 0, 10000));
                 String csv = SERVICE.csv(f, export);
                 check(csv.startsWith("\uFEFF") && csv.contains("200000") && !csv.contains("80000"), "UTF-8 CSV exports only paid orders");
+                check(csv.contains("\"Đã thu\",\"Hoàn tiền và bù ghế\",\"Thực thu\""),
+                        "CSV distinguishes collected amount, cash adjustments and net amount");
                 check(legacy > 0, "fixture setup completed");
             } finally {
                 c.rollback();

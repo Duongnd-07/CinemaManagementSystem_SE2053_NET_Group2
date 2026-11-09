@@ -190,9 +190,9 @@ Job phải idempotent, dùng `ScheduledExecutorService` khởi tạo trong `Serv
 ## 13. UC-37 — Lịch sử bán vé online
 
 - URL: `/manager/online-reports`; quyền `VIEW_ONLINE_REPORTS`, mặc định Manager, Staff chỉ khi Admin cấp qua UC-31.
-- Trang chỉ gồm đơn online đã thanh toán hoàn tất; lọc nhanh Hôm nay, 7 ngày gần nhất, Tháng này, Quý này, Năm này và chọn khoảng ngày. Không còn bộ lọc phim/suất/đơn/trạng thái hay phần đổi/hoàn, kiểm tra thanh toán.
-- Bốn ô thống kê: đơn thành công, số vé đã bán, số tiền trước giảm giá (vé + bắp nước), số tiền thực thu. Biểu đồ theo ngày cho Hôm nay/7 ngày gần nhất/Tháng này, theo tháng cho Quý này/Năm này; chi tiết đơn, tối đa 10 đơn/trang và CSV tối đa 10.000 dòng. Giá trị thiếu hiển thị 0.
-- Đơn 0đ vẫn tính đơn/vé; vé cấp lại do đổi ghế không tạo lượt bán mới. Tổng tiền thu không trừ điều chỉnh hoàn tiền.
+- Trang gồm các đơn online đã thanh toán hoàn tất. Có bộ lọc Hôm nay, 7 ngày gần nhất, Tháng này, Quý này, Năm này và khoảng ngày tự chọn.
+- Sáu ô thống kê gồm đơn thành công, số vé đã bán, số tiền trước giảm giá (vé + bắp nước), tiền đã thu, tiền hoàn và bù ghế, và thực thu. Danh sách, chi tiết đơn và CSV cùng hiển thị ba số tiền sau cùng. Danh sách có tối đa 10 đơn/trang và CSV tối đa 10.000 dòng.
+- Đơn 0đ vẫn tính đơn/vé. Vé cấp lại do đổi ghế không tạo lượt bán mới. Biểu đồ hiển thị thực thu sau khi trừ tiền mặt đã hoàn hoặc bù ghế, gắn với ngày thanh toán của đơn gốc.
 - UC-29 giữ cơ sở ngày tạo đơn và điều chỉnh gắn với đơn; giao diện có ghi rõ cơ sở này và liên kết sang UC-37.
 - Trước khi chạy WAR mới, áp dụng `SE2053-SWP391-G2/sql/UC37_online_sales_report.sql` sau các migration UC-14/UC-20. Script bổ sung `Booking.PaidAt`, lịch sử `TicketCancellation` và index; chạy lại an toàn. Các đường thanh toán/hủy vé mới cần schema này.
 - Dữ liệu cũ chỉ được backfill PaidAt khi có đúng một giao dịch Paid khớp số tiền. Đơn thiếu ngày thanh toán không được đoán ngày và không xuất hiện trong lịch sử theo kỳ.

@@ -11,7 +11,7 @@
 .or-button:hover { background: var(--or-raised); }
 .or-presets { margin-bottom: 1rem; }
 .or-presets a[aria-current="true"] { background: var(--or-accent); color: #410001; border-color: var(--or-accent); }
-.or-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
+.or-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
 .or-card { background: var(--or-card); border: 1px solid var(--or-border); border-radius: .75rem; padding: 1rem; }
 .or-card dt, .or-muted { color: var(--or-muted); }
 .or-card dd { font-size: 1.35rem; font-weight: 700; margin: .4rem 0 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -20,11 +20,11 @@
 .or-table-wrap { overflow-x: auto; border: 1px solid var(--or-border); border-radius: .75rem; margin: 1rem 0; }
 .or-history { margin-top: 1.5rem; }
 .or-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
-.or-table-wide { min-width: 1060px; table-layout: fixed; }
-.or-col-order { width: 17%; }
-.or-col-show { width: 25%; }
+.or-table-wide { min-width: 1300px; table-layout: fixed; }
+.or-col-order { width: 15%; }
+.or-col-show { width: 19%; }
 .or-col-count { width: 6%; }
-.or-col-money { width: 13%; }
+.or-col-money { width: 10%; }
 .or-table caption { text-align: left; padding: 1rem; color: var(--or-muted); }
 .or-table :is(th, td) { padding: .85rem; text-align: left; border-bottom: 1px solid var(--or-border); vertical-align: top; }
 .or-table th { background: var(--or-card); }
@@ -35,7 +35,10 @@
 .or-table small { display: block; color: var(--or-muted); }
 .or-page-nav { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
 .or-daily { display: flex; gap: .5rem; height: 150px; overflow-x: auto; align-items: end; margin-top: 1rem; padding-bottom: 1.75rem; }
-.or-bar { min-width: 32px; flex: 1; height: max(2px, var(--bar)); background: var(--or-accent); position: relative; }
+.or-bar { min-width: 32px; flex: 1; height: 100%; position: relative; }
+.or-bar::before { content: ""; position: absolute; inset-inline: 0; bottom: 0; height: max(2px, var(--bar)); background: var(--or-accent); }
+.or-daily:has(.or-bar-negative) .or-bar::before { bottom: 50%; height: max(2px, calc(var(--bar) / 2)); }
+.or-daily .or-bar.or-bar-negative::before { top: 50%; bottom: auto; background: #fbbf77; }
 .or-bar span { position: absolute; top: 100%; padding-top: .2rem; font-size: .65rem; color: var(--or-muted); white-space: nowrap; }
 .or-skip { position: fixed; top: -100px; left: 1rem; z-index: 100; padding: 1rem; background: var(--or-card); }
 .or-skip:focus { top: 1rem; }

@@ -82,10 +82,11 @@ try:
         check(b'Cache-Control' not in body and b'or-kpis' in body, 'Report has summary and no error fallback: ' + tab)
         check('Kiểm tra thanh toán'.encode() not in body and 'Đổi / hoàn'.encode() not in body,
               'Removed sections cannot be reopened by old query parameters: ' + tab)
-        check(len(re.findall(rb'<dt>', body)) == 4, 'Exactly four summary cards: ' + tab)
+        check(len(re.findall(rb'<dt>', body)) == 6, 'Six summary cards: ' + tab)
         status, body, response = get(manager, '/manager/online-reports' + query + '&tab=' + tab + '&export=csv')
         check(status == 200 and response.headers.get_content_type() == 'text/csv' and body.startswith(b'\xef\xbb\xbf'),
               'UTF-8 CSV export: ' + tab)
+        check('"Đã thu","Hoàn tiền và bù ghế","Thực thu"'.encode() in body, 'CSV has cash adjustment columns: ' + tab)
         (OUT / ('http-' + tab + '.csv')).write_bytes(body)
     online_id = sql("SELECT TOP 1 b.BookingID FROM Booking b WHERE b.Channel='Online' AND b.Status='Paid' "
                     "AND b.PaidAt IS NOT NULL AND (b.FinalAmount=0 OR EXISTS (SELECT 1 FROM OnlinePayment p "
