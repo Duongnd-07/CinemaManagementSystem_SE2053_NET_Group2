@@ -105,6 +105,7 @@ public class OnlineSalesRow {
 
     public BigDecimal getCashRefund() { return cashRefund; }
     public void setCashRefund(BigDecimal cashRefund) { this.cashRefund = cashRefund; }
+    public BigDecimal getNetAmount() { return amount.subtract(cashRefund); }
 
     public BigDecimal getVoucherAmount() { return voucherAmount; }
     public void setVoucherAmount(BigDecimal voucherAmount) { this.voucherAmount = voucherAmount; }

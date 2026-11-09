@@ -81,9 +81,10 @@ public class OnlineSalesReportService {
             result.setPage(page);
             result.setPageCount(pages);
             result.setRows(dao.rows(conn, f, export ? 0 : (page - 1) * PAGE_SIZE, export ? EXPORT_LIMIT : PAGE_SIZE));
-            Map<LocalDate, BigDecimal> series = collectionSeries(f, dao.dailyCollections(conn, f));
+            Map<LocalDate, BigDecimal> series = collectionSeries(f, dao.dailyNetCollections(conn, f));
             result.setCollections(series);
-            result.setMaxCollection(series.values().stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO));
+            result.setMaxCollection(series.values().stream().map(BigDecimal::abs)
+                    .max(BigDecimal::compareTo).orElse(BigDecimal.ZERO));
             return result;
         });
     }
@@ -119,11 +120,12 @@ public class OnlineSalesReportService {
         line(out, "Cơ sở ngày", "Ngày thanh toán thành công");
         line(out, "Múi giờ", "Asia/Ho_Chi_Minh", "Đơn vị", "VND", "Tạo lúc", result.getGeneratedAt());
         line(out, "Mã đơn", "Tạo đơn", "Thanh toán", "Phim", "Phòng", "Suất", "Số vé", "Vé trước giảm",
-                "Bắp nước", "Giảm giá", "Thực thu", "Phương thức");
+                "Bắp nước", "Giảm giá", "Đã thu", "Hoàn tiền và bù ghế", "Thực thu", "Phương thức");
         for (OnlineSalesRow r : result.getRows()) {
             line(out, r.getBookingId(), r.getCreatedAt(), r.getPaidAt(), r.getTitle(), r.getRoomName(),
                     r.getShowtimeAt(), r.getTicketCount(), r.getTicketValue(), r.getConcessionValue(),
-                    r.getDiscount(), r.getAmount(), r.getAmount().signum() == 0 ? "Voucher/điểm bù toàn bộ" : r.getMethod());
+                    r.getDiscount(), r.getAmount(), r.getCashRefund(), r.getNetAmount(),
+                    r.getAmount().signum() == 0 ? "Voucher/điểm bù toàn bộ" : r.getMethod());
         }
         return out.toString();
     }
