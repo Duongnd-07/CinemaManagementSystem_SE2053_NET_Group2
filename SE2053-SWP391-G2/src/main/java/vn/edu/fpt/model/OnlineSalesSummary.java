@@ -9,6 +9,7 @@ public class OnlineSalesSummary {
     private BigDecimal ticketValue = BigDecimal.ZERO;
     private BigDecimal concessionValue = BigDecimal.ZERO;
     private BigDecimal collected = BigDecimal.ZERO;
+    private BigDecimal cashRefund = BigDecimal.ZERO;
     private BigDecimal grossAmount = BigDecimal.ZERO;
 
     public int getOrderCount() { return orderCount; }
@@ -25,6 +26,10 @@ public class OnlineSalesSummary {
 
     public BigDecimal getCollected() { return collected; }
     public void setCollected(BigDecimal collected) { this.collected = collected; }
+
+    public BigDecimal getCashRefund() { return cashRefund; }
+    public void setCashRefund(BigDecimal cashRefund) { this.cashRefund = cashRefund; }
+    public BigDecimal getNetAmount() { return collected.subtract(cashRefund); }
 
     public BigDecimal getGrossAmount() { return grossAmount; }
     public void setGrossAmount(BigDecimal grossAmount) { this.grossAmount = grossAmount; }

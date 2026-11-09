@@ -32,7 +32,8 @@
                 <p>Tạo: <c:out value="${fn:replace(order.createdAt, 'T', ' ')}" default="0"/> · Thanh toán: <c:out value="${fn:replace(order.paidAt, 'T', ' ')}" default="0"/></p>
                 <p>Trạng thái: Đã thanh toán · Khách: <c:out value="${empty order.customerName ? '0' : order.customerName}"/></p>
                 <p>Vé trước giảm: <fmt:formatNumber value="${empty order.ticketValue ? 0 : order.ticketValue}" maxFractionDigits="0"/>đ · Bắp nước: <fmt:formatNumber value="${empty order.concessionValue ? 0 : order.concessionValue}" maxFractionDigits="0"/>đ · Giảm giá: <fmt:formatNumber value="${empty order.discount ? 0 : order.discount}" maxFractionDigits="0"/>đ</p>
-                <p>Số tiền thực thu: <b><fmt:formatNumber value="${empty order.amount ? 0 : order.amount}" maxFractionDigits="0"/>đ</b> · <c:out value="${order.amount == 0 ? 'Voucher/điểm bù toàn bộ' : (empty order.method ? '0' : order.method)}"/></p>
+                <p>Đã thu: <b><fmt:formatNumber value="${order.amount}" maxFractionDigits="0"/>đ</b> · <c:out value="${order.amount == 0 ? 'Voucher/điểm bù toàn bộ' : (empty order.method ? '0' : order.method)}"/></p>
+                <p>Hoàn tiền và bù ghế: <fmt:formatNumber value="${order.cashRefund}" maxFractionDigits="0"/>đ · Thực thu: <b><fmt:formatNumber value="${order.netAmount}" maxFractionDigits="0"/>đ</b></p>
             </section>
             <div class="or-table-wrap">
                 <table class="or-table"><caption>Vé trong đơn</caption>
@@ -74,15 +75,25 @@
                     <div class="or-card"><dt>Đơn thành công</dt><dd>${s.orderCount}</dd></div>
                     <div class="or-card"><dt>Số vé đã bán</dt><dd>${s.ticketCount}</dd></div>
                     <div class="or-card"><dt>Số tiền trước giảm giá</dt><dd><fmt:formatNumber value="${empty s.grossAmount ? 0 : s.grossAmount}" maxFractionDigits="0"/>đ</dd></div>
-                    <div class="or-card"><dt>Số tiền thực thu</dt><dd><fmt:formatNumber value="${empty s.collected ? 0 : s.collected}" maxFractionDigits="0"/>đ</dd></div>
+                    <div class="or-card"><dt>Đã thu</dt><dd><fmt:formatNumber value="${s.collected}" maxFractionDigits="0"/>đ</dd></div>
+                    <div class="or-card"><dt>Hoàn tiền và bù ghế</dt><dd><fmt:formatNumber value="${s.cashRefund}" maxFractionDigits="0"/>đ</dd></div>
+                    <div class="or-card"><dt>Thực thu</dt><dd><fmt:formatNumber value="${s.netAmount}" maxFractionDigits="0"/>đ</dd></div>
                 </dl>
+                <p class="or-muted text-body-sm">Thực thu bằng tiền đã thu trừ tiền mặt đã hoàn hoặc bù ghế cho các đơn thanh toán trong kỳ. Khoản chi được ghi nhận theo đơn gốc.</p>
                 <c:set var="monthly" value="${f.groupBy == 'month'}"/>
-                <c:set var="chartTitle" value="${monthly ? 'Tiền thu theo tháng' : 'Tiền thu theo ngày'}"/>
+                <c:set var="chartTitle" value="${monthly ? 'Thực thu theo tháng' : 'Thực thu theo ngày'}"/>
                 <section class="or-card mt-4" aria-label="${chartTitle}">
                     <h2 class="text-headline-sm"><c:out value="${chartTitle}"/></h2>
-                    <div class="or-daily" aria-hidden="true"><c:forEach var="period" items="${result.collections}"><c:set var="periodLabel"><c:choose><c:when test="${monthly}"><c:out value="${fn:substring(period.key, 5, 7)}"/>/<c:out value="${fn:substring(period.key, 0, 4)}"/></c:when><c:otherwise><c:out value="${fn:substring(period.key, 5, 10)}"/></c:otherwise></c:choose></c:set><div class="or-bar" style="--bar: ${result.maxCollection.signum() > 0 ? period.value * 100 / result.maxCollection : 0}%" title="${periodLabel}: ${period.value}đ"><span><c:out value="${periodLabel}"/></span></div></c:forEach></div>
+                    <div class="or-daily" aria-hidden="true">
+                        <c:forEach var="period" items="${result.collections}">
+                            <c:set var="periodLabel"><c:choose><c:when test="${monthly}"><c:out value="${fn:substring(period.key, 5, 7)}"/>/<c:out value="${fn:substring(period.key, 0, 4)}"/></c:when><c:otherwise><c:out value="${fn:substring(period.key, 5, 10)}"/></c:otherwise></c:choose></c:set>
+                            <div class="or-bar ${period.value.signum() < 0 ? 'or-bar-negative' : ''}"
+                                 style="--bar: ${result.maxCollection.signum() > 0 ? period.value.abs() * 100 / result.maxCollection : 0}%"
+                                 title="${periodLabel}: ${period.value}đ"><span><c:out value="${periodLabel}"/></span></div>
+                        </c:forEach>
+                    </div>
                     <details><summary class="cursor-pointer">Xem bảng số liệu đầy đủ</summary>
-                        <div class="or-table-wrap"><table class="or-table"><thead><tr><th scope="col">${monthly ? 'Tháng thanh toán' : 'Ngày thanh toán'}</th><th scope="col" class="or-money">Thu từ đơn online</th></tr></thead><tbody><c:forEach var="period" items="${result.collections}"><tr><td><c:choose><c:when test="${monthly}"><c:out value="${fn:substring(period.key, 5, 7)}"/>/<c:out value="${fn:substring(period.key, 0, 4)}"/></c:when><c:otherwise><c:out value="${period.key}"/></c:otherwise></c:choose></td><td class="or-money"><fmt:formatNumber value="${period.value}" maxFractionDigits="0"/>đ</td></tr></c:forEach></tbody></table></div>
+                        <div class="or-table-wrap"><table class="or-table"><thead><tr><th scope="col">${monthly ? 'Tháng thanh toán' : 'Ngày thanh toán'}</th><th scope="col" class="or-money">Thực thu từ đơn online</th></tr></thead><tbody><c:forEach var="period" items="${result.collections}"><tr><td><c:choose><c:when test="${monthly}"><c:out value="${fn:substring(period.key, 5, 7)}"/>/<c:out value="${fn:substring(period.key, 0, 4)}"/></c:when><c:otherwise><c:out value="${period.key}"/></c:otherwise></c:choose></td><td class="or-money"><fmt:formatNumber value="${period.value}" maxFractionDigits="0"/>đ</td></tr></c:forEach></tbody></table></div>
                     </details>
                 </section>
                 <section class="or-history" aria-labelledby="orders-title">
@@ -90,8 +101,8 @@
                     <div class="or-table-wrap" tabindex="0" role="region" aria-label="Đơn online, cuộn ngang để xem đầy đủ">
                         <table class="or-table or-table-wide">
                             <caption>Đơn đã thanh toán trong kỳ</caption>
-                            <colgroup><col class="or-col-order"/><col class="or-col-show"/><col class="or-col-count"/><col class="or-col-money"/><col class="or-col-money"/><col class="or-col-money"/><col class="or-col-money"/></colgroup>
-                            <thead><tr><th scope="col">Đơn / thanh toán</th><th scope="col">Phim / suất</th><th scope="col" class="or-number">Số vé</th><th scope="col" class="or-money">Vé trước giảm</th><th scope="col" class="or-money">Bắp nước</th><th scope="col" class="or-money">Giảm giá</th><th scope="col" class="or-money">Thực thu</th></tr></thead>
+                            <colgroup><col class="or-col-order"/><col class="or-col-show"/><col class="or-col-count"/><col span="6" class="or-col-money"/></colgroup>
+                            <thead><tr><th scope="col">Đơn / thanh toán</th><th scope="col">Phim / suất</th><th scope="col" class="or-number">Số vé</th><th scope="col" class="or-money">Vé trước giảm</th><th scope="col" class="or-money">Bắp nước</th><th scope="col" class="or-money">Giảm giá</th><th scope="col" class="or-money">Đã thu</th><th scope="col" class="or-money">Hoàn và bù ghế</th><th scope="col" class="or-money">Thực thu</th></tr></thead>
                             <tbody>
                                 <c:forEach var="row" items="${result.rows}">
                                     <tr>
@@ -102,9 +113,11 @@
                                         <td class="or-money"><fmt:formatNumber value="${empty row.concessionValue ? 0 : row.concessionValue}" maxFractionDigits="0"/>đ</td>
                                         <td class="or-money"><fmt:formatNumber value="${empty row.discount ? 0 : row.discount}" maxFractionDigits="0"/>đ</td>
                                         <td class="or-money"><fmt:formatNumber value="${empty row.amount ? 0 : row.amount}" maxFractionDigits="0"/>đ</td>
+                                        <td class="or-money"><fmt:formatNumber value="${row.cashRefund}" maxFractionDigits="0"/>đ</td>
+                                        <td class="or-money"><fmt:formatNumber value="${row.netAmount}" maxFractionDigits="0"/>đ</td>
                                     </tr>
                                 </c:forEach>
-                                <c:if test="${empty result.rows}"><tr><td colspan="7" class="or-empty">Không có đơn online đã thanh toán trong kỳ.</td></tr></c:if>
+                                <c:if test="${empty result.rows}"><tr><td colspan="9" class="or-empty">Không có đơn online đã thanh toán trong kỳ.</td></tr></c:if>
                             </tbody>
                         </table>
                     </div>
