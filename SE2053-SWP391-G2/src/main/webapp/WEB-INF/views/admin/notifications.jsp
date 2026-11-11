@@ -19,16 +19,10 @@
     </a>
     <div class="flex items-center gap-3">
         <jsp:include page="/WEB-INF/views/common/notification-bell.jsp"><jsp:param name="href" value="${ctx}/admin/notifications"/></jsp:include>
-        <span class="hidden sm:inline text-white"><c:out value="${sessionScope.user.fullName}"/></span>
-        <a href="${ctx}/logout" class="inline-flex min-h-11 items-center rounded-xl border border-white/10 px-4 text-white hover:bg-white/10">Đăng xuất</a>
+        <jsp:include page="/WEB-INF/views/common/admin-user-menu.jsp"/>
     </div>
 </header>
 <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-    <nav class="mb-6 flex flex-wrap gap-3" aria-label="Điều hướng quản trị">
-        <a href="${ctx}/admin/users" class="inline-flex min-h-11 items-center rounded-xl border border-white/10 bg-white/5 px-4 text-white hover:bg-white/10">Tài khoản</a>
-        <a href="${ctx}/admin/configurations" class="inline-flex min-h-11 items-center rounded-xl border border-white/10 bg-white/5 px-4 text-white hover:bg-white/10">Cấu hình</a>
-        <a href="${ctx}/admin/logs" class="inline-flex min-h-11 items-center rounded-xl border border-white/10 bg-white/5 px-4 text-white hover:bg-white/10">Nhật ký hệ thống</a>
-    </nav>
     <h1 class="text-2xl font-bold text-white mb-2">Thông báo</h1>
     <p class="mb-6 text-gray-300">Thông báo được gửi đến tài khoản quản trị của bạn.</p>
     <c:if test="${not empty flashSuccess}"><p role="status" class="mb-5 rounded-xl border border-emerald-400/40 bg-emerald-950 p-4 text-emerald-200"><c:out value="${flashSuccess}"/></p></c:if>
