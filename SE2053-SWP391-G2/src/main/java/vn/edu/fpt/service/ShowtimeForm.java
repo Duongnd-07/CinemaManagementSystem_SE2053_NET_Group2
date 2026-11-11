@@ -1,12 +1,17 @@
 package vn.edu.fpt.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * UC-24: Form nhập liệu suất chiếu phục vụ validate và hiển thị lại khi có lỗi.
+ * Sửa suất chiếu dùng roomId (1 phòng); tạo mới dùng roomIds để tạo cùng lúc ở nhiều phòng.
  */
 public class ShowtimeForm {
     private int showtimeId;
     private String movieId = "";
     private String roomId = "";
+    private List<String> roomIds = new ArrayList<>();
     private String startTime = "";
     private String basePrice = "";
     private String status = "Active";
@@ -34,6 +39,28 @@ public class ShowtimeForm {
 
     public void setRoomId(String roomId) {
         this.roomId = roomId == null ? "" : roomId.trim();
+    }
+
+    public List<String> getRoomIds() {
+        return roomIds;
+    }
+
+    public void setRoomIds(List<String> roomIds) {
+        this.roomIds = cleanRoomIds(roomIds);
+    }
+
+    // Bỏ ô trống và mã phòng trùng, giữ thứ tự người dùng chọn
+    static List<String> cleanRoomIds(List<String> roomIds) {
+        List<String> cleaned = new ArrayList<>();
+        if (roomIds != null) {
+            for (String id : roomIds) {
+                String value = id == null ? "" : id.trim();
+                if (!value.isEmpty() && !cleaned.contains(value)) {
+                    cleaned.add(value);
+                }
+            }
+        }
+        return cleaned;
     }
 
     public String getStartTime() {

@@ -235,37 +235,17 @@ public class ShowtimeService {
 
         // 2. Kiểm tra Phòng chiếu (chặn hoàn toàn phòng Dừng hoạt động hoặc Bảo trì)
         int roomId = parseInt(form.getRoomId());
-        Room room = null;
-        if (roomId <= 0) {
-            errors.put("roomId", Messages.SHOWTIME_ROOM_INVALID);
-        } else {
-            room = roomDAO.findById(roomId);
-            if (room == null) {
-                errors.put("roomId", Messages.SHOWTIME_ROOM_INVALID);
-            } else if (RoomStatus.INACTIVE.equals(room.getStatus())) {
-                errors.put("roomId", Messages.SHOWTIME_ROOM_INACTIVE);
-            } else if (RoomStatus.MAINTENANCE.equals(room.getStatus())) {
-                errors.put("roomId", Messages.SHOWTIME_ROOM_MAINTENANCE);
-            } else if (!RoomStatus.ACTIVE.equals(room.getStatus())) {
-                errors.put("roomId", Messages.SHOWTIME_ROOM_INVALID);
-            }
+        Room room = roomId > 0 ? roomDAO.findById(roomId) : null;
+        String roomError = roomStatusError(room);
+        if (roomError != null) {
+            errors.put("roomId", roomError);
         }
 
         // 3. Kiểm tra tính tương thích định dạng phòng chiếu vs định dạng phim (Góp ý 5)
         if (movie != null && room != null) {
-            String roomFormat = (room.getFormat() == null || room.getFormat().isBlank()) ? "2D" : room.getFormat().trim();
-            if (movie.getFormats() != null && !movie.getFormats().isBlank()) {
-                boolean formatMatched = false;
-                for (String f : movie.getFormats().split("[,;/]")) {
-                    if (f.trim().equalsIgnoreCase(roomFormat)) {
-                        formatMatched = true;
-                        break;
-                    }
-                }
-                if (!formatMatched) {
-                    errors.put("roomId", Messages.format(Messages.SHOWTIME_FORMAT_MISMATCH,
-                            movie.getTitle(), movie.getFormats(), room.getRoomName(), roomFormat));
-                }
+            String mismatch = formatMismatch(movie, room);
+            if (mismatch != null) {
+                errors.put("roomId", mismatch);
             }
         }
 
@@ -399,53 +379,100 @@ public class ShowtimeService {
     }
 
     /**
-     * Lên lịch suất chiếu hàng loạt (Batch Scheduling - Góp ý 1)
-     * Toàn bộ các suất chiếu được kiểm tra chống trùng lịch và lưu trong cùng 1 Transaction duy nhất.
+     * Tạo 1 suất chiếu (cùng phim, cùng giờ bắt đầu) đồng thời ở nhiều phòng.
+     * Giá vé để trống thì mỗi phòng tự tính theo giá gợi ý (ngày/khung giờ/định dạng phòng).
+     * Chỉ lưu khi mọi phòng đều hợp lệ và không trùng lịch: kiểm tra và lưu trong 1 transaction.
+     *
+     * @return số suất chiếu đã tạo
+     */
+    public int createMany(ShowtimeForm form) throws SQLException, ValidationException {
+        Map<String, String> errors = new LinkedHashMap<>();
+
+        Movie movie = validateMovie(form.getMovieId(), errors);
+        List<Room> rooms = validateRooms(form.getRoomIds(), movie, errors);
+
+        LocalDateTime startTime = null;
+        try {
+            if (!form.getStartTime().isEmpty()) {
+                startTime = LocalDateTime.parse(form.getStartTime());
+            }
+        } catch (DateTimeParseException ignored) {
+        }
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        if (startTime == null) {
+            errors.put("startTime", Messages.SHOWTIME_START_TIME_REQUIRED);
+        } else if (!startTime.isAfter(LocalDateTime.now())) {
+            errors.put("startTime", Messages.SHOWTIME_START_TIME_PAST);
+        } else if (movie != null && movie.getReleaseDate() != null
+                && startTime.toLocalDate().isBefore(movie.getReleaseDate())) {
+            errors.put("startTime", Messages.format(Messages.SHOWTIME_BEFORE_RELEASE_DATE,
+                    startTime.format(dateFormat), movie.getReleaseDate().format(dateFormat)));
+        } else if (movie != null && movie.getEndDate() != null
+                && startTime.toLocalDate().isAfter(movie.getEndDate())) {
+            errors.put("startTime", Messages.format(Messages.SHOWTIME_AFTER_MOVIE_END,
+                    movie.getEndDate().format(dateFormat)));
+        }
+
+        BigDecimal customPrice = parseOptionalPrice(form.getBasePrice(), errors);
+
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+
+        LocalDateTime endTime = ShowtimePricing.calculateEndTime(startTime, movie.getDurationMinutes());
+        String translationType = normalizeTranslationType(form.getTranslationType());
+
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                List<Showtime> toInsert = new ArrayList<>();
+                List<String> collisionRooms = new ArrayList<>();
+                String singleCollision = null;
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
+                for (Room room : rooms) {
+                    List<Showtime> collisions = showtimeDAO.findCollisions(conn, room.getRoomId(), startTime, endTime, null);
+                    if (!collisions.isEmpty()) {
+                        Showtime c = collisions.get(0);
+                        String colMovieTitle = c.getMovie() != null ? c.getMovie().getTitle() : "Phim khác";
+                        singleCollision = Messages.format(Messages.SHOWTIME_COLLISION, room.getRoomName(),
+                                colMovieTitle, c.getStartTime().format(dtf), c.getEndTime().format(dtf));
+                        collisionRooms.add(room.getRoomName() + " (\"" + colMovieTitle + "\" "
+                                + c.getStartTime().format(dtf) + " - " + c.getEndTime().format(dtf) + ")");
+                        continue;
+                    }
+                    BigDecimal price = customPrice != null ? customPrice
+                            : ShowtimePricing.calculateSuggestedPrice(startTime, roomFormatOf(room));
+                    toInsert.add(newShowtime(movie.getMovieId(), room.getRoomId(), startTime, endTime, price,
+                            translationType));
+                }
+                if (!collisionRooms.isEmpty()) {
+                    String message = collisionRooms.size() == 1 ? singleCollision
+                            : Messages.format(Messages.SHOWTIME_COLLISION_MULTI, String.join("; ", collisionRooms));
+                    throw new ValidationException(Map.of("collision", message));
+                }
+
+                showtimeDAO.insertBatch(conn, toInsert);
+                conn.commit();
+                return toInsert.size();
+            } catch (SQLException | ValidationException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * Lên lịch suất chiếu hàng loạt (Batch Scheduling - Góp ý 1) cho 1 phim ở 1 hoặc nhiều phòng.
+     * Mỗi phòng nhận cùng bộ ngày/khung giờ. Toàn bộ các suất chiếu được kiểm tra chống trùng lịch
+     * và lưu trong cùng 1 Transaction duy nhất.
      */
     public int saveBatch(BatchShowtimeForm form) throws SQLException, ValidationException {
         Map<String, String> errors = new LinkedHashMap<>();
 
-        // Validate Movie
-        int movieId = parseInt(form.getMovieId());
-        Movie movie = null;
-        if (movieId <= 0) {
-            errors.put("movieId", Messages.SHOWTIME_MOVIE_INVALID);
-        } else {
-            movie = movieDAO.findById(movieId);
-            if (movie == null || !MovieStatus.PUBLIC.contains(movie.getStatus())) {
-                errors.put("movieId", Messages.SHOWTIME_MOVIE_INVALID);
-            }
-        }
-
-        // Validate Room
-        int roomId = parseInt(form.getRoomId());
-        Room room = null;
-        if (roomId <= 0) {
-            errors.put("roomId", Messages.SHOWTIME_ROOM_INVALID);
-        } else {
-            room = roomDAO.findById(roomId);
-            if (room == null || !RoomStatus.ACTIVE.equals(room.getStatus())) {
-                errors.put("roomId", Messages.SHOWTIME_ROOM_INVALID);
-            }
-        }
-
-        // Format check
-        if (movie != null && room != null) {
-            String roomFormat = (room.getFormat() == null || room.getFormat().isBlank()) ? "2D" : room.getFormat().trim();
-            if (movie.getFormats() != null && !movie.getFormats().isBlank()) {
-                boolean formatMatched = false;
-                for (String f : movie.getFormats().split("[,;/]")) {
-                    if (f.trim().equalsIgnoreCase(roomFormat)) {
-                        formatMatched = true;
-                        break;
-                    }
-                }
-                if (!formatMatched) {
-                    errors.put("roomId", Messages.format(Messages.SHOWTIME_FORMAT_MISMATCH,
-                            movie.getTitle(), movie.getFormats(), room.getRoomName(), roomFormat));
-                }
-            }
-        }
+        Movie movie = validateMovie(form.getMovieId(), errors);
+        List<Room> rooms = validateRooms(form.getRoomIds(), movie, errors);
 
         // Validate Dates
         LocalDate startDate = parseDate(form.getStartDate());
@@ -454,7 +481,7 @@ public class ShowtimeService {
         if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
             errors.put("dates", Messages.SHOWTIME_BATCH_DATE_INVALID);
         } else if (startDate.isBefore(today)) {
-            errors.put("dates", "Ng\u00e0y b\u1eaft \u0111\u1ea7u kh\u00f4ng \u0111\u01b0\u1ee3c l\u00e0 ng\u00e0y trong qu\u00e1 kh\u1ee9. Vui l\u00f2ng ch\u1ecdn t\u1eeb ng\u00e0y h\u00f4m nay tr\u1edf \u0111i.");
+            errors.put("dates", "Ngày bắt đầu không được là ngày trong quá khứ. Vui lòng chọn từ ngày hôm nay trở đi.");
         } else if (startDate.plusDays(31).isBefore(endDate)) {
             errors.put("dates", "Khoang thoi gian tao hang loat toi da la 31 ngay.");
         }
@@ -479,18 +506,7 @@ public class ShowtimeService {
         }
 
         // Validate optional base price
-        BigDecimal customBasePrice = null;
-        if (form.getBasePrice() != null && !form.getBasePrice().trim().isEmpty()) {
-            try {
-                customBasePrice = new BigDecimal(form.getBasePrice().trim());
-                if (customBasePrice.compareTo(new BigDecimal("10000")) < 0
-                        || customBasePrice.remainder(new BigDecimal("1000")).compareTo(BigDecimal.ZERO) != 0) {
-                    errors.put("basePrice", Messages.SHOWTIME_PRICE_INVALID);
-                }
-            } catch (NumberFormatException e) {
-                errors.put("basePrice", Messages.SHOWTIME_PRICE_INVALID);
-            }
-        }
+        BigDecimal customBasePrice = parseOptionalPrice(form.getBasePrice(), errors);
 
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
@@ -498,12 +514,11 @@ public class ShowtimeService {
 
         Collections.sort(validSlots);
         int duration = movie.getDurationMinutes();
-        String roomFormat = room.getFormat() == null ? "2D" : room.getFormat();
+        String translationType = normalizeTranslationType(form.getTranslationType());
 
-        // 1. Sinh danh sách các suất chiếu dự kiến
-        List<Showtime> plannedShowtimes = new ArrayList<>();
+        // 1. Sinh danh sách giờ bắt đầu dự kiến (giống nhau cho mọi phòng đã chọn), theo thứ tự thời gian
+        List<LocalDateTime> plannedStarts = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
-
         for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
             int dayVal = d.getDayOfWeek().getValue(); // 1=Mon, 7=Sun
             if (!form.getDaysOfWeek().contains(dayVal)) {
@@ -512,73 +527,60 @@ public class ShowtimeService {
             if (movie.getReleaseDate() != null && d.isBefore(movie.getReleaseDate())) {
                 continue;
             }
-
             for (LocalTime slot : validSlots) {
                 LocalDateTime start = LocalDateTime.of(d, slot);
-                if (!start.isAfter(now)) {
-                    continue; // bỏ qua các mốc giờ trong quá khứ
+                if (start.isAfter(now)) { // bỏ qua các mốc giờ trong quá khứ
+                    plannedStarts.add(start);
                 }
-                LocalDateTime end = ShowtimePricing.calculateEndTime(start, duration);
-                BigDecimal price = customBasePrice != null ? customBasePrice :
-                        ShowtimePricing.calculateSuggestedPrice(start, roomFormat);
-
-                Showtime st = new Showtime();
-                st.setMovieId(movieId);
-                st.setRoomId(roomId);
-                st.setStartTime(start);
-                st.setEndTime(end);
-                st.setBasePrice(price);
-                st.setStatus(ShowtimeStatus.ACTIVE);
-                String translationType = form.getTranslationType();
-                if (translationType == null || translationType.isBlank() || (!translationType.equals("Phụ đề") && !translationType.equals("Lồng tiếng"))) {
-                    translationType = "Phụ đề";
-                }
-                st.setTranslationType(translationType);
-                plannedShowtimes.add(st);
             }
         }
 
-        if (plannedShowtimes.isEmpty()) {
+        if (plannedStarts.isEmpty()) {
             throw new ValidationException(Map.of("general", Messages.SHOWTIME_BATCH_EMPTY));
         }
 
-        // 2. Kiểm tra xung đột nội bộ trong chính danh sách batch này
-        plannedShowtimes.sort(Comparator.comparing(Showtime::getStartTime));
-        for (int i = 0; i < plannedShowtimes.size() - 1; i++) {
-            Showtime s1 = plannedShowtimes.get(i);
-            Showtime s2 = plannedShowtimes.get(i + 1);
-            if (s1.getEndTime().isAfter(s2.getStartTime())) {
+        // 2. Kiểm tra xung đột nội bộ giữa các khung giờ trong đợt (mỗi phòng dùng chung bộ khung giờ này)
+        for (int i = 0; i < plannedStarts.size() - 1; i++) {
+            LocalDateTime s1Start = plannedStarts.get(i);
+            LocalDateTime s1End = ShowtimePricing.calculateEndTime(s1Start, duration);
+            LocalDateTime s2Start = plannedStarts.get(i + 1);
+            if (s1End.isAfter(s2Start)) {
+                LocalDateTime s2End = ShowtimePricing.calculateEndTime(s2Start, duration);
                 DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm dd/MM");
                 String msg = "Xung đột thời gian giữa 2 suất trong đợt tạo: ["
-                        + s1.getStartTime().format(dtf) + " - " + s1.getEndTime().format(dtf)
-                        + "] và [" + s2.getStartTime().format(dtf) + " - " + s2.getEndTime().format(dtf)
+                        + s1Start.format(dtf) + " - " + s1End.format(dtf)
+                        + "] và [" + s2Start.format(dtf) + " - " + s2End.format(dtf)
                         + "]. Khoảng cách giữa 2 suất phải gồm " + duration + " phút phim + 15 phút dọn rạp.";
                 throw new ValidationException(Map.of("general", msg));
             }
         }
 
         // 3. Thực hiện kiểm tra DB và lưu trong 1 TRANSACTION DUY NHẤT
-        int insertedCount = 0;
         try (Connection conn = DBContext.getConnection()) {
             conn.setAutoCommit(false);
             try {
                 List<Showtime> toInsert = new ArrayList<>();
-                for (Showtime st : plannedShowtimes) {
-                    List<Showtime> collisions = showtimeDAO.findCollisions(conn, roomId, st.getStartTime(), st.getEndTime(), null);
-                    if (!collisions.isEmpty()) {
-                        if (form.isSkipCollisions()) {
-                            continue; // Bỏ qua suất bị trùng
-                        } else {
+                for (Room room : rooms) {
+                    String roomFormat = roomFormatOf(room);
+                    for (LocalDateTime start : plannedStarts) {
+                        LocalDateTime end = ShowtimePricing.calculateEndTime(start, duration);
+                        List<Showtime> collisions = showtimeDAO.findCollisions(conn, room.getRoomId(), start, end, null);
+                        if (!collisions.isEmpty()) {
+                            if (form.isSkipCollisions()) {
+                                continue; // Bỏ qua suất bị trùng
+                            }
                             Showtime c = collisions.get(0);
                             String colMovieTitle = c.getMovie() != null ? c.getMovie().getTitle() : "Phim khác";
                             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm dd/MM");
-                            String msg = "Suất chiếu ngày " + st.getStartTime().format(dtf)
+                            String msg = "Suất chiếu ngày " + start.format(dtf) + " tại " + room.getRoomName()
                                     + " bị trùng với suất đã có: \"" + colMovieTitle + "\" ("
                                     + c.getStartTime().format(dtf) + " - " + c.getEndTime().format(dtf) + ").";
                             throw new ValidationException(Map.of("general", msg));
                         }
+                        BigDecimal price = customBasePrice != null ? customBasePrice
+                                : ShowtimePricing.calculateSuggestedPrice(start, roomFormat);
+                        toInsert.add(newShowtime(movie.getMovieId(), room.getRoomId(), start, end, price, translationType));
                     }
-                    toInsert.add(st);
                 }
 
                 if (toInsert.isEmpty()) {
@@ -587,7 +589,7 @@ public class ShowtimeService {
 
                 showtimeDAO.insertBatch(conn, toInsert);
                 conn.commit();
-                insertedCount = toInsert.size();
+                return toInsert.size();
             } catch (SQLException | ValidationException e) {
                 conn.rollback();
                 throw e;
@@ -595,7 +597,116 @@ public class ShowtimeService {
                 conn.setAutoCommit(true);
             }
         }
-        return insertedCount;
+    }
+
+    // Phim phải tồn tại và đang/sắp chiếu
+    private Movie validateMovie(String movieIdValue, Map<String, String> errors) throws SQLException {
+        int movieId = parseInt(movieIdValue);
+        Movie movie = movieId > 0 ? movieDAO.findById(movieId) : null;
+        if (movie == null || !MovieStatus.PUBLIC.contains(movie.getStatus())) {
+            errors.put("movieId", Messages.SHOWTIME_MOVIE_INVALID);
+            return null;
+        }
+        return movie;
+    }
+
+    // Tạo mới ở nhiều phòng: mỗi phòng phải đang hoạt động và hợp định dạng phim.
+    // Lỗi của các phòng được gom vào 1 thông báo dưới ô chọn phòng; chỉ trả về các phòng hợp lệ
+    private List<Room> validateRooms(List<String> roomIds, Movie movie, Map<String, String> errors)
+            throws SQLException {
+        List<Room> rooms = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        for (String value : roomIds) {
+            int roomId = parseInt(value);
+            Room room = roomId > 0 ? roomDAO.findById(roomId) : null;
+            String statusError = roomStatusError(room);
+            if (statusError != null) {
+                problems.add(room == null ? statusError : room.getRoomName() + ": " + statusError);
+                continue;
+            }
+            String mismatch = movie == null ? null : formatMismatch(movie, room);
+            if (mismatch != null) {
+                problems.add(mismatch);
+                continue;
+            }
+            rooms.add(room);
+        }
+        if (roomIds.isEmpty()) {
+            errors.put("roomId", Messages.SHOWTIME_ROOMS_REQUIRED);
+        } else if (!problems.isEmpty()) {
+            errors.put("roomId", String.join(" ", problems));
+        }
+        return rooms;
+    }
+
+    // Chặn phòng không tồn tại, dừng hoạt động hoặc đang bảo trì
+    private String roomStatusError(Room room) {
+        if (room == null) {
+            return Messages.SHOWTIME_ROOM_INVALID;
+        }
+        if (RoomStatus.INACTIVE.equals(room.getStatus())) {
+            return Messages.SHOWTIME_ROOM_INACTIVE;
+        }
+        if (RoomStatus.MAINTENANCE.equals(room.getStatus())) {
+            return Messages.SHOWTIME_ROOM_MAINTENANCE;
+        }
+        if (!RoomStatus.ACTIVE.equals(room.getStatus())) {
+            return Messages.SHOWTIME_ROOM_INVALID;
+        }
+        return null;
+    }
+
+    // Góp ý 5: phim không khai báo định dạng thì chiếu được mọi phòng; phòng không khai báo định dạng tính là 2D
+    private String formatMismatch(Movie movie, Room room) {
+        if (movie.getFormats() == null || movie.getFormats().isBlank()) {
+            return null;
+        }
+        String roomFormat = roomFormatOf(room);
+        for (String f : movie.getFormats().split("[,;/]")) {
+            if (f.trim().equalsIgnoreCase(roomFormat)) {
+                return null;
+            }
+        }
+        return Messages.format(Messages.SHOWTIME_FORMAT_MISMATCH,
+                movie.getTitle(), movie.getFormats(), room.getRoomName(), roomFormat);
+    }
+
+    private String roomFormatOf(Room room) {
+        return room.getFormat() == null || room.getFormat().isBlank() ? "2D" : room.getFormat().trim();
+    }
+
+    // Giá vé tùy chọn: để trống trả về null (tự tính giá gợi ý); có nhập thì phải >= 10.000đ và là bội số của 1.000đ
+    private BigDecimal parseOptionalPrice(String value, Map<String, String> errors) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            BigDecimal price = new BigDecimal(value.trim());
+            if (price.compareTo(new BigDecimal("10000")) >= 0
+                    && price.remainder(new BigDecimal("1000")).compareTo(BigDecimal.ZERO) == 0) {
+                return price;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        errors.put("basePrice", Messages.SHOWTIME_PRICE_INVALID);
+        return null;
+    }
+
+    private String normalizeTranslationType(String translationType) {
+        return "Lồng tiếng".equals(translationType) ? "Lồng tiếng" : "Phụ đề";
+    }
+
+    private Showtime newShowtime(int movieId, int roomId, LocalDateTime start, LocalDateTime end, BigDecimal price,
+                                 String translationType) {
+        Showtime showtime = new Showtime();
+        showtime.setMovieId(movieId);
+        showtime.setRoomId(roomId);
+        showtime.setStartTime(start);
+        showtime.setEndTime(end);
+        showtime.setBasePrice(price);
+        showtime.setStatus(ShowtimeStatus.ACTIVE);
+        showtime.setTranslationType(translationType);
+        return showtime;
     }
 
     /**

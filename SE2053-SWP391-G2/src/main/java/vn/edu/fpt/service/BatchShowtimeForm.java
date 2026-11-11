@@ -8,7 +8,7 @@ import java.util.List;
  */
 public class BatchShowtimeForm {
     private String movieId = "";
-    private String roomId = "";
+    private List<String> roomIds = new ArrayList<>();
     private String startDate = "";
     private String endDate = "";
     private List<Integer> daysOfWeek = new ArrayList<>();
@@ -28,12 +28,12 @@ public class BatchShowtimeForm {
         this.movieId = movieId == null ? "" : movieId.trim();
     }
 
-    public String getRoomId() {
-        return roomId;
+    public List<String> getRoomIds() {
+        return roomIds;
     }
 
-    public void setRoomId(String roomId) {
-        this.roomId = roomId == null ? "" : roomId.trim();
+    public void setRoomIds(List<String> roomIds) {
+        this.roomIds = ShowtimeForm.cleanRoomIds(roomIds);
     }
 
     public String getStartDate() {
