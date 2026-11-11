@@ -141,50 +141,6 @@
                 </button>
             </form>
 
-            <!-- Hộp chọn tài khoản test nhanh 4 vai trò (Tiện ích hỗ trợ kiểm thử) -->
-            <div class="mt-6 pt-5 border-t border-white/10">
-                <div class="flex items-center justify-between mb-2.5">
-                    <span class="text-[11px] font-semibold text-[#8e919f] uppercase tracking-wider flex items-center gap-1">
-                        <span class="material-symbols-outlined text-sm text-[#ffb95f]">smart_toy</span>
-                        Tài khoản mẫu 4 vai trò:
-                    </span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-[11px]">
-                    <button type="button" onclick="fillTestAccount('admin@cinema.vn', 'Admin@123')"
-                            class="p-2 bg-[#0f131d] hover:bg-white/5 border border-white/10 rounded-lg text-left transition text-gray-300 hover:text-white flex items-center justify-between">
-                        <div>
-                            <div class="font-bold text-red-400">1. Admin</div>
-                            <div class="text-[10px] text-gray-400">admin@cinema.vn</div>
-                        </div>
-                        <span class="material-symbols-outlined text-xs text-gray-400">arrow_forward</span>
-                    </button>
-                    <button type="button" onclick="fillTestAccount('manager@cinema.vn', 'Manager@123')"
-                            class="p-2 bg-[#0f131d] hover:bg-white/5 border border-white/10 rounded-lg text-left transition text-gray-300 hover:text-white flex items-center justify-between">
-                        <div>
-                            <div class="font-bold text-amber-400">2. Manager</div>
-                            <div class="text-[10px] text-gray-400">manager@cinema.vn</div>
-                        </div>
-                        <span class="material-symbols-outlined text-xs text-gray-400">arrow_forward</span>
-                    </button>
-                    <button type="button" onclick="fillTestAccount('staff@cinema.vn', 'Staff@123')"
-                            class="p-2 bg-[#0f131d] hover:bg-white/5 border border-white/10 rounded-lg text-left transition text-gray-300 hover:text-white flex items-center justify-between">
-                        <div>
-                            <div class="font-bold text-blue-400">3. Staff</div>
-                            <div class="text-[10px] text-gray-400">staff@cinema.vn</div>
-                        </div>
-                        <span class="material-symbols-outlined text-xs text-gray-400">arrow_forward</span>
-                    </button>
-                    <button type="button" onclick="fillTestAccount('duongpt@gmail.com', 'Customer@123')"
-                            class="p-2 bg-[#0f131d] hover:bg-white/5 border border-white/10 rounded-lg text-left transition text-gray-300 hover:text-white flex items-center justify-between">
-                        <div>
-                            <div class="font-bold text-emerald-400">4. Customer</div>
-                            <div class="text-[10px] text-gray-400">duongpt@gmail.com</div>
-                        </div>
-                        <span class="material-symbols-outlined text-xs text-gray-400">arrow_forward</span>
-                    </button>
-                </div>
-            </div>
-
             <!-- Chuyển hướng sang đăng ký -->
             <div class="mt-6 text-center text-xs text-[#8e919f]">
                 Chưa có tài khoản thành viên?
@@ -211,11 +167,6 @@
                 passwordInput.type = 'password';
                 eyeIcon.textContent = 'visibility';
             }
-        }
-
-        function fillTestAccount(identifier, password) {
-            document.getElementById('identifier').value = identifier;
-            document.getElementById('password').value = password;
         }
 
         // Tự động đóng thông báo flash sau 5 giây (5000ms) với hiệu ứng trượt mờ
