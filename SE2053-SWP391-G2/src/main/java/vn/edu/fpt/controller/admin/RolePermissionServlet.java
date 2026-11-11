@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import vn.edu.fpt.model.LogEventType;
-import vn.edu.fpt.model.Permission;
 import vn.edu.fpt.service.ActivityLogger;
 import vn.edu.fpt.service.RolePermissionService;
 import vn.edu.fpt.service.ValidationException;
@@ -36,7 +35,6 @@ public class RolePermissionServlet extends HttpServlet {
         moveFlashToRequest(session, request);
         try {
             request.setAttribute("groups", permissionService.loadRows());
-            request.setAttribute("roles", Permission.CONFIGURABLE_ROLES);
             request.setAttribute("csrfToken", CsrfToken.get(session));
             request.getRequestDispatcher(VIEW).forward(request, response);
         } catch (SQLException e) {

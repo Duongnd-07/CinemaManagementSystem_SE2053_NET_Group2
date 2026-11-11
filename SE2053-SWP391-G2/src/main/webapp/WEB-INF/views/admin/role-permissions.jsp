@@ -75,7 +75,7 @@
                             <thead>
                                 <tr class="text-xs text-[#8e919f] border-b border-white/10">
                                     <th scope="col" class="px-5 py-3 text-left font-semibold">Chức năng</th>
-                                    <c:forEach var="role" items="${roles}">
+                                    <c:forEach var="role" items="${group.key.roles}">
                                         <th scope="col" class="w-24 px-3 py-3 text-center font-semibold"><c:out value="${role}"/></th>
                                     </c:forEach>
                                 </tr>
@@ -90,9 +90,6 @@
                                         <c:forEach var="cell" items="${row.cells}">
                                             <td class="px-3 py-3.5 text-center transition-colors">
                                                 <c:choose>
-                                                    <c:when test="${not cell.assignable}">
-                                                        <span class="text-gray-600" title="Không áp dụng cho vai trò này">—</span>
-                                                    </c:when>
                                                     <c:when test="${cell.locked}">
                                                         <span class="material-symbols-outlined text-lg text-[#8e919f]"
                                                               title="Luôn bật vì đây là trang đích sau khi đăng nhập"

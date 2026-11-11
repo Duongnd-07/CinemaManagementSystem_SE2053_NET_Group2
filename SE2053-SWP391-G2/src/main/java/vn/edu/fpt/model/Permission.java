@@ -36,8 +36,8 @@ public enum Permission {
     public static final List<String> CONFIGURABLE_ROLES = List.of(Role.MANAGER, Role.STAFF);
 
     public enum Group {
-        // Staff có thể được giao thêm các chức năng quản lý; mặc định chỉ Manager có
-        MANAGEMENT("Nghiệp vụ quản lý", "manage_accounts", Set.of(Role.MANAGER, Role.STAFF), Set.of(Role.MANAGER)),
+        // Nghiệp vụ quản lý chỉ dành cho Manager, không bao giờ giao cho Staff
+        MANAGEMENT("Nghiệp vụ quản lý", "manage_accounts", Set.of(Role.MANAGER), Set.of(Role.MANAGER)),
         // Servlet /staff/* chỉ phục vụ Staff (SRS: Primary Actor Staff) nên không giao cho Manager
         OPERATION("Nghiệp vụ nhân viên", "badge", Set.of(Role.STAFF), Set.of(Role.STAFF));
 
@@ -59,6 +59,11 @@ public enum Permission {
 
         public String getIcon() {
             return icon;
+        }
+
+        // Các vai trò hiện thành cột trong bảng của nhóm này (theo thứ tự CONFIGURABLE_ROLES)
+        public List<String> getRoles() {
+            return CONFIGURABLE_ROLES.stream().filter(assignableRoles::contains).toList();
         }
     }
 
