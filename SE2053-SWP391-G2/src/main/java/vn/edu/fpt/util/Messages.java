@@ -73,6 +73,8 @@ public final class Messages {
     public static final String SHOWTIME_PRICE_INVALID = "Giá vé cơ bản phải từ 10.000đ trở lên và là bội số của 1.000đ.";
     public static final String SHOWTIME_COLLISION =
             "Phòng {0} đã có suất chiếu \"{1}\" ({2} - {3}). Vui lòng chọn khung giờ khác hoặc phòng khác.";
+    public static final String SHOWTIME_COLLISION_MULTI =
+            "Các phòng sau đã có suất chiếu trùng giờ: {0}. Vui lòng bỏ chọn các phòng này hoặc chọn khung giờ khác.";
     public static final String SHOWTIME_IMMUTABLE_BOOKED =
             "Suất chiếu đã có vé đặt hoặc ghế đang giữ chỗ, không thể đổi phim, phòng hoặc giờ chiếu.";
     public static final String SHOWTIME_HAS_BOOKINGS = SHOWTIME_IMMUTABLE_BOOKED;
@@ -87,8 +89,12 @@ public final class Messages {
             "Phim \"{0}\" chỉ hỗ trợ định dạng [{1}], không tương thích với phòng [{2}] ({3}).";
     public static final String SHOWTIME_BEFORE_RELEASE_DATE =
             "Thời gian chiếu ({0}) không được trước ngày khởi chiếu của phim ({1}).";
+    public static final String SHOWTIME_ROOMS_REQUIRED = "Vui lòng chọn ít nhất một phòng chiếu đang hoạt động.";
+    public static final String SHOWTIME_MULTI_SAVED =
+            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại: {2}.";
+    // {2} là danh sách tên phòng (tên phòng đã có chữ "Phòng")
     public static final String SHOWTIME_BATCH_SAVED =
-            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại phòng {2}.";
+            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại: {2}.";
     public static final String SHOWTIME_BATCH_EMPTY =
             "Không có suất chiếu hợp lệ nào để tạo. Vui lòng kiểm tra lại khoảng ngày và khung giờ.";
     public static final String SHOWTIME_BATCH_DATE_INVALID =

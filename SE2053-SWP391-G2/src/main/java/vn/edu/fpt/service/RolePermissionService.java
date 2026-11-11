@@ -54,7 +54,8 @@ public class RolePermissionService {
         return null;
     }
 
-    // Gom theo nhóm để trang hiển thị từng khối (thứ tự theo enum Permission)
+    // Gom theo nhóm để trang hiển thị từng khối (thứ tự theo enum Permission).
+    // Mỗi dòng chỉ có ô cho vai trò được phân quyền trong nhóm, ví dụ nghiệp vụ quản lý chỉ có cột Manager
     public Map<Permission.Group, List<PermissionRow>> loadRows() throws SQLException {
         Map<String, Boolean> stored;
         try (Connection conn = DBContext.getConnection()) {
@@ -63,7 +64,7 @@ public class RolePermissionService {
         Map<Permission.Group, List<PermissionRow>> groups = new LinkedHashMap<>();
         for (Permission permission : Permission.values()) {
             List<PermissionRow.Cell> cells = new ArrayList<>();
-            for (String role : Permission.CONFIGURABLE_ROLES) {
+            for (String role : permission.getGroup().getRoles()) {
                 cells.add(new PermissionRow.Cell(role, permission.keyFor(role), permission.isAssignableTo(role),
                         permission.isLockedFor(role), isGranted(stored, role, permission)));
             }

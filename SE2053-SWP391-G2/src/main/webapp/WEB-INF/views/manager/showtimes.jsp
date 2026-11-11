@@ -205,7 +205,10 @@
                                     <div class="flex items-center gap-3">
                                         <c:choose>
                                             <c:when test="${not empty showtime.movie.posterUrl}">
-                                                <img src="${showtime.movie.posterUrl}" alt="Poster" class="w-10 h-14 object-cover rounded shadow-md border border-white/10 flex-shrink-0" referrerpolicy="no-referrer"/>
+                                                <%-- Poster tải lên lưu đường dẫn tương đối (assets/images/posters/...) nên cần ghép context path, URL ngoài (http...) giữ nguyên --%>
+                                                <img src="${fn:startsWith(showtime.movie.posterUrl, 'http') ? '' : ctx.concat('/')}<c:out value='${showtime.movie.posterUrl}'/>"
+                                                     alt="" loading="lazy" referrerpolicy="no-referrer"
+                                                     class="w-10 h-14 object-cover rounded shadow-md border border-white/10 flex-shrink-0"/>
                                             </c:when>
                                             <c:otherwise>
                                                 <div class="w-10 h-14 bg-surface-container-high rounded flex items-center justify-center text-outline flex-shrink-0">
@@ -558,41 +561,25 @@
                             <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                             <input type="hidden" name="action" value="batch_save"/>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
-                                <div>
-                                    <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="batchMovieId">
-                                        Phim chiếu <span class="text-primary">*</span>
-                                    </label>
-                                    <select id="batchMovieId" name="batchMovieId" class="${inputClass}" required onchange="onBatchParamsChange()">
-                                        <option value="">-- Chọn phim --</option>
-                                        <c:forEach var="movie" items="${movies}">
-                                            <option value="${movie.movieId}"
-                                                    data-duration="${movie.durationMinutes}"
-                                                    data-formats="<c:out value='${movie.formats}'/>"
-                                                    data-release="${movie.releaseDate != null ? movie.releaseDate : ''}">
-                                                <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
-                                            </option>
-                                        </c:forEach>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="batchRoomId">
-                                        Phòng chiếu <span class="text-primary">*</span>
-                                    </label>
-                                    <select id="batchRoomId" name="batchRoomId" class="${inputClass}" required onchange="onBatchParamsChange()">
-                                        <option value="">-- Chọn phòng chiếu --</option>
-                                        <c:forEach var="room" items="${rooms}">
-                                            <c:if test="${room.status == 'Active'}">
-                                                <option value="${room.roomId}"
-                                                        data-format="${empty room.format ? '2D' : room.format}">
-                                                    <c:out value="${room.roomName}"/> (${empty room.format ? '2D' : room.format} - ${room.totalSeats} ghế)
-                                                </option>
-                                            </c:if>
-                                        </c:forEach>
-                                    </select>
-                                </div>
+                            <div>
+                                <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="batchMovieId">
+                                    Phim chiếu <span class="text-primary">*</span>
+                                </label>
+                                <select id="batchMovieId" name="batchMovieId" class="${inputClass}" required onchange="onBatchParamsChange()">
+                                    <option value="">-- Chọn phim --</option>
+                                    <c:forEach var="movie" items="${movies}">
+                                        <option value="${movie.movieId}"
+                                                data-duration="${movie.durationMinutes}"
+                                                data-formats="<c:out value='${movie.formats}'/>"
+                                                data-release="${movie.releaseDate != null ? movie.releaseDate : ''}">
+                                            <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
+                                        </option>
+                                    </c:forEach>
+                                </select>
                             </div>
+
+                            <%-- Chọn được nhiều phòng: mỗi phòng nhận cùng bộ ngày và khung giờ --%>
+                            <ui:room-picker rooms="${rooms}" name="batchRoomId" pickerId="batchRoomPicker"/>
 
                             <%-- Cảnh báo format không khớp --%>
                             <div id="batchFormatWarning" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-body-sm flex items-center gap-2">
@@ -730,7 +717,7 @@
                                     </span>
                                     <span id="batchCountBadge" class="font-bold text-headline-sm text-primary font-mono">0 suất chiếu</span>
                                 </div>
-                                <p id="batchDetailText" class="text-outline text-body-sm">Vui lòng chọn phim, phòng, khoảng ngày và ít nhất một khung giờ.</p>
+                                <p id="batchDetailText" class="text-outline text-body-sm">Vui lòng chọn phim, ít nhất một phòng, khoảng ngày và ít nhất một khung giờ.</p>
                             </div>
 
                             <div class="flex justify-end gap-space-sm pt-space-md border-t border-white/5">
@@ -749,45 +736,33 @@
                     <%-- TAB 2: FORM TẠO 1 SUẤT ĐƠN LẺ                        --%>
                     <%-- ---------------------------------------------------- --%>
                     <div id="tabContentSingle" class="${openSingleTab ? '' : 'hidden'}">
-                        <form method="post" action="${ctx}/manager/showtimes${listQuery}" class="space-y-space-md">
+                        <form method="post" action="${ctx}/manager/showtimes${listQuery}" class="space-y-space-md" id="singleCreateForm">
                             <input type="hidden" name="csrfToken" value="${csrfToken}"/>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
-                                <div>
-                                    <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalMovieId">Phim chiếu <span class="text-primary">*</span></label>
-                                    <select id="modalMovieId" name="showtimeMovieId" class="${inputClass}" required>
-                                        <option value="">-- Chọn phim --</option>
-                                        <c:forEach var="movie" items="${movies}">
-                                            <option value="${movie.movieId}"
-                                                    data-duration="${movie.durationMinutes}"
-                                                    data-formats="<c:out value='${movie.formats}'/>"
-                                                    ${form.movieId == ''.concat(movie.movieId) ? 'selected' : ''}>
-                                                <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes} phút)
-                                            </option>
-                                        </c:forEach>
-                                    </select>
-                                    <c:if test="${not empty errors.movieId}">
-                                        <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.movieId}"/></p>
-                                    </c:if>
-                                </div>
+                            <div>
+                                <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalMovieId">Phim chiếu <span class="text-primary">*</span></label>
+                                <select id="modalMovieId" name="showtimeMovieId" class="${inputClass}" required>
+                                    <option value="">-- Chọn phim --</option>
+                                    <c:forEach var="movie" items="${movies}">
+                                        <option value="${movie.movieId}"
+                                                data-duration="${movie.durationMinutes}"
+                                                data-formats="<c:out value='${movie.formats}'/>"
+                                                ${form.movieId == ''.concat(movie.movieId) ? 'selected' : ''}>
+                                            <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes} phút)
+                                        </option>
+                                    </c:forEach>
+                                </select>
+                                <c:if test="${not empty errors.movieId}">
+                                    <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.movieId}"/></p>
+                                </c:if>
+                            </div>
 
-                                <div>
-                                    <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalRoomId">Phòng chiếu <span class="text-primary">*</span></label>
-                                    <select id="modalRoomId" name="showtimeRoomId" class="${inputClass}" required>
-                                        <option value="">-- Chọn phòng chiếu --</option>
-                                        <c:forEach var="room" items="${rooms}">
-                                            <c:if test="${room.status == 'Active'}">
-                                                <option value="${room.roomId}" data-format="${empty room.format ? '2D' : room.format}"
-                                                        ${form.roomId == ''.concat(room.roomId) ? 'selected' : ''}>
-                                                    <c:out value="${room.roomName}"/> (${empty room.format ? '2D' : room.format} - ${room.totalSeats} ghế)
-                                                </option>
-                                            </c:if>
-                                        </c:forEach>
-                                    </select>
-                                    <c:if test="${not empty errors.roomId}">
-                                        <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.roomId}"/></p>
-                                    </c:if>
-                                </div>
+                            <%-- Chọn được nhiều phòng: tạo cùng 1 giờ chiếu ở tất cả các phòng đã chọn --%>
+                            <div>
+                                <ui:room-picker rooms="${rooms}" name="showtimeRoomId" pickerId="singleRoomPicker" selectedIds="${form.roomIds}"/>
+                                <c:if test="${not empty errors.roomId}">
+                                    <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.roomId}"/></p>
+                                </c:if>
                             </div>
 
                             <%-- Cảnh báo phim không hỗ trợ định dạng của phòng, giống tab hàng loạt --%>
@@ -841,10 +816,11 @@
                             </div>
 
                             <div>
-                                <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalBasePrice">Giá vé gốc (VND) <span class="text-primary">*</span></label>
+                                <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalBasePrice">Giá vé gốc (VND) (Tùy chọn)</label>
                                 <input id="modalBasePrice" name="basePrice" class="${inputClass} font-mono"
-                                       type="number" min="10000" step="1000" required placeholder="VD: 85000"
+                                       type="number" min="10000" step="1000" placeholder="Để trống = Tự tính theo giá gợi ý của từng phòng"
                                        value="<c:out value='${form.basePrice}'/>"/>
+                                <p class="text-outline text-label-sm mt-1">Nhập giá thì mọi phòng đã chọn dùng chung giá này; để trống thì mỗi phòng lấy giá gợi ý theo định dạng phòng.</p>
                                 <c:if test="${not empty errors.basePrice}">
                                     <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.basePrice}"/></p>
                                 </c:if>
@@ -896,6 +872,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (endDateInput) {
         endDateInput.min = todayStr;
         if (!endDateInput.value) endDateInput.value = nextWeekStr;
+    }
+
+    // Khung chọn nhiều phòng của tab hàng loạt (khởi tạo trước khi thêm giờ mẫu để bảng xem trước đếm đúng)
+    var batchPickerRoot = document.getElementById('batchRoomPicker');
+    if (batchPickerRoot) {
+        batchPicker = initRoomPicker(batchPickerRoot, document.getElementById('batchMovieId'), onBatchParamsChange);
+        guardRoomSelection(document.getElementById('batchForm'), batchPicker);
+        onBatchParamsChange();
     }
 
     // Khởi tạo các mốc giờ mẫu cho Batch
@@ -1001,9 +985,141 @@ function selectDays(type) {
     onBatchParamsChange();
 }
 
+// ===== Chọn nhiều phòng chiếu (dùng chung cho tab hàng loạt và tab tạo đơn lẻ) =====
+
+// Cùng quy tắc với server (ShowtimeService): phim không khai báo định dạng thì chiếu được mọi phòng,
+// phòng không khai báo định dạng tính là 2D, so khớp từng định dạng của phim
+function movieSupportsFormat(movieFormats, roomFormat) {
+    if (!movieFormats) {
+        return true;
+    }
+    var target = (roomFormat || '2D').trim().toUpperCase();
+    return movieFormats.split(/[,;\/]/).some(function (f) {
+        return f.trim().toUpperCase() === target;
+    });
+}
+
+function selectedMovieFormats(movieSelect) {
+    var opt = movieSelect ? movieSelect.options[movieSelect.selectedIndex] : null;
+    return opt && opt.value ? (opt.dataset.formats || '').trim() : '';
+}
+
+// Gắn xử lý cho khung chọn phòng (tag room-picker). onChange được gọi mỗi khi danh sách phòng chọn thay đổi
+function initRoomPicker(root, movieSelect, onChange) {
+    var boxes = Array.prototype.slice.call(root.querySelectorAll('input[type="checkbox"]'));
+    var countEl = root.querySelector('[data-room-count]');
+    var requiredEl = root.querySelector('[data-room-required]');
+
+    function selected() {
+        return boxes.filter(function (cb) { return cb.checked; });
+    }
+
+    // Làm mờ phòng mà phim không hỗ trợ định dạng và cập nhật số phòng đã chọn
+    function update() {
+        var movieFormats = selectedMovieFormats(movieSelect);
+        boxes.forEach(function (cb) {
+            var supported = movieSupportsFormat(movieFormats, cb.dataset.format);
+            var card = cb.closest('[data-room-card]');
+            card.classList.toggle('opacity-50', !supported && !cb.checked);
+            card.querySelector('[data-room-mismatch]').classList.toggle('hidden', supported);
+        });
+        var count = selected().length;
+        countEl.textContent = count ? '(đã chọn ' + count + ' phòng)' : '(chưa chọn phòng nào)';
+        if (count && requiredEl) {
+            requiredEl.classList.add('hidden');
+        }
+    }
+
+    boxes.forEach(function (cb) {
+        cb.addEventListener('change', onChange);
+    });
+    root.querySelectorAll('[data-room-select]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var movieFormats = selectedMovieFormats(movieSelect);
+            var matching = btn.dataset.roomSelect === 'matching';
+            boxes.forEach(function (cb) {
+                cb.checked = matching && movieSupportsFormat(movieFormats, cb.dataset.format);
+            });
+            onChange();
+        });
+    });
+
+    // Bắt buộc chọn ít nhất 1 phòng trước khi gửi form (server vẫn kiểm tra lại)
+    function validate() {
+        if (selected().length > 0) {
+            return true;
+        }
+        if (requiredEl) {
+            requiredEl.classList.remove('hidden');
+        }
+        root.scrollIntoView({behavior: 'smooth', block: 'center'});
+        return false;
+    }
+
+    return {update: update, selected: selected, validate: validate};
+}
+
+function guardRoomSelection(form, picker) {
+    if (form && picker) {
+        form.addEventListener('submit', function (e) {
+            if (!picker.validate()) {
+                e.preventDefault();
+            }
+        });
+    }
+}
+
+function roomsFromPicker(picker) {
+    return picker.selected().map(function (cb) {
+        return {name: cb.dataset.name, format: cb.dataset.format || '2D'};
+    });
+}
+
+// Cảnh báo các phòng đã chọn mà phim không hỗ trợ định dạng (Góp ý 5)
+function showFormatWarning(movieSelect, rooms, warningEl, warningTextEl, multiRoom) {
+    if (!warningEl) {
+        return;
+    }
+    var movieFormats = selectedMovieFormats(movieSelect);
+    var unsupported = rooms.filter(function (r) {
+        return !movieSupportsFormat(movieFormats, r.format);
+    });
+    if (unsupported.length === 0) {
+        warningEl.classList.add('hidden');
+        return;
+    }
+    if (multiRoom) {
+        warningTextEl.textContent = 'Phim chỉ hỗ trợ định dạng [' + movieFormats + '], không chiếu được ở: '
+                + unsupported.map(function (r) { return r.name + ' (' + r.format + ')'; }).join(', ')
+                + '. Hãy bỏ chọn các phòng này.';
+    } else {
+        warningTextEl.textContent = 'Phim chỉ hỗ trợ định dạng [' + movieFormats + '], không tương thích với phòng ['
+                + unsupported[0].format.toUpperCase() + ']. Hãy chọn phòng khác.';
+    }
+    warningEl.classList.remove('hidden');
+}
+
+// Giá gợi ý, cùng bảng giá với ShowtimePricing phía server
+function suggestedPrice(date, format) {
+    var day = date.getDay();
+    var isWeekend = (day === 0 || day === 5 || day === 6);
+    var hour = date.getHours();
+    var base;
+    if (hour < 12) base = isWeekend ? 80000 : 65000;
+    else if (hour < 17) base = isWeekend ? 95000 : 75000;
+    else if (hour < 22) base = isWeekend ? 110000 : 85000;
+    else base = isWeekend ? 90000 : 75000;
+
+    var f = (format || '2D').toUpperCase();
+    if (f === '3D') base += 20000;
+    else if (f === 'IMAX') base += 50000;
+    return base;
+}
+
+var batchPicker = null;
+
 function onBatchParamsChange() {
     var movieSelect = document.getElementById('batchMovieId');
-    var roomSelect = document.getElementById('batchRoomId');
     var startDateInput = document.getElementById('startDate');
     var endDateInput = document.getElementById('endDate');
     var batchCountBadge = document.getElementById('batchCountBadge');
@@ -1011,32 +1127,19 @@ function onBatchParamsChange() {
     var formatWarning = document.getElementById('batchFormatWarning');
     var formatWarningText = document.getElementById('batchFormatWarningText');
 
-    if (!movieSelect || !roomSelect || !startDateInput || !endDateInput) {
+    if (!movieSelect || !batchPicker || !startDateInput || !endDateInput) {
         return;
     }
 
-    var movieOpt = movieSelect.options[movieSelect.selectedIndex];
-    var roomOpt = roomSelect.options[roomSelect.selectedIndex];
-
-    // Kiểm tra định dạng phim vs phòng (Góp ý 5)
-    if (movieOpt && movieOpt.value && roomOpt && roomOpt.value) {
-        var movieFormats = (movieOpt.dataset.formats || '').toUpperCase();
-        var roomFormat = (roomOpt.dataset.format || '2D').toUpperCase();
-        if (movieFormats && movieFormats.indexOf(roomFormat) === -1) {
-            formatWarningText.textContent = 'Phim chỉ hỗ trợ bản [' + (movieOpt.dataset.formats || '2D') + '], không tương thích với phòng [' + roomFormat + ']. Hãy chọn phòng khác.';
-            formatWarning.classList.remove('hidden');
-        } else {
-            formatWarning.classList.add('hidden');
-        }
-    } else {
-        formatWarning.classList.add('hidden');
-    }
+    batchPicker.update();
+    var rooms = roomsFromPicker(batchPicker);
+    showFormatWarning(movieSelect, rooms, formatWarning, formatWarningText, true);
 
     var startVal = startDateInput.value;
     var endVal = endDateInput.value;
-    if (!startVal || !endVal || currentBatchSlots.length === 0) {
+    if (!startVal || !endVal || currentBatchSlots.length === 0 || rooms.length === 0) {
         batchCountBadge.textContent = '0 suất chiếu';
-        batchDetailText.textContent = 'Vui lòng chọn phim, phòng, khoảng ngày và ít nhất một khung giờ.';
+        batchDetailText.textContent = 'Vui lòng chọn phim, ít nhất một phòng, khoảng ngày và ít nhất một khung giờ.';
         return;
     }
 
@@ -1065,15 +1168,17 @@ function onBatchParamsChange() {
         cur.setDate(cur.getDate() + 1);
     }
 
-    var totalEstimated = matchingDays * currentBatchSlots.length;
+    var totalEstimated = matchingDays * currentBatchSlots.length * rooms.length;
     batchCountBadge.textContent = totalEstimated + ' suất chiếu dự kiến';
-    batchDetailText.textContent = matchingDays + ' ngày phù hợp × ' + currentBatchSlots.length + ' khung giờ/ngày. Hệ thống sẽ tự động tính toán giờ kết thúc (+15p dọn rạp) và bảng giá.';
+    batchDetailText.textContent = matchingDays + ' ngày phù hợp × ' + currentBatchSlots.length + ' khung giờ/ngày × '
+            + rooms.length + ' phòng. Hệ thống sẽ tự động tính toán giờ kết thúc (+15p dọn rạp) và bảng giá.';
 }
 
-// Logic tính toán cho form đơn
+// Logic tính toán cho form đơn: form sửa chọn 1 phòng (select), form tạo mới chọn nhiều phòng (room-picker)
 function initSingleCalculations() {
     var movieSelect = document.getElementById('modalMovieId');
     var roomSelect = document.getElementById('modalRoomId');
+    var pickerRoot = document.getElementById('singleRoomPicker');
     var startTimeInput = document.getElementById('modalStartTime');
     var basePriceInput = document.getElementById('modalBasePrice');
     var previewEndTime = document.getElementById('previewEndTime');
@@ -1082,43 +1187,29 @@ function initSingleCalculations() {
     var formatWarning = document.getElementById('singleFormatWarning');
     var formatWarningText = document.getElementById('singleFormatWarningText');
 
-    if (!movieSelect || !roomSelect || !startTimeInput) {
+    if (!movieSelect || !startTimeInput || (!roomSelect && !pickerRoot)) {
         return;
     }
 
+    var picker = null;
     var currentSuggestedPrice = 0;
 
-    // Cùng quy tắc với server (ShowtimeService): phim không khai báo định dạng thì chiếu được mọi phòng,
-    // phòng không khai báo định dạng tính là 2D, so khớp từng định dạng của phim
-    function checkFormat() {
-        if (!formatWarning) {
-            return;
+    function selectedRooms() {
+        if (picker) {
+            return roomsFromPicker(picker);
         }
-        var movieOpt = movieSelect.options[movieSelect.selectedIndex];
-        var roomOpt = roomSelect.options[roomSelect.selectedIndex];
-        var movieFormats = movieOpt && movieOpt.value ? (movieOpt.dataset.formats || '').trim() : '';
-        if (!movieFormats || !roomOpt || !roomOpt.value) {
-            formatWarning.classList.add('hidden');
-            return;
-        }
-        var roomFormat = (roomOpt.dataset.format || '2D').trim().toUpperCase();
-        var supported = movieFormats.split(/[,;\/]/).some(function (f) {
-            return f.trim().toUpperCase() === roomFormat;
-        });
-        if (supported) {
-            formatWarning.classList.add('hidden');
-        } else {
-            formatWarningText.textContent = 'Phim chỉ hỗ trợ định dạng [' + movieFormats + '], không tương thích với phòng ['
-                    + roomFormat + ']. Hãy chọn phòng khác.';
-            formatWarning.classList.remove('hidden');
-        }
+        var opt = roomSelect.options[roomSelect.selectedIndex];
+        return opt && opt.value ? [{name: opt.textContent.trim(), format: opt.dataset.format || '2D'}] : [];
     }
 
     function recalculate() {
-        checkFormat();
+        if (picker) {
+            picker.update();
+        }
+        var rooms = selectedRooms();
+        showFormatWarning(movieSelect, rooms, formatWarning, formatWarningText, !!picker);
         var startVal = startTimeInput.value;
         var movieOpt = movieSelect.options[movieSelect.selectedIndex];
-        var roomOpt = roomSelect.options[roomSelect.selectedIndex];
 
         if (startVal && movieOpt && movieOpt.dataset.duration) {
             var duration = parseInt(movieOpt.dataset.duration, 10);
@@ -1131,36 +1222,45 @@ function initSingleCalculations() {
             }
         }
 
-        if (startVal && roomOpt) {
-            var sDate = new Date(startVal);
-            if (!isNaN(sDate.getTime())) {
-                var day = sDate.getDay();
-                var isWeekend = (day === 0 || day === 5 || day === 6);
-                var hour = sDate.getHours();
-                var base = 0;
-                if (hour < 12) base = isWeekend ? 80000 : 65000;
-                else if (hour < 17) base = isWeekend ? 95000 : 75000;
-                else if (hour < 22) base = isWeekend ? 110000 : 85000;
-                else base = isWeekend ? 90000 : 75000;
-
-                var format = roomOpt.dataset.format || '2D';
-                var surcharge = 0;
-                if (format === '3D') surcharge = 20000;
-                else if (format === 'IMAX') surcharge = 50000;
-
-                currentSuggestedPrice = base + surcharge;
-                if (previewPriceValue) {
-                    previewPriceValue.textContent = currentSuggestedPrice.toLocaleString('vi-VN') + 'đ';
+        // Giá gợi ý theo từng định dạng phòng đã chọn; chỉ cho "Áp dụng" khi các phòng cùng 1 định dạng
+        currentSuggestedPrice = 0;
+        var sDate = startVal ? new Date(startVal) : null;
+        if (sDate && !isNaN(sDate.getTime()) && rooms.length > 0) {
+            var formats = [];
+            rooms.forEach(function (r) {
+                var f = r.format.toUpperCase();
+                if (formats.indexOf(f) === -1) {
+                    formats.push(f);
                 }
-                if (basePriceInput && !basePriceInput.value) {
-                    basePriceInput.value = currentSuggestedPrice;
-                }
+            });
+            if (previewPriceValue) {
+                previewPriceValue.textContent = formats.map(function (f) {
+                    return (formats.length > 1 ? f + ': ' : '') + suggestedPrice(sDate, f).toLocaleString('vi-VN') + 'đ';
+                }).join(' · ');
             }
+            if (formats.length === 1) {
+                currentSuggestedPrice = suggestedPrice(sDate, formats[0]);
+            }
+            // Form sửa tự điền giá gợi ý khi ô giá trống; form tạo mới để trống = mỗi phòng tự tính giá
+            if (!picker && basePriceInput && !basePriceInput.value) {
+                basePriceInput.value = currentSuggestedPrice;
+            }
+        } else if (previewPriceValue) {
+            previewPriceValue.textContent = '--';
+        }
+        if (btnApplyPrice) {
+            btnApplyPrice.classList.toggle('hidden', currentSuggestedPrice <= 0);
         }
     }
 
+    if (pickerRoot) {
+        picker = initRoomPicker(pickerRoot, movieSelect, recalculate);
+        guardRoomSelection(document.getElementById('singleCreateForm'), picker);
+    }
     movieSelect.addEventListener('change', recalculate);
-    roomSelect.addEventListener('change', recalculate);
+    if (roomSelect) {
+        roomSelect.addEventListener('change', recalculate);
+    }
     startTimeInput.addEventListener('change', recalculate);
     startTimeInput.addEventListener('input', recalculate);
 

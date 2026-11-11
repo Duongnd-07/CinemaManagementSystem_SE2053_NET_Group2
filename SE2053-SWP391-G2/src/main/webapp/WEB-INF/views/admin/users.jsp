@@ -33,36 +33,12 @@
         </div>
 
         <div class="flex items-center gap-4">
-            <a href="${pageContext.request.contextPath}/admin/permissions"
-               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl transition">
-                <span class="material-symbols-outlined text-base">key</span>
-                <span>Phân quyền</span>
-            </a>
             <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
                 <jsp:param name="href" value="${pageContext.request.contextPath}/admin/notifications"/>
             </jsp:include>
-            <a href="${pageContext.request.contextPath}/admin/configurations"
-               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl transition">
-                <span class="material-symbols-outlined text-base">tune</span>
-                <span>Cấu hình hệ thống</span>
-            </a>
-            <a href="${pageContext.request.contextPath}/admin/logs"
-               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl transition">
-                <span class="material-symbols-outlined text-base">receipt_long</span>
-                <span>Nhật ký hệ thống</span>
-            </a>
-            <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
-                <span class="material-symbols-outlined text-[#ffb95f] text-lg">shield_person</span>
-                <span class="text-xs font-semibold text-white">
-                    <c:out value="${sessionScope.user.fullName != null ? sessionScope.user.fullName : 'Quản trị viên'}"/>
-                </span>
-                <span class="text-[10px] text-gray-400 bg-red-950/80 border border-red-500/40 text-red-300 px-1.5 py-0.5 rounded font-bold">Admin</span>
-            </div>
-            <a href="${pageContext.request.contextPath}/logout"
-               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-[#e50914] bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 px-3 py-1.5 rounded-xl transition">
-                <span class="material-symbols-outlined text-base">logout</span>
-                <span>Đăng xuất</span>
-            </a>
+            <jsp:include page="/WEB-INF/views/common/admin-user-menu.jsp">
+                <jsp:param name="active" value="users"/>
+            </jsp:include>
         </div>
     </header>
 

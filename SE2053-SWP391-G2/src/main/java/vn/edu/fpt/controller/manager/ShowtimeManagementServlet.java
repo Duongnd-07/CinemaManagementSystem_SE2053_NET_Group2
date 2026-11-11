@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,7 +104,7 @@ public class ShowtimeManagementServlet extends HttpServlet {
             throws SQLException, IOException {
         BatchShowtimeForm form = new BatchShowtimeForm();
         form.setMovieId(trim(request.getParameter("batchMovieId")));
-        form.setRoomId(trim(request.getParameter("batchRoomId")));
+        form.setRoomIds(parameterList(request, "batchRoomId"));
         form.setStartDate(trim(request.getParameter("startDate")));
         form.setEndDate(trim(request.getParameter("endDate")));
         form.setBasePrice(trim(request.getParameter("batchBasePrice")));
@@ -135,17 +136,8 @@ public class ShowtimeManagementServlet extends HttpServlet {
 
         try {
             int count = showtimeService.saveBatch(form);
-            Movie movie = showtimeService.findPublicMovies().stream()
-                    .filter(m -> String.valueOf(m.getMovieId()).equals(form.getMovieId()))
-                    .findFirst().orElse(null);
-            Room room = showtimeService.findAllRooms().stream()
-                    .filter(r -> String.valueOf(r.getRoomId()).equals(form.getRoomId()))
-                    .findFirst().orElse(null);
-            String movieTitle = movie != null ? movie.getTitle() : "phim";
-            String roomName = room != null ? room.getRoomName() : "phòng";
-
-            request.getSession().setAttribute(FLASH_SUCCESS,
-                    Messages.format(Messages.SHOWTIME_BATCH_SAVED, count, movieTitle, roomName));
+            request.getSession().setAttribute(FLASH_SUCCESS, Messages.format(Messages.SHOWTIME_BATCH_SAVED,
+                    count, movieTitle(form.getMovieId()), roomNames(form.getRoomIds())));
         } catch (ValidationException e) {
             request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());
         }
@@ -159,16 +151,28 @@ public class ShowtimeManagementServlet extends HttpServlet {
         if (showtimeId != null) {
             form.setShowtimeId(showtimeId);
         }
+        boolean created = showtimeId == null || showtimeId <= 0;
 
         try {
-            showtimeService.save(showtimeId, form);
-            boolean created = showtimeId == null || showtimeId <= 0;
-            ActivityLogger.info(request, LogEventType.CATALOG, created ? "Thêm suất chiếu" : "Cập nhật suất chiếu",
-                    "Showtime", created ? null : showtimeId, "Phim #" + form.getMovieId() + ", phòng #"
-                            + form.getRoomId() + ", bắt đầu " + form.getStartTime() + ", giá " + form.getBasePrice()
-                            + ", bản chiếu " + form.getTranslationType());
-            request.getSession().setAttribute(FLASH_SUCCESS,
-                    showtimeId == null || showtimeId <= 0 ? Messages.SHOWTIME_SAVED : Messages.SHOWTIME_UPDATED);
+            if (created) {
+                // Tạo mới: cùng phim, cùng giờ chiếu ở tất cả các phòng đã chọn
+                int count = showtimeService.createMany(form);
+                ActivityLogger.info(request, LogEventType.CATALOG, "Thêm suất chiếu", "Showtime", null,
+                        "Phim #" + form.getMovieId() + ", phòng #" + String.join(", #", form.getRoomIds())
+                                + ", bắt đầu " + form.getStartTime() + ", giá "
+                                + (form.getBasePrice().isEmpty() ? "tự tính theo phòng" : form.getBasePrice())
+                                + ", bản chiếu " + form.getTranslationType());
+                request.getSession().setAttribute(FLASH_SUCCESS, count == 1 ? Messages.SHOWTIME_SAVED
+                        : Messages.format(Messages.SHOWTIME_MULTI_SAVED, count, movieTitle(form.getMovieId()),
+                                roomNames(form.getRoomIds())));
+            } else {
+                showtimeService.save(showtimeId, form);
+                ActivityLogger.info(request, LogEventType.CATALOG, "Cập nhật suất chiếu", "Showtime", showtimeId,
+                        "Phim #" + form.getMovieId() + ", phòng #" + form.getRoomId() + ", bắt đầu "
+                                + form.getStartTime() + ", giá " + form.getBasePrice()
+                                + ", bản chiếu " + form.getTranslationType());
+                request.getSession().setAttribute(FLASH_SUCCESS, Messages.SHOWTIME_UPDATED);
+            }
             response.sendRedirect(request.getContextPath() + "/manager/showtimes" + listQuery(request));
         } catch (ValidationException e) {
             Showtime editingShowtime = null;
@@ -283,11 +287,38 @@ public class ShowtimeManagementServlet extends HttpServlet {
     private ShowtimeForm readForm(HttpServletRequest request) {
         ShowtimeForm form = new ShowtimeForm();
         form.setMovieId(trim(request.getParameter("showtimeMovieId")));
+        // Form sửa gửi 1 phòng (select), form tạo mới gửi nhiều phòng (checkbox) cùng tên tham số
         form.setRoomId(trim(request.getParameter("showtimeRoomId")));
+        form.setRoomIds(parameterList(request, "showtimeRoomId"));
         form.setStartTime(trim(request.getParameter("startTime")));
         form.setBasePrice(trim(request.getParameter("basePrice")));
         form.setTranslationType(trim(request.getParameter("showtimeTranslationType")));
         return form;
+    }
+
+    private List<String> parameterList(HttpServletRequest request, String name) {
+        String[] values = request.getParameterValues(name);
+        return values == null ? new ArrayList<>() : Arrays.asList(values);
+    }
+
+    private String movieTitle(String movieId) throws SQLException {
+        return showtimeService.findPublicMovies().stream()
+                .filter(m -> String.valueOf(m.getMovieId()).equals(movieId))
+                .map(Movie::getTitle)
+                .findFirst().orElse("phim");
+    }
+
+    // Tên các phòng theo thứ tự đã chọn, ví dụ "Phòng chiếu 1, Phòng chiếu 3"
+    private String roomNames(List<String> roomIds) throws SQLException {
+        Map<String, String> names = new LinkedHashMap<>();
+        for (Room room : showtimeService.findAllRooms()) {
+            names.put(String.valueOf(room.getRoomId()), room.getRoomName());
+        }
+        List<String> selected = new ArrayList<>();
+        for (String id : roomIds) {
+            selected.add(names.getOrDefault(id, "phòng #" + id));
+        }
+        return String.join(", ", selected);
     }
 
     private String listQuery(HttpServletRequest request) {

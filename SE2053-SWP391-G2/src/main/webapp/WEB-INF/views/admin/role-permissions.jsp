@@ -22,58 +22,24 @@
 </head>
 <body class="min-h-screen bg-[#0c0f17] text-[#dfe2f1]">
     <header class="h-16 bg-[#131722]/90 backdrop-blur-md border-b border-white/10 sticky top-0 z-40 flex items-center justify-between px-4 sm:px-8 shadow-lg">
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#e50914] to-[#ff4d58] flex items-center justify-center shadow-[0_0_15px_rgba(229,9,20,0.5)]">
-                    <span class="material-symbols-outlined text-white text-xl">admin_panel_settings</span>
-                </div>
-                <span class="text-lg font-extrabold tracking-wider text-white">CINE<span class="text-[#e50914]">ADMIN</span></span>
+        <a href="${ctx}/admin/users" class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#e50914] to-[#ff4d58] flex items-center justify-center shadow-[0_0_15px_rgba(229,9,20,0.5)]">
+                <span class="material-symbols-outlined text-white text-xl">admin_panel_settings</span>
             </div>
-            <nav class="hidden sm:flex items-center gap-1 text-sm">
-                <a href="${ctx}/admin/users"
-                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[#8e919f] hover:text-white hover:bg-white/5 transition">
-                    <span class="material-symbols-outlined text-lg">group</span>Tài khoản
-                </a>
-                <a href="${ctx}/admin/permissions" aria-current="page"
-                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white bg-white/10 border border-white/10">
-                    <span class="material-symbols-outlined text-lg">key</span>Phân quyền
-                </a>
-                <a href="${ctx}/admin/configurations"
-                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[#8e919f] hover:text-white hover:bg-white/5 transition">
-                    <span class="material-symbols-outlined text-lg">tune</span>Cấu hình hệ thống
-                </a>
-                <a href="${ctx}/admin/logs"
-                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[#8e919f] hover:text-white hover:bg-white/5 transition">
-                    <span class="material-symbols-outlined text-lg">receipt_long</span>Nhật ký hệ thống
-                </a>
-            </nav>
-        </div>
+            <span class="text-lg font-extrabold tracking-wider text-white">CINE<span class="text-[#e50914]">ADMIN</span></span>
+        </a>
 
         <div class="flex items-center gap-4">
-            <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
-                <span class="material-symbols-outlined text-[#ffb95f] text-lg">shield_person</span>
-                <span class="text-xs font-semibold text-white">
-                    <c:out value="${sessionScope.user.fullName != null ? sessionScope.user.fullName : 'Quản trị viên'}"/>
-                </span>
-                <span class="text-[10px] bg-red-950/80 border border-red-500/40 text-red-300 px-1.5 py-0.5 rounded font-bold">Admin</span>
-            </div>
-            <a href="${ctx}/logout"
-               class="flex items-center gap-1.5 text-xs text-[#8e919f] hover:text-[#e50914] bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 px-3 py-1.5 rounded-xl transition">
-                <span class="material-symbols-outlined text-base">logout</span>
-                <span>Đăng xuất</span>
-            </a>
+            <jsp:include page="/WEB-INF/views/common/notification-bell.jsp">
+                <jsp:param name="href" value="${ctx}/admin/notifications"/>
+            </jsp:include>
+            <jsp:include page="/WEB-INF/views/common/admin-user-menu.jsp">
+                <jsp:param name="active" value="permissions"/>
+            </jsp:include>
         </div>
     </header>
 
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <%-- Menu cho màn hình nhỏ --%>
-        <nav class="flex sm:hidden gap-2 text-sm">
-            <a href="${ctx}/admin/users" class="flex-1 text-center px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#8e919f]">Tài khoản</a>
-            <span class="flex-1 text-center px-3 py-2 rounded-xl bg-white/10 border border-white/10 text-white">Phân quyền</span>
-            <a href="${ctx}/admin/configurations" class="flex-1 text-center px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#8e919f]">Cấu hình</a>
-            <a href="${ctx}/admin/logs" class="flex-1 text-center px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#8e919f]">Nhật ký</a>
-        </nav>
-
         <div>
             <h1 class="text-2xl font-extrabold text-white">Phân quyền theo vai trò</h1>
             <p class="text-sm text-[#8e919f] mt-1">
@@ -109,7 +75,7 @@
                             <thead>
                                 <tr class="text-xs text-[#8e919f] border-b border-white/10">
                                     <th scope="col" class="px-5 py-3 text-left font-semibold">Chức năng</th>
-                                    <c:forEach var="role" items="${roles}">
+                                    <c:forEach var="role" items="${group.key.roles}">
                                         <th scope="col" class="w-24 px-3 py-3 text-center font-semibold"><c:out value="${role}"/></th>
                                     </c:forEach>
                                 </tr>
@@ -124,9 +90,6 @@
                                         <c:forEach var="cell" items="${row.cells}">
                                             <td class="px-3 py-3.5 text-center transition-colors">
                                                 <c:choose>
-                                                    <c:when test="${not cell.assignable}">
-                                                        <span class="text-gray-600" title="Không áp dụng cho vai trò này">—</span>
-                                                    </c:when>
                                                     <c:when test="${cell.locked}">
                                                         <span class="material-symbols-outlined text-lg text-[#8e919f]"
                                                               title="Luôn bật vì đây là trang đích sau khi đăng nhập"

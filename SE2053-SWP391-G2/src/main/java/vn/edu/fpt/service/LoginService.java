@@ -3,8 +3,6 @@ package vn.edu.fpt.service;
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import vn.edu.fpt.dao.UserDAO;
 import vn.edu.fpt.model.User;
 import vn.edu.fpt.util.Messages;
@@ -12,8 +10,6 @@ import vn.edu.fpt.util.PasswordUtil;
 
 // UC-02: Nghiệp vụ Đăng nhập & Xác thực người dùng theo 4 vai trò (Admin, Manager, Staff, Customer)
 public class LoginService {
-    private static final Logger LOGGER = Logger.getLogger(LoginService.class.getName());
-
     private final UserDAO userDAO;
 
     public LoginService() {
@@ -68,18 +64,6 @@ public class LoginService {
         if (!"Active".equalsIgnoreCase(user.getStatus())) {
             errors.put("auth", Messages.LOGIN_ACCOUNT_INACTIVE);
             throw new ValidationException(errors);
-        }
-
-        // 5. Nâng cấp tự động chuẩn mật khẩu PBKDF2 nếu tài khoản dùng hash cũ hoặc seed dev
-        if (PasswordUtil.needsRehash(user.getPasswordHash())) {
-            try {
-                String upgradedHash = PasswordUtil.hash(password);
-                userDAO.updatePassword(user.getUserId(), upgradedHash);
-                user.setPasswordHash(upgradedHash);
-                LOGGER.info("Tự động nâng cấp thuật toán băm PBKDF2 cho User ID: " + user.getUserId());
-            } catch (SQLException e) {
-                LOGGER.log(Level.WARNING, "Không thể nâng cấp hash mật khẩu cho User ID: " + user.getUserId(), e);
-            }
         }
 
         return user;

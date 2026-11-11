@@ -35,22 +35,12 @@ public final class PasswordUtil {
 
     /**
      * Kiểm tra mật khẩu người dùng nhập có khớp với chuỗi hash đã lưu trong DB hay không.
+     * Chỉ chấp nhận hash PBKDF2 dạng {salt_hex}:{hash_hex}; giá trị chưa băm (mật khẩu gốc, 'hashed_pwd')
+     * luôn bị từ chối. Tài khoản seed cũ cần chạy sql/hash_seed_passwords.sql.
      */
     public static boolean verify(String plainPassword, String storedHash) {
-        if (plainPassword == null || storedHash == null) {
+        if (plainPassword == null || storedHash == null || !storedHash.contains(":")) {
             return false;
-        }
-        // Hỗ trợ tài khoản seed dev (chưa băm PBKDF2): chấp nhận các mật khẩu mặc định thông dụng
-        if (!storedHash.contains(":")) {
-            if ("hashed_pwd".equals(storedHash)) {
-                return "Admin@123".equals(plainPassword)
-                        || "Manager@123".equals(plainPassword)
-                        || "Staff@123".equals(plainPassword)
-                        || "Customer@123".equals(plainPassword)
-                        || "123456".equals(plainPassword)
-                        || "hashed_pwd".equals(plainPassword);
-            }
-            return plainPassword.equals(storedHash);
         }
         String[] parts = storedHash.split(":", 2);
         try {
@@ -62,13 +52,6 @@ public final class PasswordUtil {
         } catch (IllegalArgumentException e) {
             return false;
         }
-    }
-
-    /**
-     * Kiểm tra xem chuỗi hash trong DB có cần nâng cấp lên chuẩn PBKDF2 mới hay không.
-     */
-    public static boolean needsRehash(String storedHash) {
-        return storedHash == null || !storedHash.contains(":");
     }
 
     private static byte[] pbkdf2(char[] password, byte[] salt) {
