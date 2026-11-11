@@ -3,10 +3,10 @@ GO
 
 -- 1. Insert User
 INSERT INTO [User] (FullName, Email, Phone, PasswordHash, Role, PointBalance, Status) VALUES
-(N'Nguyễn Văn Admin', 'admin@cinema.vn', '0901234567', 'hashed_pwd', 'Admin', 0, 'Active'),
-(N'Trần Thị Quản Lý', 'manager@cinema.vn', '0912345678', 'hashed_pwd', 'Manager', 0, 'Active'),
-(N'Lê Văn Nhân Viên', 'staff@cinema.vn', '0923456789', 'hashed_pwd', 'Staff', 0, 'Active'),
-(N'Phạm Tùng Dương', 'duongpt@gmail.com', '0934567890', 'hashed_pwd', 'Customer', 150, 'Active');
+(N'Nguyễn Văn Admin', 'admin@cinema.vn', '0901234567', '0318f09b80c7cfbfa47c38f3dcb0bfd3:39f941b486a5a322eb5bbeb289f5e1e25be056f177fe4bf0a2f2729987f7a448', 'Admin', 0, 'Active'),
+(N'Trần Thị Quản Lý', 'manager@cinema.vn', '0912345678', '97c4b9ef9607ce3554c95452d90ce28a:f48ee615ec2bd32bc34d2b74a86d2842753d5af6efbdcbd53d7bc24833c9f0de', 'Manager', 0, 'Active'),
+(N'Lê Văn Nhân Viên', 'staff@cinema.vn', '0923456789', 'b118a04912bcaa8016bcaab6b63c65e3:afcc6fee6a671c0453404de9e95d74650983aa20fd1642cb9c2fd4388b423a60', 'Staff', 0, 'Active'),
+(N'Phạm Tùng Dương', 'duongpt@gmail.com', '0934567890', '2484478cd1fa6a944d87658b362ad6ef:e75de588056768c6fd1e1397dab9fb0968659f14f8f3727dbd676d87bb65481f', 'Customer', 150, 'Active');
 
 -- 2. Insert Genre
 INSERT INTO Genre (GenreName) VALUES ('Action'), ('Sci-Fi'), ('Drama'), ('Comedy');

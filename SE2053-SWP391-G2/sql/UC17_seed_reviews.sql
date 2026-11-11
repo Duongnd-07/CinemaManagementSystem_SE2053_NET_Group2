@@ -3,7 +3,7 @@
 --
 -- Script tạo:
 --   * 8 khách hàng demo reviewer01..08@review.demo, mật khẩu Customer@123
---     (PasswordHash = 'hashed_pwd', LoginService tự nâng cấp sang PBKDF2 ở lần đăng nhập đầu).
+--     (PasswordHash lưu dạng băm PBKDF2 của Customer@123, không lưu mật khẩu gốc).
 --   * Mỗi phim Now Showing/Ended: dùng 1 suất chiếu đã kết thúc ở phòng có ghế; phim chưa có suất như vậy
 --     (vd. phim Ended) được tạo 1 suất trong quá khứ (Status = Ended).
 --   * Mỗi reviewer: 1 đơn Paid + 1 vé Watched cho suất đó (GB-07: có vé đã xem mới được đánh giá), rồi 1 review.
@@ -27,7 +27,7 @@ BEGIN TRANSACTION;
 
 -- ===== 1. Tài khoản reviewer demo =====
 INSERT INTO [User] (FullName, Email, Phone, PasswordHash, Role, PointBalance, Status, DateOfBirth, Gender)
-SELECT v.FullName, v.Email, v.Phone, 'hashed_pwd', 'Customer', 0, 'Active', v.DateOfBirth, v.Gender
+SELECT v.FullName, v.Email, v.Phone, '2484478cd1fa6a944d87658b362ad6ef:e75de588056768c6fd1e1397dab9fb0968659f14f8f3727dbd676d87bb65481f', 'Customer', 0, 'Active', v.DateOfBirth, v.Gender
 FROM (VALUES
     (N'Nguyễn Minh Anh',   'reviewer01@review.demo', '0990017001', CAST('1999-02-14' AS DATE), 'Female'),
     (N'Trần Quốc Bảo',     'reviewer02@review.demo', '0990017002', CAST('1997-06-03' AS DATE), 'Male'),
