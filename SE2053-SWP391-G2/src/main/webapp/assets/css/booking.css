@@ -272,6 +272,42 @@ button.seat:focus-visible {
 }
 
 /* Trang checkout */
+@media (min-width: 768px) {
+    .booking-discounts {
+        row-gap: 0;
+    }
+
+    /* Đặt hai cột vào cùng một lưới: mô tả dài sẽ đẩy cả hai ô nhập xuống cùng nhau. */
+    .booking-discounts > div {
+        display: contents;
+    }
+
+    .booking-discounts > div:first-child > * {
+        grid-column: 1;
+    }
+
+    .booking-discounts > div:last-child > * {
+        grid-column: 2;
+    }
+
+    .booking-discounts > div > :nth-child(1) {
+        grid-row: 1;
+    }
+
+    .booking-discounts > div > :nth-child(2) {
+        grid-row: 2;
+    }
+
+    .booking-discounts > div > :nth-child(3) {
+        grid-row: 3;
+        align-self: start;
+    }
+
+    .booking-discounts > div > :nth-child(4) {
+        grid-row: 4;
+    }
+}
+
 .booking-section-title {
     display: flex;
     align-items: center;
