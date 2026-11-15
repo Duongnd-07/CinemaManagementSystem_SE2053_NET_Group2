@@ -16,7 +16,7 @@
     <title>Xác nhận đặt vé - <c:out value="${movie.title}"/> | CineLuxe</title>
     <jsp:include page="/WEB-INF/views/common/public-head.jsp"/>
     <link href="${ctx}/assets/css/seat-map.css" rel="stylesheet"/>
-    <link href="${ctx}/assets/css/booking.css" rel="stylesheet"/>
+    <link href="${ctx}/assets/css/booking.css?v=discount-input-alignment-2" rel="stylesheet"/>
 </head>
 <body class="booking-page min-h-screen flex flex-col">
     <jsp:include page="/WEB-INF/views/common/public-header.jsp"/>
@@ -129,7 +129,7 @@
                 </section>
 
                 <%-- Bước 7: voucher (tối đa 1/đơn - GB-05) hoặc quy đổi điểm --%>
-                <section class="cl-card p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <section class="booking-discounts cl-card p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <h2 class="booking-section-title"><span class="material-symbols-outlined">confirmation_number</span>Mã giảm giá</h2>
                         <label for="voucherCode" class="booking-hint">Mỗi đơn áp dụng tối đa 1 mã · chỉ giảm trên tiền vé</label>
@@ -203,12 +203,14 @@
                                class="booking-input mt-2 ${not empty errors['points'] ? 'is-invalid' : ''}"
                                value="${quote.pointsRedeemed > 0 ? quote.pointsRedeemed : ''}" placeholder="0"
                                ${checkout.availablePoints == 0 ? 'disabled' : ''}/>
-                        <div id="pointsFeedback">
-                            <c:if test="${not empty errors['points']}">
-                                <p class="booking-field-error"><c:out value="${errors['points']}"/></p>
-                            </c:if>
+                        <div>
+                            <div id="pointsFeedback">
+                                <c:if test="${not empty errors['points']}">
+                                    <p class="booking-field-error"><c:out value="${errors['points']}"/></p>
+                                </c:if>
+                            </div>
+                            <p class="booking-hint mt-2">Điểm được trừ vào tổng tiền vé và bắp nước sau khi áp dụng voucher.</p>
                         </div>
-                        <p class="booking-hint mt-2">Điểm được trừ vào tổng tiền vé và bắp nước sau khi áp dụng voucher.</p>
                     </div>
                 </section>
             </div>
