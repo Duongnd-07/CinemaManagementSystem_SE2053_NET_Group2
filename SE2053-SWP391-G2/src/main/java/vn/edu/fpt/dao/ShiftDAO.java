@@ -53,6 +53,17 @@ public class ShiftDAO {
         return findOne(conn, SELECT_FROM + (lock ? LOCK : "") + JOIN_NAMES + "WHERE sh.ShiftID = ?", shiftId);
     }
 
+    // Mỗi quầy một két tiền nên chỉ một ca đang mở (UX_Shift_OpenPerCounter)
+    public boolean isCounterOpen(String counterNo) throws SQLException {
+        String sql = "SELECT 1 FROM Shift WHERE CounterNo = ? AND EndedAt IS NULL";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, counterNo);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
     public void open(int staffId, String counterNo, BigDecimal openingCash) throws SQLException {
         String sql = "INSERT INTO Shift (StaffID, CounterNo, StartedAt, OpeningCash) VALUES (?, ?, GETDATE(), ?)";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {

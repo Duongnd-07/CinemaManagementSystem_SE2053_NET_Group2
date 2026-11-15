@@ -40,6 +40,8 @@ public class ShiftService {
 
     private static final String COUNTER_INVALID = "Vui lòng chọn quầy làm việc.";
     private static final String SHIFT_ALREADY_OPEN = "Bạn đang có một ca chưa kết thúc.";
+    private static final String COUNTER_BUSY = "Quầy {0} đang có nhân viên khác mở ca, vui lòng chọn quầy khác.";
+    private static final String COUNTER_INDEX = "UX_Shift_OpenPerCounter";
     private static final String SHIFT_NOT_OPEN = "Bạn không có ca nào đang mở.";
     private static final String SHIFT_NOT_FOUND = "Không tìm thấy ca làm việc.";
     private static final String SHIFT_ALREADY_CLOSED = "Ca này đã kết thúc.";
@@ -97,9 +99,17 @@ public class ShiftService {
         if (findOpenShift(staffId) != null) {
             throw error(ERROR_GENERAL, SHIFT_ALREADY_OPEN);
         }
+        // Gọi sau findOpenShift để ca quá giờ ở quầy này đã được tự kết
+        if (shiftDAO.isCounterOpen(counterNo)) {
+            throw error(ERROR_COUNTER, Messages.format(COUNTER_BUSY, counterNo.substring(1)));
+        }
         try {
             shiftDAO.open(staffId, counterNo, openingCash);
         } catch (SQLException e) {
+            // Hai nhân viên cùng bấm Mở ca một quầy: UX_Shift_OpenPerCounter chặn người đến sau
+            if (isDuplicateKey(e) && String.valueOf(e.getMessage()).contains(COUNTER_INDEX)) {
+                throw error(ERROR_COUNTER, Messages.format(COUNTER_BUSY, counterNo.substring(1)));
+            }
             // Hai tab cùng bấm Mở ca: UX_Shift_OpenPerStaff chặn bản thứ hai
             if (isDuplicateKey(e)) {
                 throw error(ERROR_GENERAL, SHIFT_ALREADY_OPEN);
