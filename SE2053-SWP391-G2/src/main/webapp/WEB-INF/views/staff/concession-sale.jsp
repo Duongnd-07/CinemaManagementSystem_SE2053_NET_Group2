@@ -171,6 +171,6 @@
     </form>
 </main>
 
-<script src="${ctx}/assets/js/counter-sale.js?v=5"></script>
+<script src="${ctx}/assets/js/counter-sale.js?v=6"></script>
 </body>
 </html>

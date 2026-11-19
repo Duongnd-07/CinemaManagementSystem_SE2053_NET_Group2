@@ -147,7 +147,7 @@ public class CounterSaleServlet extends HttpServlet {
                 redirect(request, response, "?receipt=" + paid.getBookingId());
                 return;
             }
-            quote = saleService.quote(form);
+            quote = saleService.quote(form, staffId);
         } catch (ValidationException e) {
             Map<String, String> errors = e.getErrors();
             // Suất chiếu không còn mở bán (đã bắt đầu, phòng bị khóa...) thì quay về danh sách
@@ -161,16 +161,16 @@ public class CounterSaleServlet extends HttpServlet {
                 redirect(request, response, "");
                 return;
             }
-            renderSale(request, response, shift, form, quoteOrNull(form), errors);
+            renderSale(request, response, shift, form, quoteOrNull(form, staffId), errors);
             return;
         }
         renderSale(request, response, shift, form, quote, quote.getErrors());
     }
 
     // Sau khi giao dịch bị hủy vẫn hiển thị lại tiền để nhân viên sửa; suất chiếu hỏng thì không có
-    private CounterQuote quoteOrNull(CounterSaleForm form) throws SQLException {
+    private CounterQuote quoteOrNull(CounterSaleForm form, int staffId) throws SQLException {
         try {
-            return saleService.quote(form);
+            return saleService.quote(form, staffId);
         } catch (ValidationException e) {
             return null;
         }
@@ -195,7 +195,8 @@ public class CounterSaleServlet extends HttpServlet {
             throws SQLException, ServletException, IOException {
         if (!form.isConcessionOnly()) {
             try {
-                request.setAttribute("booking", saleService.loadSeats(form.getShowtimeId()));
+                request.setAttribute("booking",
+                        saleService.loadSeats(form.getShowtimeId(), shift.getStaffId(), form.getSeatIds()));
             } catch (ValidationException e) {
                 flash(request, FLASH_ERROR, e.getErrors().values().iterator().next());
                 redirect(request, response, "");

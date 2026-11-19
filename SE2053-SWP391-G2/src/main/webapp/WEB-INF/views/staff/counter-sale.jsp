@@ -199,7 +199,7 @@
                             <ul class="legend-list mt-space-md">
                                 <li><span class="seat seat--legend is-available"></span>Trống</li>
                                 <li><span class="seat seat--legend is-selected"></span>Đang chọn</li>
-                                <li><span class="seat seat--legend is-pending"></span>Khách online đang giữ</li>
+                                <li><span class="seat seat--legend is-pending"></span>Đang giữ</li>
                                 <li><span class="seat seat--legend is-sold"></span>Đã bán</li>
                                 <li><span class="seat seat--legend is-maintenance"></span>Bảo trì</li>
                                 <c:forEach var="price" items="${booking.seatPrices}">
@@ -385,6 +385,6 @@
     </c:choose>
 </main>
 
-<script src="${ctx}/assets/js/counter-sale.js?v=5"></script>
+<script src="${ctx}/assets/js/counter-sale.js?v=6"></script>
 </body>
 </html>

@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.UnaryOperator;
 import vn.edu.fpt.dao.BookingDAO;
 import vn.edu.fpt.dao.ConcessionDAO;
 import vn.edu.fpt.dao.CounterSaleDAO;
@@ -32,6 +33,7 @@ import vn.edu.fpt.model.PaymentMethod;
 import vn.edu.fpt.model.Role;
 import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.model.Seat;
+import vn.edu.fpt.model.SeatStatus;
 import vn.edu.fpt.model.Shift;
 import vn.edu.fpt.model.Showtime;
 import vn.edu.fpt.model.ShowtimeStatus;
@@ -87,6 +89,11 @@ public class CounterSaleService {
     private static final SecureRandom RANDOM = new SecureRandom();
     // Trạng thái tài khoản khách còn hoạt động (giống AuthFilter)
     private static final String ACTIVE = "Active";
+    // Giữ ghế khi tính tiền, cùng thời gian giữ ghế với đặt vé online (UC-13)
+    private static final String CONFIG_HOLD_MINUTES = "SEAT_HOLD_MINUTES";
+    private static final int DEFAULT_HOLD_MINUTES = 10;
+    // Seat_Hold.SessionID của quầy: 'COUNTER-<StaffID>' (online dùng CHECKOUT-/BOOKING-)
+    private static final String COUNTER_HOLD_PREFIX = "COUNTER-";
 
     private final ShiftDAO shiftDAO = new ShiftDAO();
     private final ShiftService shiftService = new ShiftService();
@@ -108,6 +115,39 @@ public class CounterSaleService {
         return bookingService.loadCounterSeatSelection(showtimeId);
     }
 
+    // Ghế chính quầy này đang giữ (từ lần tính tiền) vẫn hiện là ghế trống đang chọn, nếu không ô ghế bị
+    // disabled và form xác nhận không gửi được ghế lên
+    public BookingSeatView loadSeats(int showtimeId, int staffId, List<String> selectedSeatIds)
+            throws SQLException, ValidationException {
+        Set<Integer> selected = toIds(selectedSeatIds);
+        Set<Integer> own;
+        try (Connection conn = DBContext.getConnection()) {
+            // Mở màn chọn ghế mà chưa chọn ghế nào là bắt đầu đơn mới: nhả ghế của đơn trước, nếu không nhân viên
+            // tự thấy ghế mình vừa giữ thành ghế bận cho tới khi hết hạn
+            if (selected.isEmpty()) {
+                bookingDAO.deleteHoldsBySession(conn, holdSession(staffId));
+                return loadSeats(showtimeId);
+            }
+            own = bookingDAO.findLiveHeldSeatIds(conn, holdSession(staffId), false);
+        }
+        BookingSeatView view = loadSeats(showtimeId);
+        own.retainAll(selected);
+        if (own.isEmpty()) {
+            return view;
+        }
+        SeatMapView map = view.getSeatMap();
+        UnaryOperator<SeatMapCell> release = cell -> cell != null && own.contains(cell.getSeatId())
+                && SeatStatus.PENDING.equals(cell.getStatus())
+                ? new SeatMapCell(cell.getSeatId(), cell.getRowName(), cell.getColNumber(), cell.getSeatType(),
+                        SeatStatus.AVAILABLE)
+                : cell;
+        for (SeatMapRow row : map.getRows()) {
+            row.getCells().replaceAll(release);
+        }
+        map.getSeats().replaceAll(release);
+        return view;
+    }
+
     // Món đang bán và còn hàng khi mới mở màn hình bán (chưa chọn số lượng)
     public List<BookingConcessionLine> listConcessions() throws SQLException {
         List<BookingConcessionLine> lines = new ArrayList<>();
@@ -121,12 +161,41 @@ public class CounterSaleService {
 
     // ===== Bước 4-5: tra thành viên, tính tiền =====
 
-    public CounterQuote quote(CounterSaleForm form) throws SQLException, ValidationException {
+    // Tính tiền xong thì giữ ghế cho quầy, để quầy khác hoặc khách online không lấy mất ghế trong lúc đang thu tiền
+    public CounterQuote quote(CounterSaleForm form, int staffId) throws SQLException, ValidationException {
         try (Connection conn = DBContext.getConnection()) {
-            CounterQuote quote = price(conn, form, false);
-            checkPayment(form, quote, false);
-            return quote;
+            conn.setAutoCommit(false);
+            try {
+                boolean withSeats = !form.isConcessionOnly() && form.getShowtimeId() > 0;
+                if (withSeats) {
+                    bookingDAO.lockShowtimeSeats(conn, form.getShowtimeId());
+                }
+                // Nhả ghế giữ từ lần tính trước: nhân viên có thể vừa đổi ghế, đổi suất hoặc chuyển sang bán bắp nước
+                bookingDAO.deleteHoldsBySession(conn, holdSession(staffId));
+                CounterQuote quote = price(conn, form, false);
+                checkPayment(form, quote, false);
+                if (withSeats && !quote.seats.isEmpty() && !quote.errors.containsKey(ERROR_SEATS)) {
+                    List<Integer> seatIds = new ArrayList<>();
+                    for (BookingSeatLine seat : quote.seats) {
+                        seatIds.add(seat.getSeatId());
+                    }
+                    bookingDAO.insertHolds(conn, holdSession(staffId), staffId, form.getShowtimeId(), seatIds,
+                            Math.max(1, configDAO.getInt(conn, CONFIG_HOLD_MINUTES, DEFAULT_HOLD_MINUTES)));
+                }
+                conn.commit();
+                return quote;
+            } catch (SQLException | ValidationException | RuntimeException e) {
+                conn.rollback();
+                if (e instanceof SQLException sql && BookingDAO.isSeatLockFailure(sql)) {
+                    throw error(ERROR_SEATS, Messages.BOOKING_SEATS_BUSY);
+                }
+                throw e;
+            }
         }
+    }
+
+    private static String holdSession(int staffId) {
+        return COUNTER_HOLD_PREFIX + staffId;
     }
 
     // ===== Bước 6-8: xác nhận đã thu tiền =====
@@ -146,6 +215,8 @@ public class CounterSaleService {
                 }
                 if (!form.isConcessionOnly()) {
                     bookingDAO.lockShowtimeSeats(conn, form.getShowtimeId());
+                    // Ghế quầy này giữ lúc tính tiền không tính là ghế bận; bán xong thì cũng không còn giữ nữa
+                    bookingDAO.deleteHoldsBySession(conn, holdSession(staffId));
                 }
                 CounterQuote quote = price(conn, form, true);
                 checkPayment(form, quote, true);
