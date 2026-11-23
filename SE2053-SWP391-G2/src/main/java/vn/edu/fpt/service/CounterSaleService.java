@@ -325,7 +325,8 @@ public class CounterSaleService {
             bookingDAO.deleteHoldsBySession(conn, BookingDAO.BOOKING_HOLD_PREFIX + bookingId);
         }
         bookingDAO.deleteExpiredHolds(conn, showtime.getShowtimeId());
-        // Bán tại quầy không giữ ghế 10 phút, nhưng không lấy ghế khách online đang giữ hoặc ghế bảo trì
+        // Không lấy ghế đã bán, ghế bảo trì hoặc ghế đang được giữ (khách online, quầy khác); ghế của chính quầy này
+        // đã được nhả trước khi tính (quote / confirm) nên không bị tính là bận
         Set<Integer> unavailable = bookingDAO.findUnavailableSeatIds(conn, showtime.getShowtimeId(), seatIds);
 
         BigDecimal vipSurcharge = configDAO.getDecimal(conn, CONFIG_VIP_SURCHARGE, DEFAULT_VIP_SURCHARGE);
