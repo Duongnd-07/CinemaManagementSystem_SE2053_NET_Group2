@@ -20,8 +20,10 @@ public class ShiftReport {
     private BigDecimal cardTotal = BigDecimal.ZERO;
     private BigDecimal transferTotal = BigDecimal.ZERO;
     private BigDecimal refundTotal = BigDecimal.ZERO;
-    // Vé hoàn tiền mặt / đổi ghế xử lý trong ca, kể cả vé bán ở ca khác
+    // Xử lý trong ca, kể cả vé bán ở ca khác: số lần trả tiền mặt > 0đ (hoàn vé, đền bù đổi ghế),
+    // số vé đã hủy hoàn (kể cả vé hoàn 0đ), số vé đã đổi ghế
     private int refundedTickets;
+    private int cancelledTickets;
     private int exchangedTickets;
     // Tổng voucher + điểm của các đơn, đọc từ Booking.DiscountAmount
     private BigDecimal discountTotal = BigDecimal.ZERO;
@@ -248,6 +250,14 @@ public class ShiftReport {
 
     public int getRefundedTickets() {
         return refundedTickets;
+    }
+
+    public int getCancelledTickets() {
+        return cancelledTickets;
+    }
+
+    public void setCancelledTickets(int cancelledTickets) {
+        this.cancelledTickets = cancelledTickets;
     }
 
     public void setRefundedTickets(int refundedTickets) {

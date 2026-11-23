@@ -128,7 +128,9 @@ public class ShiftDAO {
         // Điều chỉnh sau bán thuộc ca đã trả tiền / xử lý, kể cả đơn bán ở ca khác:
         // tiền hoàn tại quầy (Ticket.RefundShiftID) và số lần đổi ghế nhân viên làm trong khung giờ ca
         String adjustSql = "SELECT (SELECT ISNULL(SUM(RefundAmount), 0) FROM Ticket WHERE RefundShiftID = sh.ShiftID) "
-                + "AS Refund, (SELECT COUNT(*) FROM Ticket WHERE RefundShiftID = sh.ShiftID) AS Refunded, "
+                + "AS Refund, (SELECT COUNT(*) FROM Ticket WHERE RefundShiftID = sh.ShiftID AND RefundAmount > 0) "
+                + "AS Refunded, (SELECT COUNT(*) FROM Ticket WHERE RefundShiftID = sh.ShiftID AND Status = 'Cancelled') "
+                + "AS Cancelled, "
                 + "(SELECT COUNT(*) FROM TicketExchange x WHERE x.StaffID = sh.StaffID AND x.ExchangeType <> 'Refund' "
                 + "AND x.CreatedAt >= sh.StartedAt AND (sh.EndedAt IS NULL OR x.CreatedAt < sh.EndedAt)) AS Exchanged "
                 + "FROM Shift sh WHERE sh.ShiftID = ?";
@@ -138,6 +140,7 @@ public class ShiftDAO {
                 rs.next();
                 report.setRefundTotal(rs.getBigDecimal("Refund"));
                 report.setRefundedTickets(rs.getInt("Refunded"));
+                report.setCancelledTickets(rs.getInt("Cancelled"));
                 report.setExchangedTickets(rs.getInt("Exchanged"));
             }
         }

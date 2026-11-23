@@ -27,6 +27,8 @@ public class CounterHistoryService {
         private final int cashOrders;
         private final int transferOrders;
         private final int refundedTickets;
+        private final int cancelledTickets;
+        private final int soldTickets;
 
         Result(Page<CounterOrder> page, BigDecimal[] totals) {
             this.page = page;
@@ -38,6 +40,18 @@ public class CounterHistoryService {
             this.cashOrders = totals[5].intValue();
             this.transferOrders = totals[6].intValue();
             this.refundedTickets = totals[7].intValue();
+            this.cancelledTickets = totals[9].intValue();
+            this.soldTickets = totals[10].intValue();
+        }
+
+        // Vé bán ra tại quầy trong phạm vi, tính cả vé sau đó bị hủy / đổi ghế
+        public int getSoldTickets() {
+            return soldTickets;
+        }
+
+        // Vé đã hủy hoàn (UC-20), kể cả vé hoàn 0đ vì đơn đã được hoàn hết ở vé trước
+        public int getCancelledTickets() {
+            return cancelledTickets;
         }
 
         public BigDecimal getCashCollected() {

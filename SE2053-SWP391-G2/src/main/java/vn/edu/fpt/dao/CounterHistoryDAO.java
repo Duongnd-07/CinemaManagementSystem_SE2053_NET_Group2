@@ -59,7 +59,9 @@ public class CounterHistoryDAO {
     }
 
     // Tổng của mọi đơn khớp bộ lọc: {số đơn bán, đã thu, tiền đã hoàn, thu tiền mặt, thu chuyển khoản,
-    // số đơn tiền mặt, số đơn chuyển khoản, số vé đã hoàn, số dòng (đơn bán + đơn chỉ có đổi / hoàn trong phạm vi)}.
+    // số đơn tiền mặt, số đơn chuyển khoản, số lần trả tiền mặt (> 0đ, gồm cả đền bù đổi ghế),
+    // số dòng (đơn bán + đơn chỉ có đổi / hoàn trong phạm vi), số vé đã hủy hoàn (kể cả vé hoàn 0đ),
+    // số vé bán ra của các đơn bán trong phạm vi (không tính vé thay thế khi đổi ghế)}.
     // Tiền thu chỉ tính đơn bán tại quầy trong phạm vi; tiền hoàn tính theo lần hoàn làm trong phạm vi (giống Báo cáo ca)
     public BigDecimal[] summarize(Filter filter) throws SQLException {
         List<Object> params = new ArrayList<>();
@@ -73,12 +75,13 @@ public class CounterHistoryDAO {
                 + "ISNULL(SUM(CASE WHEN sl.Sold = 1 AND b.PaymentMethod = ? THEN b.FinalAmount ELSE 0 END), 0), "
                 + "ISNULL(SUM(CASE WHEN sl.Sold = 1 AND b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
                 + "ISNULL(SUM(CASE WHEN sl.Sold = 1 AND b.PaymentMethod = ? THEN 1 ELSE 0 END), 0), "
-                + "ISNULL(SUM(ex.Refunded), 0), COUNT(*) " + query(filter, params);
+                + "ISNULL(SUM(ex.Refunded), 0), COUNT(*), ISNULL(SUM(ex.Cancelled), 0), "
+                + "ISNULL(SUM(sl.Sold * tk.Tickets), 0) " + query(filter, params);
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             bind(ps, params);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
-                BigDecimal[] totals = new BigDecimal[9];
+                BigDecimal[] totals = new BigDecimal[11];
                 for (int i = 0; i < totals.length; i++) {
                     totals[i] = rs.getBigDecimal(i + 1);
                 }
@@ -181,8 +184,12 @@ public class CounterHistoryDAO {
         }
         StringBuilder sql = new StringBuilder(JOINS)
                 .append("CROSS APPLY (SELECT CASE WHEN ").append(sold).append(" THEN 1 ELSE 0 END AS Sold) sl ")
+                // Vé bán ra của đơn; vé mới sinh khi đổi ghế (UC-20) là vé thay thế nên không tính thêm
+                .append("OUTER APPLY (SELECT COUNT(*) AS Tickets FROM Ticket tc WHERE tc.BookingID = b.BookingID ")
+                .append("AND NOT EXISTS (SELECT 1 FROM TicketExchange n WHERE tc.TicketID IN (n.NewTicketID, n.NewTicketID2))) tk ")
                 .append("OUTER APPLY (SELECT COUNT(*) AS Actions, SUM(x.CashRefund) AS Refund, ")
-                .append("SUM(CASE WHEN x.CashRefund > 0 THEN 1 ELSE 0 END) AS Refunded, MAX(x.CreatedAt) AS LastAt ")
+                .append("SUM(CASE WHEN x.CashRefund > 0 THEN 1 ELSE 0 END) AS Refunded, ")
+                .append("SUM(CASE WHEN x.ExchangeType = 'Refund' THEN 1 ELSE 0 END) AS Cancelled, MAX(x.CreatedAt) AS LastAt ")
                 .append("FROM TicketExchange x JOIN Ticket xt ON xt.TicketID = x.OldTicketID ");
         if (filter.shiftId != null) {
             sql.append("JOIN Shift xs ON xs.ShiftID = ? AND x.StaffID = xs.StaffID AND x.CreatedAt >= xs.StartedAt ")

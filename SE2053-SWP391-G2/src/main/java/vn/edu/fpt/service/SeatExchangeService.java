@@ -6,6 +6,7 @@ import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -35,6 +36,7 @@ import vn.edu.fpt.model.UrgencyLevel;
 import vn.edu.fpt.model.Voucher;
 import vn.edu.fpt.model.VoucherType;
 import vn.edu.fpt.util.DBContext;
+import vn.edu.fpt.util.Messages;
 
 // UC-20: Exchange Broken Seat.
 // Luôn ưu tiên ghế cùng hạng; chỉ khi hết ghế cùng hạng mới có: ghế thường -> nâng VIP miễn phí; ghế VIP -> xuống
@@ -56,6 +58,8 @@ public class SeatExchangeService {
     public static final String TYPE_SPLIT = "Split";
     public static final String TYPE_REFUND = "Refund";
 
+    // Vé ghế hỏng chỉ đổi / hoàn từ 60 phút trước giờ chiếu đến khi suất kết thúc; trước đó ghế còn có thể sửa xong
+    public static final int OPEN_MINUTES_BEFORE = 60;
     private static final int MAX_REASON = 500;
     private static final String CONFIG_VOUCHER_VALUE = "BROKEN_SEAT_VOUCHER_VALUE";
     private static final String CONFIG_VOUCHER_DAYS = "BROKEN_SEAT_VOUCHER_DAYS";
@@ -71,6 +75,9 @@ public class SeatExchangeService {
     private static final String TICKET_NOT_FOUND = "Không tìm thấy vé với mã này.";
     private static final String TICKET_NOT_VALID = "Vé không còn hiệu lực (đã đổi, đã hủy hoặc đơn chưa thanh toán).";
     private static final String SHOWTIME_ENDED = "Suất chiếu của vé đã kết thúc hoặc bị hủy.";
+    private static final String NOT_OPEN_YET = "Chỉ đổi hoặc hoàn vé ghế hỏng từ " + OPEN_MINUTES_BEFORE
+            + " phút trước giờ chiếu. Vé này mở đổi lúc {0}.";
+    private static final DateTimeFormatter OPEN_TIME = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
     private static final String TARGET_REQUIRED = "Vui lòng chọn ghế mới.";
     private static final String TARGET_TAKEN = "Ghế vừa chọn không còn trống, vui lòng chọn lại.";
     private static final String SHIFT_REQUIRED = "Cần mở ca bán vé để lấy tiền trong két trả cho khách.";
@@ -374,6 +381,9 @@ public class SeatExchangeService {
         if (!ShowtimeStatus.ACTIVE.equals(ticket.getShowtimeStatus()) || ticket.getEndTime() == null
                 || !ticket.getEndTime().isAfter(LocalDateTime.now())) {
             throw error(ERROR_GENERAL, SHOWTIME_ENDED);
+        }
+        if (!ticket.isExchangeOpen()) {
+            throw error(ERROR_GENERAL, Messages.format(NOT_OPEN_YET, ticket.getExchangeOpensAt().format(OPEN_TIME)));
         }
     }
 

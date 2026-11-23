@@ -58,7 +58,7 @@
         <%-- Tiền mặt chi ra từ két trong ca (hoàn vé, đổi xuống ghế thường), kể cả cho đơn mua online --%>
         <div class="${cardClass} border-amber-300/40"><div class="text-body-sm text-on-surface-variant">Hoàn trả khách</div>
             <div class="text-title-lg text-amber-300">-<fmt:formatNumber value="${r.refundTotal}" maxFractionDigits="0"/>đ</div>
-            <div class="text-body-sm text-on-surface-variant">${r.refundedTickets} vé · tiền mặt</div></div>
+            <div class="text-body-sm text-on-surface-variant">Tiền mặt · ${r.cancelledTickets} vé hủy · ${r.refundedTickets} lần trả tiền</div></div>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-space-lg">
@@ -84,7 +84,8 @@
             <h3 class="mt-space-lg mb-2 text-label-lg text-on-surface-variant">Đổi ghế / hoàn trả trong ca</h3>
             <dl class="space-y-2 text-body-md">
                 <div class="flex justify-between"><dt>Vé đã đổi ghế</dt><dd>${r.exchangedTickets}</dd></div>
-                <div class="flex justify-between"><dt>Vé hoàn tiền mặt</dt><dd>${r.refundedTickets}</dd></div>
+                <div class="flex justify-between"><dt>Vé đã hủy hoàn</dt><dd>${r.cancelledTickets}</dd></div>
+                <div class="flex justify-between"><dt>Lần trả tiền mặt (hoàn vé, đền bù)</dt><dd>${r.refundedTickets}</dd></div>
                 <div class="flex justify-between"><dt>Tiền mặt đã hoàn cho khách</dt><dd><fmt:formatNumber value="${r.refundTotal}" maxFractionDigits="0"/>đ</dd></div>
             </dl>
         </section>

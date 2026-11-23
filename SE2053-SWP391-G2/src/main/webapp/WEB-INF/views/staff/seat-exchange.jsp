@@ -196,7 +196,7 @@
 
             <section>
                 <h2 class="text-title-md mb-1">Vé cần đổi</h2>
-                <p class="text-body-sm text-on-surface-variant mb-space-md">Vé của các suất chưa kết thúc đang nằm trên ghế đã báo hỏng.</p>
+                <p class="text-body-sm text-on-surface-variant mb-space-md">Vé của các suất chưa kết thúc đang nằm trên ghế đã báo hỏng. Chỉ đổi hoặc hoàn từ 60 phút trước giờ chiếu.</p>
                 <c:choose>
                     <c:when test="${empty affected}">
                         <div class="${cardClass} text-center text-on-surface-variant">Không có vé nào trên ghế hỏng.</div>
@@ -217,7 +217,14 @@
                                         <td>${t.seatLabel} <span class="text-body-sm text-on-surface-variant">(${seatLabels[t.seatType]})</span></td>
                                         <td><c:out value="${t.member ? t.customerName : 'Khách vãng lai'}"/></td>
                                         <td class="px-space-md text-right">
-                                            <a class="text-primary hover:underline font-label-lg" href="${ctx}/staff/seat-exchange?code=${t.ticketCode}">Đổi ghế</a>
+                                            <c:choose>
+                                                <c:when test="${t.exchangeOpen}">
+                                                    <a class="text-primary hover:underline font-label-lg" href="${ctx}/staff/seat-exchange?code=${t.ticketCode}">Đổi ghế</a>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="text-body-sm text-on-surface-variant whitespace-nowrap">Mở đổi lúc ${fn:substring(t.exchangeOpensAt, 11, 16)} ${fn:substring(t.exchangeOpensAt, 8, 10)}/${fn:substring(t.exchangeOpensAt, 5, 7)}</span>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </td>
                                     </tr>
                                 </c:forEach>

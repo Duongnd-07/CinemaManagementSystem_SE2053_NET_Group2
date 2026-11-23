@@ -11,11 +11,16 @@
 <c:set var="showStaff" value="${param.showStaff == '1'}"/>
 
 <%-- Khách luôn được hoàn bằng tiền mặt: tiền hoàn trừ vào tiền mặt, chuyển khoản giữ nguyên --%>
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-sm">
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-space-md mb-space-sm">
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Số đơn</div>
         <div class="text-headline-sm">${result.orderCount}</div>
         <div class="text-body-sm text-on-surface-variant mt-1">${result.cashOrders} tiền mặt · ${result.transferOrders} chuyển khoản</div>
+    </div>
+    <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
+        <div class="text-body-sm text-on-surface-variant">Vé đã bán</div>
+        <div class="text-headline-sm">${result.soldTickets}</div>
+        <div class="text-body-sm text-on-surface-variant mt-1">Tính cả vé sau đó hủy / đổi ghế</div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Đã thu của khách</div>
@@ -28,7 +33,7 @@
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Đã hoàn trả khách</div>
         <div class="text-headline-sm text-amber-300"><fmt:formatNumber value="${result.refunded}" maxFractionDigits="0"/>đ</div>
-        <div class="text-body-sm text-on-surface-variant mt-1">Tiền mặt · ${result.refundedTickets} vé</div>
+        <div class="text-body-sm text-on-surface-variant mt-1">Tiền mặt · ${result.cancelledTickets} vé hủy · ${result.refundedTickets} lần trả tiền</div>
     </div>
     <div class="bg-surface-container-low rounded-xl border border-white/10 p-space-md">
         <div class="text-body-sm text-on-surface-variant">Thực thu sau hoàn</div>

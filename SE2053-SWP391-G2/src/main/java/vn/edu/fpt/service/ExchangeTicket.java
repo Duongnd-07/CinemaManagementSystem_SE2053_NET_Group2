@@ -196,6 +196,15 @@ public class ExchangeTicket {
         this.startTime = startTime;
     }
 
+    // Lúc bắt đầu được đổi / hoàn vé ghế hỏng: khách đến rạp xem suất này mới kiểm tra được ghế
+    public LocalDateTime getExchangeOpensAt() {
+        return startTime.minusMinutes(SeatExchangeService.OPEN_MINUTES_BEFORE);
+    }
+
+    public boolean isExchangeOpen() {
+        return !getExchangeOpensAt().isAfter(LocalDateTime.now());
+    }
+
     public LocalDateTime getEndTime() {
         return endTime;
     }
