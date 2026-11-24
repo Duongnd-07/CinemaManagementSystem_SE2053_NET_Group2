@@ -180,7 +180,7 @@
                     <th class="py-4 px-5">Phòng chiếu</th>
                     <th class="py-4 px-5">Khung giờ chiếu</th>
                     <th class="py-4 px-5 text-right">Giá gốc</th>
-                    <th class="py-4 px-5 text-center">Đã đặt</th>
+                    <th class="py-4 px-5 text-center" title="Số vé đã bán / số vé tối đa bán được của suất (ghế đang hoạt động, ghế đôi tính 1 vé)">Đã bán / tối đa</th>
                     <th class="py-4 px-5 text-center">Trạng thái</th>
                     <th class="py-4 px-5 text-right">Thao tác</th>
                 </tr>
@@ -260,15 +260,16 @@
                                 <td class="py-4 px-5 text-right font-bold text-on-surface whitespace-nowrap">
                                     <fmt:formatNumber value="${showtime.basePrice}" pattern="#,##0"/>đ
                                 </td>
-                                <td class="py-4 px-5 text-center">
+                                <%-- UC-24: vé đã bán / số vé tối đa của suất = số ghế đang hoạt động của phòng (ghế đôi là 1 vé) --%>
+                                <td class="py-4 px-5 text-center whitespace-nowrap">
                                     <c:choose>
                                         <c:when test="${showtime.bookedTickets > 0}">
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm bg-blue-500/15 text-blue-400 border border-blue-500/30 font-medium">
-                                                ${showtime.bookedTickets} vé
+                                                ${showtime.bookedTickets}/${showtime.sellableSeats} vé
                                             </span>
                                         </c:when>
                                         <c:otherwise>
-                                            <span class="text-outline text-label-sm">0 vé</span>
+                                            <span class="text-outline text-label-sm">0/${showtime.sellableSeats} vé</span>
                                         </c:otherwise>
                                     </c:choose>
                                 </td>
@@ -411,9 +412,13 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                             <div>
-                                <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalMovieId">Phim chiếu</label>
-                                <select id="modalMovieId" name="showtimeMovieId" class="${inputClass}" required
-                                        ${not empty editingShowtime and editingShowtime.bookedTickets > 0 ? 'disabled' : ''}>
+                                <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="modalMovieId">
+                                    Phim chiếu <span class="text-outline font-normal">(không đổi được)</span>
+                                </label>
+                                <%-- UC-24: suất đã tạo không được đổi phim. Ô chọn bị khóa nên mã phim gửi qua ô ẩn,
+                                     server vẫn kiểm tra lại (ShowtimeService.save) phòng khi request bị sửa tay --%>
+                                <select id="modalMovieId" class="${inputClass} opacity-70 cursor-not-allowed" disabled
+                                        title="Muốn chiếu phim khác: hủy hoặc xóa suất này rồi tạo suất mới">
                                     <c:forEach var="movie" items="${movies}">
                                         <option value="${movie.movieId}"
                                                 data-duration="${movie.durationMinutes}"
@@ -423,9 +428,8 @@
                                         </option>
                                     </c:forEach>
                                 </select>
-                                <c:if test="${not empty editingShowtime and editingShowtime.bookedTickets > 0}">
-                                    <input type="hidden" name="showtimeMovieId" value="${form.movieId}"/>
-                                </c:if>
+                                <input type="hidden" name="showtimeMovieId" value="<c:out value='${form.movieId}'/>"/>
+                                <p class="text-outline text-label-sm mt-1">Muốn chiếu phim khác: hủy hoặc xóa suất này rồi tạo suất mới.</p>
                                 <c:if test="${not empty errors.movieId}">
                                     <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.movieId}"/></p>
                                 </c:if>
@@ -571,15 +575,77 @@
                                         <option value="${movie.movieId}"
                                                 data-duration="${movie.durationMinutes}"
                                                 data-formats="<c:out value='${movie.formats}'/>"
-                                                data-release="${movie.releaseDate != null ? movie.releaseDate : ''}">
+                                                data-release="${movie.releaseDate != null ? movie.releaseDate : ''}"
+                                                data-end="${movie.endDate != null ? movie.endDate : ''}">
                                             <c:out value="${movie.title}"/><c:if test="${not empty movie.releaseDate}"> - ${movie.releaseDate.year}</c:if> (${movie.durationMinutes}p)
                                         </option>
                                     </c:forEach>
                                 </select>
                             </div>
 
-                            <%-- Chọn được nhiều phòng: mỗi phòng nhận cùng bộ ngày và khung giờ --%>
-                            <ui:room-picker rooms="${rooms}" name="batchRoomId" pickerId="batchRoomPicker"/>
+                            <%-- UC-24: các đợt chiếu. Mỗi đợt = 1 phòng + khoảng ngày, mỗi phòng chạy số ngày riêng
+                                 (VD phòng 1 chiếu 7 ngày, phòng 2 chiếu 14 ngày). Một phòng có thể có nhiều đợt để chiếu
+                                 ngắt quãng (01–07 rồi 15–30). Thứ, khung giờ, giá, bản chiếu bên dưới dùng chung cho mọi đợt.
+                                 Ba ô của một dòng gửi lên cùng chỉ số: periodRoomId[i], periodStart[i], periodEnd[i] --%>
+                            <div>
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-label-md text-on-surface-variant font-medium">
+                                        Đợt chiếu (phòng + khoảng ngày) <span class="text-primary">*</span>
+                                    </span>
+                                    <button type="button" onclick="addPeriodRow()"
+                                            class="px-2.5 py-1 rounded bg-surface-container-high hover:bg-surface-bright text-label-sm text-primary flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[16px]">add</span>
+                                        <span>Thêm đợt chiếu</span>
+                                    </button>
+                                </div>
+                                <p class="text-outline text-label-sm mb-2">
+                                    Mỗi phòng một đợt nếu các phòng chạy số ngày khác nhau. Chiếu ngắt quãng thì thêm 2 đợt cho cùng phòng (VD 01–07 và 15–30).
+                                </p>
+                                <div id="periodRows" class="space-y-2"></div>
+                            </div>
+
+                            <%-- Mẫu một dòng đợt chiếu, JS nhân bản khi bấm "Thêm đợt chiếu" --%>
+                            <template id="periodRowTemplate">
+                                <div data-period-row class="p-3 rounded-lg bg-surface-container border border-white/5">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span data-period-number class="text-label-sm font-bold text-on-surface-variant">Đợt 1</span>
+                                        <button type="button" data-period-remove onclick="removePeriodRow(this)"
+                                                class="text-outline hover:text-rose-400 text-label-sm flex items-center gap-1" title="Xóa đợt chiếu này">
+                                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                                            <span>Xóa đợt</span>
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                        <label class="block">
+                                            <span class="block text-[11px] text-outline mb-0.5">Phòng chiếu</span>
+                                            <select name="periodRoomId" class="${inputClass}" required onchange="onBatchParamsChange()">
+                                                <option value="">-- Chọn phòng --</option>
+                                                <c:forEach var="room" items="${rooms}">
+                                                    <c:if test="${room.status == 'Active'}">
+                                                        <c:set var="periodRoomFormat" value="${empty room.format ? '2D' : room.format}"/>
+                                                        <c:set var="periodRoomSeats" value="${empty sellableSeats[''.concat(room.roomId)] ? 0 : sellableSeats[''.concat(room.roomId)]}"/>
+                                                        <option value="${room.roomId}"
+                                                                data-name="<c:out value='${room.roomName}'/>"
+                                                                data-format="<c:out value='${periodRoomFormat}'/>"
+                                                                data-seats="${periodRoomSeats}">
+                                                            <c:out value="${room.roomName}"/> (<c:out value="${periodRoomFormat}"/> · ${periodRoomSeats} vé/suất)
+                                                        </option>
+                                                    </c:if>
+                                                </c:forEach>
+                                            </select>
+                                        </label>
+                                        <label class="block">
+                                            <span class="block text-[11px] text-outline mb-0.5">Từ ngày</span>
+                                            <input type="date" name="periodStart" class="${inputClass}" required min="${today}" onchange="onBatchParamsChange()"/>
+                                        </label>
+                                        <label class="block">
+                                            <span class="block text-[11px] text-outline mb-0.5">Đến ngày</span>
+                                            <input type="date" name="periodEnd" class="${inputClass}" required min="${today}" onchange="onBatchParamsChange()"/>
+                                        </label>
+                                    </div>
+                                    <p data-period-summary class="text-label-sm text-outline mt-1.5"></p>
+                                </div>
+                            </template>
 
                             <%-- Cảnh báo format không khớp --%>
                             <div id="batchFormatWarning" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-body-sm flex items-center gap-2">
@@ -605,22 +671,6 @@
                                             <div class="text-[11px] text-outline">Lồng tiếng Việt</div>
                                         </div>
                                     </label>
-                                </div>
-                            </div>
-
-                            <%-- Khoảng ngày chiếu --%>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
-                                <div>
-                                    <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="startDate">
-                                        Từ ngày <span class="text-primary">*</span>
-                                    </label>
-                                    <input type="date" id="startDate" name="startDate" class="${inputClass}" required onchange="onBatchParamsChange()" min="${today}"/>
-                                </div>
-                                <div>
-                                    <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="endDate">
-                                        Đến ngày <span class="text-primary">*</span>
-                                    </label>
-                                    <input type="date" id="endDate" name="endDate" class="${inputClass}" required onchange="onBatchParamsChange()" min="${today}"/>
                                 </div>
                             </div>
 
@@ -715,9 +765,11 @@
                                         <span class="material-symbols-outlined text-[18px] text-primary">calendar_month</span>
                                         <span>Dự kiến sinh ra:</span>
                                     </span>
-                                    <span id="batchCountBadge" class="font-bold text-headline-sm text-primary font-mono">0 suất chiếu</span>
+                                    <span id="batchCountBadge" class="font-bold text-headline-sm text-primary font-mono text-right">0 suất chiếu</span>
                                 </div>
-                                <p id="batchDetailText" class="text-outline text-body-sm">Vui lòng chọn phim, ít nhất một phòng, khoảng ngày và ít nhất một khung giờ.</p>
+                                <p id="batchDetailText" class="text-outline text-body-sm">Vui lòng chọn phim, ít nhất một đợt chiếu và ít nhất một khung giờ.</p>
+                                <%-- Cảnh báo phía trình duyệt (2 đợt cùng phòng trùng ngày...), server vẫn kiểm tra lại --%>
+                                <p id="batchPeriodWarning" class="hidden text-rose-300 text-body-sm"></p>
                             </div>
 
                             <div class="flex justify-end gap-space-sm pt-space-md border-t border-white/5">
@@ -759,7 +811,8 @@
 
                             <%-- Chọn được nhiều phòng: tạo cùng 1 giờ chiếu ở tất cả các phòng đã chọn --%>
                             <div>
-                                <ui:room-picker rooms="${rooms}" name="showtimeRoomId" pickerId="singleRoomPicker" selectedIds="${form.roomIds}"/>
+                                <ui:room-picker rooms="${rooms}" name="showtimeRoomId" pickerId="singleRoomPicker" selectedIds="${form.roomIds}"
+                                                sellableSeats="${sellableSeats}"/>
                                 <c:if test="${not empty errors.roomId}">
                                     <p class="text-rose-400 text-label-sm mt-1"><c:out value="${errors.roomId}"/></p>
                                 </c:if>
@@ -813,6 +866,11 @@
                                         <button type="button" id="btnApplyPrice" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-label-sm">Áp dụng</button>
                                     </div>
                                 </div>
+                                <%-- UC-24: tổng số vé tối đa = cộng số ghế đang bán được của các phòng đã chọn --%>
+                                <div class="flex items-center justify-between text-body-sm pt-2 border-t border-white/5">
+                                    <span class="text-on-surface-variant">Số vé tối đa bán được:</span>
+                                    <span id="previewMaxTickets" class="font-bold text-on-surface font-mono">--</span>
+                                </div>
                             </div>
 
                             <div>
@@ -857,29 +915,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 5000);
     }
 
-    // Thiết lập ngày mặc định cho Batch Form (Hôm nay -> 7 ngày tới)
-    var todayStr = new Date().toISOString().split('T')[0];
-    var nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    var nextWeekStr = nextWeek.toISOString().split('T')[0];
+    // Ngày theo giờ máy người dùng (toISOString là giờ UTC, trước 7h sáng ở VN sẽ ra ngày hôm qua)
+    var todayStr = isoDate(new Date());
 
-    var startDateInput = document.getElementById('startDate');
-    var endDateInput = document.getElementById('endDate');
-    if (startDateInput) {
-        startDateInput.min = todayStr;
-        if (!startDateInput.value) startDateInput.value = todayStr;
-    }
-    if (endDateInput) {
-        endDateInput.min = todayStr;
-        if (!endDateInput.value) endDateInput.value = nextWeekStr;
-    }
-
-    // Khung chọn nhiều phòng của tab hàng loạt (khởi tạo trước khi thêm giờ mẫu để bảng xem trước đếm đúng)
-    var batchPickerRoot = document.getElementById('batchRoomPicker');
-    if (batchPickerRoot) {
-        batchPicker = initRoomPicker(batchPickerRoot, document.getElementById('batchMovieId'), onBatchParamsChange);
-        guardRoomSelection(document.getElementById('batchForm'), batchPicker);
-        onBatchParamsChange();
+    // Tab hàng loạt: có sẵn 1 đợt chiếu (hôm nay -> 6 ngày sau = 1 tuần), bấm "Thêm đợt chiếu" cho phòng khác
+    if (document.getElementById('periodRows')) {
+        addPeriodRow();
     }
 
     // Khởi tạo các mốc giờ mẫu cho Batch
@@ -1071,7 +1112,7 @@ function guardRoomSelection(form, picker) {
 
 function roomsFromPicker(picker) {
     return picker.selected().map(function (cb) {
-        return {name: cb.dataset.name, format: cb.dataset.format || '2D'};
+        return {name: cb.dataset.name, format: cb.dataset.format || '2D', seats: parseInt(cb.dataset.seats, 10) || 0};
     });
 }
 
@@ -1116,62 +1157,189 @@ function suggestedPrice(date, format) {
     return base;
 }
 
-var batchPicker = null;
+// ===== Ngày tháng theo giờ máy (không dùng new Date('yyyy-mm-dd') vì trình duyệt hiểu là giờ UTC) =====
+function isoDate(date) {
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+}
 
+function parseIsoDate(value) {
+    var parts = (value || '').split('-');
+    if (parts.length !== 3) {
+        return null;
+    }
+    var date = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    return isNaN(date.getTime()) ? null : date;
+}
+
+function addDays(date, days) {
+    var copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    copy.setDate(copy.getDate() + days);
+    return copy;
+}
+
+function formatNumber(n) {
+    return n.toLocaleString('vi-VN');
+}
+
+// ===== UC-24: đợt chiếu của tab hàng loạt, mỗi dòng = 1 phòng + khoảng ngày =====
+
+// Thêm 1 dòng đợt chiếu. Dòng mới lấy khoảng ngày của dòng cuối (thường gặp: phòng khác cùng ngày),
+// dòng đầu tiên mặc định từ hôm nay chạy 1 tuần
+function addPeriodRow() {
+    var container = document.getElementById('periodRows');
+    var template = document.getElementById('periodRowTemplate');
+    if (!container || !template) {
+        return;
+    }
+    var rows = container.querySelectorAll('[data-period-row]');
+    var last = rows.length ? rows[rows.length - 1] : null;
+    var today = new Date();
+    var start = last ? last.querySelector('[name="periodStart"]').value : isoDate(today);
+    var end = last ? last.querySelector('[name="periodEnd"]').value : isoDate(addDays(today, 6));
+
+    var row = template.content.firstElementChild.cloneNode(true);
+    row.querySelector('[name="periodStart"]').value = start;
+    row.querySelector('[name="periodEnd"]').value = end;
+    container.appendChild(row);
+    renumberPeriodRows();
+    onBatchParamsChange();
+    if (last) {
+        row.querySelector('[name="periodRoomId"]').focus();
+    }
+}
+
+function removePeriodRow(button) {
+    var row = button.closest('[data-period-row]');
+    if (row) {
+        row.parentNode.removeChild(row);
+    }
+    renumberPeriodRows();
+    onBatchParamsChange();
+}
+
+// Đánh số "Đợt 1, 2..." đúng thứ tự server báo lỗi; luôn giữ ít nhất 1 dòng
+function renumberPeriodRows() {
+    var rows = document.querySelectorAll('#periodRows [data-period-row]');
+    rows.forEach(function (row, i) {
+        row.querySelector('[data-period-number]').textContent = 'Đợt ' + (i + 1);
+        row.querySelector('[data-period-remove]').classList.toggle('invisible', rows.length === 1);
+    });
+}
+
+// Số suất của 1 đợt, cùng quy tắc với ShowtimeService.saveBatch: chỉ các thứ đã chọn, không trước ngày khởi chiếu,
+// không sau ngày kết thúc chiếu của phim, bỏ các mốc giờ đã qua
+function countPeriodShowtimes(start, end, selectedDays, release, movieEnd, now) {
+    var count = 0;
+    for (var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        var isoDay = d.getDay() === 0 ? 7 : d.getDay();
+        if (selectedDays.indexOf(isoDay) === -1 || (release && d < release)) {
+            continue;
+        }
+        if (movieEnd && d > movieEnd) {
+            break;
+        }
+        currentBatchSlots.forEach(function (slot) {
+            var hm = slot.split(':');
+            if (new Date(d.getFullYear(), d.getMonth(), d.getDate(), +hm[0], +hm[1]) > now) {
+                count++;
+            }
+        });
+    }
+    return count;
+}
+
+// Tính lại bảng xem trước: mỗi đợt = số suất × số vé tối đa/suất của phòng; cộng lại thành tổng
 function onBatchParamsChange() {
     var movieSelect = document.getElementById('batchMovieId');
-    var startDateInput = document.getElementById('startDate');
-    var endDateInput = document.getElementById('endDate');
+    var container = document.getElementById('periodRows');
     var batchCountBadge = document.getElementById('batchCountBadge');
     var batchDetailText = document.getElementById('batchDetailText');
+    var periodWarning = document.getElementById('batchPeriodWarning');
     var formatWarning = document.getElementById('batchFormatWarning');
     var formatWarningText = document.getElementById('batchFormatWarningText');
-
-    if (!movieSelect || !batchPicker || !startDateInput || !endDateInput) {
+    if (!movieSelect || !container) {
         return;
     }
 
-    batchPicker.update();
-    var rooms = roomsFromPicker(batchPicker);
-    showFormatWarning(movieSelect, rooms, formatWarning, formatWarningText, true);
-
-    var startVal = startDateInput.value;
-    var endVal = endDateInput.value;
-    if (!startVal || !endVal || currentBatchSlots.length === 0 || rooms.length === 0) {
-        batchCountBadge.textContent = '0 suất chiếu';
-        batchDetailText.textContent = 'Vui lòng chọn phim, ít nhất một phòng, khoảng ngày và ít nhất một khung giờ.';
-        return;
-    }
-
-    var sDate = new Date(startVal);
-    var eDate = new Date(endVal);
-    if (sDate > eDate) {
-        batchCountBadge.textContent = '0 suất chiếu';
-        batchDetailText.textContent = 'Ngày kết thúc phải từ ngày bắt đầu trở đi.';
-        return;
-    }
-
-    // Đếm các ngày thỏa mãn
+    var movieOpt = movieSelect.options[movieSelect.selectedIndex];
+    var hasMovie = !!(movieOpt && movieOpt.value);
+    var release = hasMovie ? parseIsoDate(movieOpt.dataset.release) : null;
+    var movieEnd = hasMovie ? parseIsoDate(movieOpt.dataset.end) : null;
     var selectedDays = [];
     document.querySelectorAll('input[name="daysOfWeek"]:checked').forEach(function (cb) {
         selectedDays.push(parseInt(cb.value, 10));
     });
+    var now = new Date();
 
-    var matchingDays = 0;
-    var cur = new Date(sDate);
-    while (cur <= eDate) {
-        var jsDay = cur.getDay(); // 0=Sun, 1=Mon...
-        var isoDay = jsDay === 0 ? 7 : jsDay;
-        if (selectedDays.indexOf(isoDay) !== -1) {
-            matchingDays++;
+    var rooms = [];       // các phòng đã chọn (không trùng) để cảnh báo định dạng
+    var planned = [];     // các đợt hợp lệ để kiểm tra trùng ngày trong cùng phòng
+    var problems = [];
+    var totalShowtimes = 0;
+    var totalTickets = 0;
+
+    container.querySelectorAll('[data-period-row]').forEach(function (row, i) {
+        var number = i + 1;
+        var select = row.querySelector('[name="periodRoomId"]');
+        var startInput = row.querySelector('[name="periodStart"]');
+        var endInput = row.querySelector('[name="periodEnd"]');
+        var summary = row.querySelector('[data-period-summary]');
+        endInput.min = startInput.value || startInput.min;
+
+        var opt = select.options[select.selectedIndex];
+        var start = parseIsoDate(startInput.value);
+        var end = parseIsoDate(endInput.value);
+        summary.classList.remove('text-rose-300');
+        if (!opt || !opt.value) {
+            summary.textContent = 'Chọn phòng chiếu cho đợt này.';
+            return;
         }
-        cur.setDate(cur.getDate() + 1);
+        var room = {id: opt.value, name: opt.dataset.name, format: opt.dataset.format || '2D',
+            seats: parseInt(opt.dataset.seats, 10) || 0};
+        if (!rooms.some(function (r) { return r.id === room.id; })) {
+            rooms.push(room);
+            if (room.seats === 0) {
+                problems.push(room.name + ' chưa có ghế nào đang bán được (chưa tạo sơ đồ ghế hoặc ghế đều bảo trì), suất ở phòng này không bán được vé.');
+            }
+        }
+        if (!start || !end || end < start) {
+            summary.textContent = 'Ngày kết thúc phải từ ngày bắt đầu trở đi.';
+            summary.classList.add('text-rose-300');
+            problems.push('Đợt ' + number + ': ngày kết thúc phải từ ngày bắt đầu trở đi.');
+            return;
+        }
+        planned.forEach(function (other) {
+            if (other.room.id === room.id && start <= other.end && end >= other.start) {
+                problems.push(room.name + ' có hai đợt trùng ngày (đợt ' + other.number + ' và đợt ' + number
+                        + '). Hãy gộp hoặc tách khoảng ngày.');
+            }
+        });
+        planned.push({number: number, room: room, start: start, end: end});
+
+        var days = Math.round((end - start) / 86400000) + 1;
+        var count = countPeriodShowtimes(start, end, selectedDays, release, movieEnd, now);
+        var tickets = count * room.seats;
+        totalShowtimes += count;
+        totalTickets += tickets;
+        summary.textContent = days + ' ngày · ' + formatNumber(count) + ' suất × ' + formatNumber(room.seats)
+                + ' vé/suất = tối đa ' + formatNumber(tickets) + ' vé';
+    });
+
+    showFormatWarning(movieSelect, rooms, formatWarning, formatWarningText, true);
+    if (periodWarning) {
+        periodWarning.textContent = problems.join(' ');
+        periodWarning.classList.toggle('hidden', problems.length === 0);
     }
 
-    var totalEstimated = matchingDays * currentBatchSlots.length * rooms.length;
-    batchCountBadge.textContent = totalEstimated + ' suất chiếu dự kiến';
-    batchDetailText.textContent = matchingDays + ' ngày phù hợp × ' + currentBatchSlots.length + ' khung giờ/ngày × '
-            + rooms.length + ' phòng. Hệ thống sẽ tự động tính toán giờ kết thúc (+15p dọn rạp) và bảng giá.';
+    if (!hasMovie || rooms.length === 0 || currentBatchSlots.length === 0 || selectedDays.length === 0) {
+        batchCountBadge.textContent = '0 suất chiếu';
+        batchDetailText.textContent = 'Vui lòng chọn phim, ít nhất một đợt chiếu (phòng + khoảng ngày), ít nhất một thứ và một khung giờ.';
+        return;
+    }
+    batchCountBadge.textContent = formatNumber(totalShowtimes) + ' suất · tối đa ' + formatNumber(totalTickets) + ' vé';
+    batchDetailText.textContent = planned.length + ' đợt ở ' + rooms.length + ' phòng. Số vé tối đa = số suất × số ghế đang bán được'
+            + ' của phòng (ghế bảo trì không tính, ghế đôi tính 1 vé). Nếu bỏ qua suất trùng lịch đã có thì số thực tế có thể ít hơn;'
+            + ' hệ thống tự tính giờ kết thúc (+15p dọn rạp) và giá.';
 }
 
 // Logic tính toán cho form đơn: form sửa chọn 1 phòng (select), form tạo mới chọn nhiều phòng (room-picker)
@@ -1183,6 +1351,7 @@ function initSingleCalculations() {
     var basePriceInput = document.getElementById('modalBasePrice');
     var previewEndTime = document.getElementById('previewEndTime');
     var previewPriceValue = document.getElementById('previewPriceValue');
+    var previewMaxTickets = document.getElementById('previewMaxTickets');
     var btnApplyPrice = document.getElementById('btnApplyPrice');
     var formatWarning = document.getElementById('singleFormatWarning');
     var formatWarningText = document.getElementById('singleFormatWarningText');
@@ -1208,6 +1377,11 @@ function initSingleCalculations() {
         }
         var rooms = selectedRooms();
         showFormatWarning(movieSelect, rooms, formatWarning, formatWarningText, !!picker);
+        if (previewMaxTickets) {
+            var maxTickets = rooms.reduce(function (sum, r) { return sum + (r.seats || 0); }, 0);
+            previewMaxTickets.textContent = rooms.length === 0 ? '--'
+                    : formatNumber(maxTickets) + ' vé (' + rooms.length + ' suất)';
+        }
         var startVal = startTimeInput.value;
         var movieOpt = movieSelect.options[movieSelect.selectedIndex];
 
