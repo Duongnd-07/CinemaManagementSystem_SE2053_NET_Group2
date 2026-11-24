@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -156,14 +157,19 @@ public class TicketPrintDAO {
     }
 
     // A7: ghi lượt vào cửa. UNIQUE (TicketID) nên vé đã vào cửa thì ném SQLException trùng khóa (E10)
-    public LocalDateTime insertCheckIn(int ticketId, int printNo, int staffId, int shiftId) throws SQLException {
+    // shiftId null: nhân viên soát cửa không mở ca (BR-36-07)
+    public LocalDateTime insertCheckIn(int ticketId, int printNo, int staffId, Integer shiftId) throws SQLException {
         String sql = "INSERT INTO TicketCheckIn (TicketID, PrintNo, StaffID, ShiftID) OUTPUT INSERTED.CheckedInAt "
                 + "VALUES (?, ?, ?, ?)";
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, ticketId);
             ps.setInt(2, printNo);
             ps.setInt(3, staffId);
-            ps.setInt(4, shiftId);
+            if (shiftId == null) {
+                ps.setNull(4, Types.INTEGER);
+            } else {
+                ps.setInt(4, shiftId);
+            }
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? toLocal(rs.getTimestamp(1)) : LocalDateTime.now();
             }

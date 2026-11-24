@@ -27,12 +27,13 @@ import vn.edu.fpt.util.DBContext;
 import vn.edu.fpt.util.Messages;
 import vn.edu.fpt.util.QrCodeImage;
 
-// UC-36: Scan E-ticket & Print Paper Ticket. Nhân viên phải đang mở ca mới được quét / in / soát vé (BR-36-07).
+// UC-36: Scan E-ticket & Print Paper Ticket. Nhân viên phải đang mở ca mới được quét / in vé (BR-36-07);
+// soát vé tại cửa phòng chiếu (A7) không cần mở ca.
 // A7: soát vé tại cửa phòng chiếu, mỗi vé chỉ vào cửa một lần và chỉ bản in mới nhất (BR-36-08..10).
 // In vé và soát cửa không đổi trạng thái vé, đơn hay doanh thu ca.
 // So giờ bằng đồng hồ của web server, cùng giả định với ShiftService (web server và SQL Server cùng giờ).
 public class TicketPrintService {
-    public static final String SHIFT_REQUIRED = "Bạn cần mở ca làm việc trước khi soát vé.";
+    public static final String SHIFT_REQUIRED = "Bạn cần mở ca làm việc trước khi quét và in vé.";
     public static final String NOT_FOUND = "Không tìm thấy vé. Vui lòng kiểm tra lại mã vé.";
     public static final String NOT_PAID = "Đơn hàng chưa được thanh toán hoặc đã bị huỷ, không thể in vé.";
     public static final String CANCELLED = "Vé đã bị huỷ.";
@@ -307,7 +308,8 @@ public class TicketPrintService {
     // một lượt được ghi), không hợp lệ thì trả lý do và không ghi gì (E10-E13). suspicious = vé đã dùng / vé giấy cũ,
     // servlet ghi cảnh báo vào nhật ký (UC-32).
     public CheckInResult checkIn(String raw, int showtimeId, int staffId) throws SQLException, ValidationException {
-        Shift shift = requireShift(staffId);
+        // BR-36-07: người soát cửa không phải thu ngân nên không cần mở ca; đang có ca thì ghi kèm ca để đối chiếu
+        Shift shift = shiftService.findOpenShift(staffId);
         DoorShowtime door = doorShowtimes().stream().filter(s -> s.getShowtimeId() == showtimeId).findFirst()
                 .orElseThrow(() -> error(DOOR_NO_SHOWTIME));
         String text = raw == null ? "" : raw.toUpperCase(Locale.ROOT);
@@ -359,7 +361,7 @@ public class TicketPrintService {
             return rejected(reason, booking, ticket, suspicious);
         }
         try {
-            printDAO.insertCheckIn(ticketId, scannedPrint, staffId, shift.getShiftId());
+            printDAO.insertCheckIn(ticketId, scannedPrint, staffId, shift == null ? null : shift.getShiftId());
         } catch (SQLException e) {
             if (!isDuplicate(e)) {
                 throw e;
