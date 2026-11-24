@@ -163,30 +163,10 @@ public class LoginServlet extends HttpServlet {
     public static String determineRedirectUrl(HttpServletRequest request, User user, String returnUrl) {
         String ctx = request.getContextPath();
 
-        // 1. Kiểm tra returnUrl hợp lệ (chống lỗ hổng Open Redirect)
-        if (returnUrl != null && !returnUrl.trim().isEmpty()) {
-            String trimmed = returnUrl.trim();
-            // Nếu returnUrl bắt đầu bằng contextPath hoặc dấu gạch chéo an toàn (không phải //)
-            if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.startsWith("/\\")) {
-                // Kiểm tra phân quyền nhanh cho returnUrl
-                boolean isAdminArea = trimmed.contains("/admin/");
-                boolean isManagerArea = trimmed.contains("/manager/");
-                boolean isStaffArea = trimmed.contains("/staff/");
-                String role = user.getRole();
-
-                if (isAdminArea && Role.ADMIN.equals(role)) {
-                    return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
-                }
-                if (isManagerArea && Role.MANAGER.equals(role)) {
-                    return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
-                }
-                if (isStaffArea && (Role.STAFF.equals(role) || Role.MANAGER.equals(role))) {
-                    return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
-                }
-                if (!isAdminArea && !isManagerArea && !isStaffArea) {
-                    return trimmed.startsWith(ctx) ? trimmed : ctx + trimmed;
-                }
-            }
+        // 1. UC-02 A1: quay lại trang đã yêu cầu nếu được phép
+        String target = permittedReturnUrl(ctx, user, returnUrl);
+        if (target != null) {
+            return target;
         }
 
         // 2. Chuyển hướng mặc định theo 4 vai trò:
@@ -199,6 +179,41 @@ public class LoginServlet extends HttpServlet {
             case Role.CUSTOMER -> ctx + "/";
             default -> ctx + "/";
         };
+    }
+
+    /**
+     * UC-02 A1: chỉ trả về returnUrl khi đó là địa chỉ nội bộ (chống Open Redirect) và vai trò được vào trang đó
+     * theo đúng quy tắc của AuthFilter, kể cả phân quyền UC-31; ngược lại null để dùng trang đích của vai trò.
+     */
+    private static String permittedReturnUrl(String ctx, User user, String returnUrl) {
+        if (returnUrl == null) {
+            return null;
+        }
+        String trimmed = returnUrl.trim();
+        if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\")) {
+            return null;
+        }
+        boolean hasCtx = !ctx.isEmpty() && (trimmed.equals(ctx) || trimmed.startsWith(ctx + "/")
+                || trimmed.startsWith(ctx + "?") || trimmed.startsWith(ctx + "#"));
+        String url = ctx.isEmpty() || hasCtx ? trimmed : ctx + trimmed;
+
+        // Đường dẫn sau context path, bỏ query string, fragment và tham số ;jsessionid
+        String path = url.substring(ctx.length());
+        for (char stop : new char[] {'?', '#', ';'}) {
+            int index = path.indexOf(stop);
+            if (index >= 0) {
+                path = path.substring(0, index);
+            }
+        }
+        if (path.isEmpty()) {
+            path = "/";
+        }
+        try {
+            return AuthFilter.canAccess(path, user.getRole()) ? url : null;
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Không kiểm tra được quyền của trang cần quay lại, dùng trang đích theo vai trò", e);
+            return null;
+        }
     }
 
     private void flash(HttpServletRequest request, String key, String message) {
