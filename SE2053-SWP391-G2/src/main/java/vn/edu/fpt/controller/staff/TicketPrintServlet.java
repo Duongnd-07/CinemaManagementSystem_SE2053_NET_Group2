@@ -15,6 +15,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import vn.edu.fpt.filter.AuthFilter;
+import vn.edu.fpt.model.CheckInResult;
+import vn.edu.fpt.model.DoorShowtime;
 import vn.edu.fpt.model.LogEventType;
 import vn.edu.fpt.model.PrintBooking;
 import vn.edu.fpt.model.PrintTicket;
@@ -33,6 +35,7 @@ import vn.edu.fpt.util.Messages;
 // thoại in, CHƯA ghi DB; action=confirm (nhân viên xác nhận vé đã ra giấy) mới ghi lượt in, action=cancel bỏ lượt in.
 // Trình duyệt không cho biết đã bấm In hay Hủy trong hộp thoại in, nên hủy / bấm Back / rời trang đều không làm vé bị
 // tính là đã in. Lượt in chưa xác nhận được giữ trong session và trang nhắc xác nhận cho tới khi nhân viên trả lời.
+// A7: ?mode=door là tab Soát vé vào phòng; POST action=checkin quét một vé ở cửa (mỗi vé chỉ vào một lần).
 // Chỉ Staff đang mở ca mới được dùng.
 @WebServlet("/staff/ticket-print")
 public class TicketPrintServlet extends HttpServlet {
@@ -47,6 +50,9 @@ public class TicketPrintServlet extends HttpServlet {
     private static final String SESSION_AUTO_PRINT = "ticketPrintAutoPrint";
     // Đơn vừa tra cứu: chỉ đơn này được mở lại bằng ?booking=ID (không cho tra cứu bằng mã đơn - BR-36-01)
     private static final String SESSION_BOOKING = "ticketPrintBooking";
+    // A7: tab "Soát vé vào phòng" (?mode=door) và kết quả lần quét vừa rồi (hiện một lần sau redirect)
+    private static final String MODE_DOOR = "door";
+    private static final String SESSION_CHECKIN_RESULT = "ticketCheckInResult";
     private static final String FORBIDDEN = "Bạn không có quyền truy cập vào khu vực này.";
     private static final String TARGET = "Booking";
 
@@ -70,6 +76,8 @@ public class TicketPrintServlet extends HttpServlet {
             request.setAttribute("activeMenu", "ticket-print");
             request.setAttribute("minReason", TicketPrintService.MIN_REASON);
             request.setAttribute("maxReason", TicketPrintService.MAX_REASON);
+            boolean door = MODE_DOOR.equals(request.getParameter("mode"));
+            request.setAttribute("doorMode", door);
             if (shift != null) {
                 Object pending = session.getAttribute(SESSION_PENDING);
                 if (pending instanceof PrintBooking) {
@@ -78,11 +86,45 @@ public class TicketPrintServlet extends HttpServlet {
                     request.setAttribute("autoPrint", session.getAttribute(SESSION_AUTO_PRINT) != null);
                     session.removeAttribute(SESSION_AUTO_PRINT);
                 }
-                loadBooking(request, session);
+                if (door) {
+                    loadDoor(request, session);
+                } else {
+                    loadBooking(request, session);
+                }
             }
             request.getRequestDispatcher(VIEW).forward(request, response);
         } catch (SQLException e) {
             handleSystemError(response, e);
+        }
+    }
+
+    // A7: danh sách suất đang mở cửa soát vé, suất đang chọn và kết quả lần quét vừa rồi
+    private void loadDoor(HttpServletRequest request, HttpSession session) throws SQLException {
+        List<DoorShowtime> showtimes = printService.doorShowtimes();
+        int selected = parseInt(request.getParameter("showtime"));
+        DoorShowtime current = showtimes.stream().filter(s -> s.getShowtimeId() == selected).findFirst()
+                .orElse(showtimes.size() == 1 ? showtimes.get(0) : null);
+        request.setAttribute("doorShowtimes", showtimes);
+        request.setAttribute("doorShowtime", current);
+        Object result = session.getAttribute(SESSION_CHECKIN_RESULT);
+        if (result instanceof CheckInResult) {
+            request.setAttribute("checkInResult", result);
+            session.removeAttribute(SESSION_CHECKIN_RESULT);
+        }
+    }
+
+    // A7: quét một vé ở cửa; vé đã dùng / vé giấy cũ được ghi cảnh báo để quản lý xem lại (UC-32)
+    private void checkIn(HttpServletRequest request, HttpSession session, User user)
+            throws SQLException, ValidationException {
+        int showtimeId = parseInt(request.getParameter("showtimeId"));
+        CheckInResult result = printService.checkIn(request.getParameter("code"), showtimeId, user.getUserId());
+        session.setAttribute(SESSION_CHECKIN_RESULT, result);
+        if (result.isAdmitted()) {
+            ActivityLogger.info(request, LogEventType.OPERATION, "Soát vé vào phòng", TARGET, result.getBookingId(),
+                    "Vé " + result.getTicketCode() + " (ghế " + result.getSeatLabel() + ") vào cửa: " + result.getDetail());
+        } else if (result.isSuspicious()) {
+            ActivityLogger.warning(request, LogEventType.OPERATION, "Từ chối vé vào phòng", TARGET,
+                    result.getBookingId(), "Vé " + result.getTicketCode() + ": " + result.getMessage());
         }
     }
 
@@ -123,6 +165,20 @@ public class TicketPrintServlet extends HttpServlet {
         }
         HttpSession session = request.getSession();
         String action = request.getParameter("action");
+        if ("checkin".equals(action)) {
+            try {
+                checkIn(request, session, user);
+            } catch (ValidationException e) {
+                session.setAttribute(FLASH_ERROR, e.getErrors().get("general"));
+            } catch (SQLException e) {
+                handleSystemError(response, e);
+                return;
+            }
+            int showtimeId = parseInt(request.getParameter("showtimeId"));
+            response.sendRedirect(request.getContextPath() + "/staff/ticket-print?mode=" + MODE_DOOR
+                    + (showtimeId > 0 ? "&showtime=" + showtimeId : ""));
+            return;
+        }
         try {
             if ("confirm".equals(action) || "cancel".equals(action)) {
                 finishPending(request, session, user, "confirm".equals(action));

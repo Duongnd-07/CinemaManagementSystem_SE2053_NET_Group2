@@ -175,4 +175,54 @@ public class PrintTicket implements Serializable {
     public int getReprintNo() {
         return Math.max(0, printCount - 1);
     }
+
+    // Suất chiếu của vé (Ticket.ShowtimeID, không có thì của đơn) - A7 so với suất đang soát
+    private int showtimeId;
+
+    public int getShowtimeId() {
+        return showtimeId;
+    }
+
+    public void setShowtimeId(int showtimeId) {
+        this.showtimeId = showtimeId;
+    }
+
+    // A7: vé đã vào cửa (của chính vé, hoặc của vé cũ đã đổi sang vé này ở UC-20); null nếu chưa
+    private LocalDateTime checkedInAt;
+    private String checkedInBy;
+    // Ảnh QR soát cửa in trên vé giấy (data URI PNG), nội dung là getPaperCode()
+    private String checkInQr;
+
+    public LocalDateTime getCheckedInAt() {
+        return checkedInAt;
+    }
+
+    public void setCheckedInAt(LocalDateTime checkedInAt) {
+        this.checkedInAt = checkedInAt;
+    }
+
+    public String getCheckedInBy() {
+        return checkedInBy;
+    }
+
+    public void setCheckedInBy(String checkedInBy) {
+        this.checkedInBy = checkedInBy;
+    }
+
+    public boolean isCheckedIn() {
+        return checkedInAt != null;
+    }
+
+    public String getCheckInQr() {
+        return checkInQr;
+    }
+
+    public void setCheckInQr(String checkInQr) {
+        this.checkInQr = checkInQr;
+    }
+
+    // BR-36-05/10: mã soát cửa in trên vé giấy = mã vé + số lần in, vd TKAB23CD45EF-P2
+    public String getPaperCode() {
+        return ticketCode + "-P" + Math.max(1, printCount);
+    }
 }

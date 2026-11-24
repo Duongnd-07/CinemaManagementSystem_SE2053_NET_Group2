@@ -96,6 +96,21 @@
         font-weight: 700;
     }
 
+    .pt-qr {
+        margin-top: 2mm;
+        text-align: center;
+    }
+
+    .pt-qr img {
+        width: 30mm;
+        height: 30mm;
+    }
+
+    .pt-qr-note {
+        font-size: 9px;
+        color: #333;
+    }
+
     .pt-foot {
         margin-top: 2mm;
         font-size: 10px;

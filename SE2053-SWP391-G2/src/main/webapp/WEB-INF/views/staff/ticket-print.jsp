@@ -33,9 +33,22 @@
             <span class="material-symbols-outlined text-primary-container">qr_code_scanner</span>Quét &amp; in vé
         </h1>
         <p class="text-body-sm text-on-surface-variant mt-1">
-            Quét mã QR trên vé điện tử khách nhận qua email (hoặc nhập mã vé) để in vé giấy. In vé không thay đổi trạng thái vé.
+            Quét mã QR trên vé điện tử khách nhận qua email (hoặc nhập mã vé) để in vé giấy. Ở cửa phòng chiếu, dùng tab
+            "Soát vé vào phòng": mỗi vé chỉ được vào cửa một lần.
         </p>
     </div>
+
+    <%-- A7: hai tab cùng một trang - in vé tại quầy / soát vé tại cửa phòng chiếu --%>
+    <nav class="flex gap-space-sm mb-space-lg" aria-label="Chức năng">
+        <a href="${ctx}/staff/ticket-print"
+           class="inline-flex items-center gap-1 px-5 py-2 rounded-full font-label-lg ${doorMode ? 'bg-surface-container-high hover:bg-surface-bright text-on-surface' : 'bg-primary text-on-primary'}">
+            <span class="material-symbols-outlined text-[18px]">print</span>In vé giấy
+        </a>
+        <a href="${ctx}/staff/ticket-print?mode=door"
+           class="inline-flex items-center gap-1 px-5 py-2 rounded-full font-label-lg ${doorMode ? 'bg-primary text-on-primary' : 'bg-surface-container-high hover:bg-surface-bright text-on-surface'}">
+            <span class="material-symbols-outlined text-[18px]">door_front</span>Soát vé vào phòng
+        </a>
+    </nav>
 
     <c:choose>
         <c:when test="${empty shift}">
@@ -47,6 +60,72 @@
                     <span class="material-symbols-outlined text-[18px]">point_of_sale</span>Mở ca tại Bán vé tại quầy
                 </a>
             </div>
+        </c:when>
+        <c:when test="${doorMode}">
+            <%-- A7: soát vé tại cửa phòng chiếu. Chọn suất đang soát rồi quét vé giấy (hoặc QR vé điện tử) --%>
+            <section class="bg-surface-container-low border border-white/5 rounded-xl p-space-lg mb-space-lg space-y-space-md">
+                <c:choose>
+                    <c:when test="${empty doorShowtimes}">
+                        <p class="text-on-surface-variant">Hiện không có suất chiếu nào đang mở cửa soát vé.</p>
+                        <p class="text-body-sm text-outline">Cửa mở từ 30 phút trước giờ chiếu đến khi suất chiếu kết thúc.</p>
+                    </c:when>
+                    <c:otherwise>
+                        <form method="get" action="${ctx}/staff/ticket-print" id="doorShowtimeForm">
+                            <input type="hidden" name="mode" value="door"/>
+                            <label class="block text-label-md text-on-surface-variant mb-1" for="showtime">Suất đang soát</label>
+                            <select class="${inputClass}" id="showtime" name="showtime" data-auto-submit>
+                                <c:if test="${empty doorShowtime}"><option value="">-- Chọn suất chiếu --</option></c:if>
+                                <c:forEach var="s" items="${doorShowtimes}">
+                                    <option value="${s.showtimeId}" ${doorShowtime.showtimeId == s.showtimeId ? 'selected' : ''}>
+                                        ${fn:substring(s.startTime, 11, 16)} · <c:out value="${s.roomName}"/> (<c:out value="${s.roomFormat}"/>) · <c:out value="${s.movieTitle}"/>
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </form>
+                        <c:if test="${not empty doorShowtime}">
+                            <p class="text-body-sm text-on-surface-variant">
+                                Đã vào cửa <strong class="text-on-surface">${doorShowtime.checkedInCount}</strong> / ${doorShowtime.ticketCount} vé
+                            </p>
+                            <form id="scanForm" method="post" action="${ctx}/staff/ticket-print" class="space-y-space-sm">
+                                <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+                                <input type="hidden" name="action" value="checkin"/>
+                                <input type="hidden" name="showtimeId" value="${doorShowtime.showtimeId}"/>
+                                <label class="block text-label-md text-on-surface-variant" for="code">Mã vé</label>
+                                <div class="flex flex-col md:flex-row gap-space-sm">
+                                    <textarea class="${inputClass} font-mono" id="code" name="code" rows="2" autofocus autocomplete="off"
+                                              placeholder="Quét QR trên vé giấy / vé điện tử hoặc nhập mã in dưới QR (vd TKAB23CD45EF-P1) rồi nhấn Enter"></textarea>
+                                    <div class="flex md:flex-col gap-space-sm shrink-0">
+                                        <button type="submit" class="px-5 py-2 rounded-full bg-primary text-on-primary hover:bg-primary/90 font-label-lg">Soát vé</button>
+                                        <button type="button" id="cameraButton"
+                                                class="px-5 py-2 rounded-full bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-lg">Quét bằng camera</button>
+                                    </div>
+                                </div>
+                                <div id="cameraBox" class="hidden">
+                                    <div id="cameraView" class="max-w-sm"></div>
+                                    <p id="cameraMessage" class="text-body-sm text-secondary mt-1" aria-live="polite"></p>
+                                </div>
+                            </form>
+                        </c:if>
+                    </c:otherwise>
+                </c:choose>
+            </section>
+
+            <c:if test="${not empty checkInResult}">
+                <c:set var="r" value="${checkInResult}"/>
+                <section role="status" aria-live="assertive"
+                         class="rounded-xl p-space-xl border-2 flex items-start gap-space-md
+                                ${r.admitted ? 'bg-emerald-950 border-emerald-500 text-emerald-200' : 'bg-error-container border-error text-on-error-container'}">
+                    <span class="material-symbols-outlined text-[48px]">${r.admitted ? 'check_circle' : 'block'}</span>
+                    <div class="space-y-1">
+                        <p class="text-headline-md font-bold"><c:out value="${r.admitted ? r.message : 'KHÔNG CHO VÀO'}"/></p>
+                        <c:if test="${not r.admitted}"><p class="font-label-lg"><c:out value="${r.message}"/></p></c:if>
+                        <c:if test="${not empty r.ticketCode}">
+                            <p class="text-body-sm opacity-90">Vé <span class="font-mono"><c:out value="${r.ticketCode}"/></span>
+                                · Ghế <c:out value="${r.seatLabel}"/> · <c:out value="${r.detail}"/></p>
+                        </c:if>
+                    </div>
+                </section>
+            </c:if>
         </c:when>
         <c:otherwise>
             <section class="bg-surface-container-low border border-white/5 rounded-xl p-space-lg mb-space-lg">
@@ -238,6 +317,12 @@
                     <tr><td>Mã vé</td><td class="pt-code">${t.ticketCode}</td></tr>
                     <tr><td>Mã đơn</td><td>#${printJob.bookingId}</td></tr>
                 </table>
+                <%-- BR-36-05/10: QR soát cửa (mã vé + số lần in); bản in lại có số mới nên vé giấy cũ không vào cửa được --%>
+                <div class="pt-qr">
+                    <c:if test="${not empty t.checkInQr}"><img src="${t.checkInQr}" alt="QR soát vé"/></c:if>
+                    <div class="pt-code"><c:out value="${t.paperCode}"/></div>
+                    <div class="pt-qr-note">Quét mã này tại cửa phòng chiếu. Mỗi vé chỉ vào cửa một lần.</div>
+                </div>
                 <div class="pt-foot">In lúc ${fn:substring(t.printedAt, 11, 16)} ${fn:substring(t.printedAt, 8, 10)}/${fn:substring(t.printedAt, 5, 7)}/${fn:substring(t.printedAt, 0, 4)} · NV: <c:out value="${t.printedBy}"/></div>
             </div>
         </c:forEach>

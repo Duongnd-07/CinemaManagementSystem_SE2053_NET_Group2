@@ -42,6 +42,16 @@
         }
     }
 
+    // A7: đổi suất đang soát thì tải lại tab Soát vé vào phòng với suất mới
+    var doorShowtime = document.querySelector('[data-auto-submit]');
+    if (doorShowtime) {
+        doorShowtime.addEventListener('change', function () {
+            if (doorShowtime.value) {
+                doorShowtime.form.submit();
+            }
+        });
+    }
+
     // A3: quét bằng webcam (thư viện html5-qrcode tải khi cần)
     var cameraButton = document.getElementById('cameraButton');
     var cameraBox = document.getElementById('cameraBox');
