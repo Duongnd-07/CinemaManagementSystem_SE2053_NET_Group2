@@ -170,18 +170,20 @@ public class RegisterService {
             throw new ValidationException(Map.of("otp", Messages.REGISTER_OTP_INVALID));
         }
 
-        // Kiểm tra mã OTP trong DB
-        EmailVerification ev = emailVerificationDAO.findLatestValidOtp(form.getEmail(), otp);
-        if (ev == null) {
-            throw new ValidationException(Map.of("otp", Messages.REGISTER_OTP_INVALID));
-        }
-
-        // Kiểm tra lại tránh race condition (email hoặc phone đã bị người khác đăng ký trong lúc chờ nhập OTP)
+        // Kiểm tra lại trước khi xét OTP (email hoặc phone đã bị người khác đăng ký trong lúc chờ nhập OTP).
+        // Phải xét trước OTP: lượt đăng ký khác cùng email đã vô hiệu hóa mã của phiên này, nếu xét OTP trước
+        // người dùng chỉ thấy "mã không chính xác" thay vì biết email đã được sử dụng
         if (userDAO.existsByEmail(form.getEmail())) {
             throw new ValidationException(Map.of("general", Messages.REGISTER_EMAIL_DUPLICATE));
         }
         if (userDAO.existsByPhone(form.getPhone())) {
             throw new ValidationException(Map.of("general", Messages.REGISTER_PHONE_DUPLICATE));
+        }
+
+        // Kiểm tra mã OTP trong DB
+        EmailVerification ev = emailVerificationDAO.findLatestValidOtp(form.getEmail(), otp);
+        if (ev == null) {
+            throw new ValidationException(Map.of("otp", Messages.REGISTER_OTP_INVALID));
         }
 
         // Băm mật khẩu an toàn bằng PBKDF2 + salt

@@ -40,22 +40,56 @@ public class AuthFilter implements Filter {
     // Tên các quyền của người dùng hiện tại, JSP dùng để ẩn menu không được phép
     private static final String ALLOWED_PERMISSIONS = "allowedPermissions";
 
+    private static final RolePermissionService PERMISSIONS = new RolePermissionService();
+
     private final UserDAO userDAO = new UserDAO();
-    private final RolePermissionService permissionService = new RolePermissionService();
+
+    /**
+     * Vai trò có được vào URL này không. Dùng chung cho filter và cho returnUrl sau đăng nhập (UC-02 A1)
+     * để hai nơi không lệch nhau: chức năng trong danh mục UC-31 xét theo phân quyền của Admin,
+     * URL khác theo khu vực; URL ngoài 4 khu vực là trang công khai.
+     *
+     * @param servletPath đường dẫn sau context path, không kèm query string
+     */
+    public static boolean canAccess(String servletPath, String role) throws SQLException {
+        List<String> roles = areaRoles(servletPath);
+        if (roles == null) {
+            return true;
+        }
+        Permission permission = Permission.fromPath(servletPath);
+        return permission != null ? PERMISSIONS.isAllowed(role, permission) : roles.contains(role);
+    }
+
+    // null: URL không thuộc khu vực nào cần đăng nhập
+    private static List<String> areaRoles(String servletPath) {
+        if (inArea(servletPath, "/admin")) {
+            return ADMIN_ROLES;
+        }
+        if (inArea(servletPath, "/manager")) {
+            return MANAGER_ROLES;
+        }
+        if (inArea(servletPath, "/staff")) {
+            return STAFF_ROLES;
+        }
+        if (inArea(servletPath, "/customer")) {
+            return CUSTOMER_ROLES;
+        }
+        return null;
+    }
+
+    private static boolean inArea(String servletPath, String prefix) {
+        return servletPath.equals(prefix) || servletPath.startsWith(prefix + "/");
+    }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
-        boolean adminArea = req.getServletPath().startsWith("/admin");
-        boolean managerArea = req.getServletPath().startsWith("/manager");
-        boolean staffArea = req.getServletPath().startsWith("/staff");
-        boolean customerArea = req.getServletPath().startsWith("/customer");
-        List<String> allowedRoles = adminArea ? ADMIN_ROLES
-                : managerArea ? MANAGER_ROLES
-                : staffArea ? STAFF_ROLES
-                : CUSTOMER_ROLES;
+        boolean managerArea = inArea(req.getServletPath(), "/manager");
+        boolean staffArea = inArea(req.getServletPath(), "/staff");
+        boolean customerArea = inArea(req.getServletPath(), "/customer");
+        List<String> allowedRoles = areaRoles(req.getServletPath());
 
         HttpSession session = req.getSession(false);
         User user = session == null ? null : (User) session.getAttribute(SESSION_USER);
@@ -96,24 +130,19 @@ public class AuthFilter implements Filter {
             redirectToLogin(req, resp);
             return;
         }
-        boolean permitted = allowedRoles.contains(dbUser.getRole());
-        if (managerArea || staffArea) {
-            // UC-31: chức năng trong danh mục do Admin phân quyền; URL ngoài danh mục giữ quy tắc theo tiền tố
-            try {
-                Permission permission = Permission.fromPath(req.getServletPath());
-                if (permission != null) {
-                    permitted = permissionService.isAllowed(dbUser.getRole(), permission);
-                }
-                if (permitted) {
-                    req.setAttribute(ALLOWED_PERMISSIONS, permissionService.allowedFor(dbUser.getRole()).stream()
-                            .map(Permission::name).collect(Collectors.toSet()));
-                    req.setAttribute("managementHome", permissionService.firstManagementPath(dbUser.getRole()));
-                }
-            } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi kiểm tra quyền truy cập", e);
-                resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, Messages.SYSTEM_ERROR);
-                return;
+        // UC-31: chức năng trong danh mục do Admin phân quyền; URL ngoài danh mục giữ quy tắc theo tiền tố
+        boolean permitted;
+        try {
+            permitted = canAccess(req.getServletPath(), dbUser.getRole());
+            if (permitted && (managerArea || staffArea)) {
+                req.setAttribute(ALLOWED_PERMISSIONS, PERMISSIONS.allowedFor(dbUser.getRole()).stream()
+                        .map(Permission::name).collect(Collectors.toSet()));
+                req.setAttribute("managementHome", PERMISSIONS.firstManagementPath(dbUser.getRole()));
             }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi kiểm tra quyền truy cập", e);
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, Messages.SYSTEM_ERROR);
+            return;
         }
         if (!permitted) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập vào khu vực này.");

@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import vn.edu.fpt.model.Room;
 import vn.edu.fpt.model.RoomStatus;
 import vn.edu.fpt.util.DBContext;
@@ -29,6 +31,22 @@ public class RoomDAO {
             }
         }
         return rooms;
+    }
+
+    // UC-24: số vé tối đa bán được của mỗi phòng cho một suất = số ghế đang hoạt động.
+    // Ghế đôi Sweetbox là một dòng Seat nên tính 1 vé; ghế khóa hoặc đang bảo trì (Maintenance) không tính.
+    public Map<Integer, Integer> countSellableSeats() throws SQLException {
+        String sql = "SELECT RoomID, COUNT(*) AS Seats FROM Seat WHERE Status = ? GROUP BY RoomID";
+        Map<Integer, Integer> seats = new HashMap<>();
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, RoomStatus.ACTIVE);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    seats.put(rs.getInt("RoomID"), rs.getInt("Seats"));
+                }
+            }
+        }
+        return seats;
     }
 
     public void updateStatus(Connection conn, int roomId, String status) throws SQLException {

@@ -20,6 +20,8 @@ public class Showtime {
     // Số vé đã bán / giữ chỗ
     private int bookedTickets;
 
+    private int sellableSeats;
+
     public Showtime() {
     }
 
@@ -101,6 +103,15 @@ public class Showtime {
 
     public void setBookedTickets(int bookedTickets) {
         this.bookedTickets = bookedTickets;
+    }
+
+    // Số vé tối đa bán được của suất: số ghế đang hoạt động của phòng (ghế đôi là 1 vé, ghế bảo trì không tính)
+    public int getSellableSeats() {
+        return sellableSeats;
+    }
+
+    public void setSellableSeats(int sellableSeats) {
+        this.sellableSeats = sellableSeats;
     }
 
     public String getTranslationType() {

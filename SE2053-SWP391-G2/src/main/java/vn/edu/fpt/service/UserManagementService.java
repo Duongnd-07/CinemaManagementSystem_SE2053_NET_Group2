@@ -18,7 +18,6 @@ import vn.edu.fpt.util.PasswordUtil;
  */
 public class UserManagementService {
     public static final int DEFAULT_PAGE_SIZE = 10;
-    private static final int MAX_FULLNAME = 50;
     private static final int MAX_EMAIL = 100;
     private static final int MIN_PASSWORD = 8;
     private static final int MAX_PASSWORD = 32;
@@ -91,11 +90,11 @@ public class UserManagementService {
             throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
         }
 
-        String trimmedName = fullName == null ? "" : fullName.trim();
-        if (trimmedName.isEmpty()) {
-            errors.put("fullName", Messages.format(Messages.MSG02, "Họ và tên"));
-        } else if (trimmedName.length() > MAX_FULLNAME) {
-            errors.put("fullName", Messages.format(Messages.MSG08, MAX_FULLNAME));
+        // Quy tắc Họ và tên dùng chung với UC-01 Đăng ký và UC-10 Hồ sơ
+        String trimmedName = FullNameRule.normalize(fullName);
+        String nameError = FullNameRule.validate(trimmedName);
+        if (nameError != null) {
+            errors.put("fullName", nameError);
         }
 
         String trimmedPhone = phone == null ? "" : phone.trim();
@@ -187,12 +186,11 @@ public class UserManagementService {
             throws SQLException, ValidationException {
         Map<String, String> errors = new LinkedHashMap<>();
 
-        // 1. Họ và tên
-        String trimmedName = fullName == null ? "" : fullName.trim();
-        if (trimmedName.isEmpty()) {
-            errors.put("fullName", Messages.format(Messages.MSG02, "Họ và tên"));
-        } else if (trimmedName.length() > MAX_FULLNAME) {
-            errors.put("fullName", Messages.format(Messages.MSG08, MAX_FULLNAME));
+        // 1. Họ và tên (quy tắc dùng chung với UC-01 Đăng ký và UC-10 Hồ sơ)
+        String trimmedName = FullNameRule.normalize(fullName);
+        String nameError = FullNameRule.validate(trimmedName);
+        if (nameError != null) {
+            errors.put("fullName", nameError);
         }
 
         // 2. Email
@@ -217,9 +215,11 @@ public class UserManagementService {
             errors.put("phone", Messages.REGISTER_PHONE_DUPLICATE);
         }
 
-        // 4. Vai trò
-        if (role == null || !Role.isValid(role) || Role.ADMIN.equalsIgnoreCase(role)) {
-            errors.put("role", "Vai trò không hợp lệ. Chỉ có thể tạo tài khoản Manager, Staff hoặc Customer.");
+        // 4. Vai trò (E6 giá trị lạ, E5 không được tạo tài khoản Admin - BR-30-03)
+        if (!Role.isValid(role)) {
+            errors.put("role", Messages.USER_ROLE_INVALID);
+        } else if (Role.ADMIN.equals(role)) {
+            errors.put("role", Messages.USER_ROLE_ADMIN_NOT_ASSIGNABLE);
         }
 
         // 5. Mật khẩu
@@ -260,7 +260,11 @@ public class UserManagementService {
         if (targetUser == null) {
             throw new ValidationException(Map.of("general", Messages.USER_NOT_FOUND));
         }
-        if (newPassword == null || newPassword.length() < MIN_PASSWORD || newPassword.length() > MAX_PASSWORD) {
+        // E1: bỏ trống báo "Trường {0} là bắt buộc." như các trường khác
+        if (newPassword == null || newPassword.isEmpty()) {
+            throw new ValidationException(Map.of("newPassword", Messages.format(Messages.MSG02, "Mật khẩu mới")));
+        }
+        if (newPassword.length() < MIN_PASSWORD || newPassword.length() > MAX_PASSWORD) {
             throw new ValidationException(Map.of("newPassword",
                     Messages.format(Messages.REGISTER_PASSWORD_LENGTH, MIN_PASSWORD, MAX_PASSWORD)));
         }

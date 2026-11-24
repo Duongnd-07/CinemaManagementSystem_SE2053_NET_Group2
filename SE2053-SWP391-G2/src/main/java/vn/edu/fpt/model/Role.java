@@ -14,6 +14,7 @@ public final class Role {
     }
 
     public static boolean isValid(String role) {
-        return ALL.contains(role);
+        // List.of(...).contains(null) ném NullPointerException, form thiếu tham số vai trò phải ra lỗi E6 chứ không lỗi 500
+        return role != null && ALL.contains(role);
     }
 }

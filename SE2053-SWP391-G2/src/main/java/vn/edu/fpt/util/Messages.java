@@ -90,15 +90,28 @@ public final class Messages {
     public static final String SHOWTIME_BEFORE_RELEASE_DATE =
             "Thời gian chiếu ({0}) không được trước ngày khởi chiếu của phim ({1}).";
     public static final String SHOWTIME_ROOMS_REQUIRED = "Vui lòng chọn ít nhất một phòng chiếu đang hoạt động.";
+    // {3}: số vé tối đa bán được của các suất vừa tạo (ghế đang hoạt động, ghế đôi tính 1 vé), đã định dạng sẵn
     public static final String SHOWTIME_MULTI_SAVED =
-            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại: {2}.";
-    // {2} là danh sách tên phòng (tên phòng đã có chữ "Phòng")
+            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại: {2}, tối đa {3} vé.";
+    // {2} là tên phòng; tạo cho nhiều phòng thì là danh sách tên phòng cách nhau dấu phẩy
     public static final String SHOWTIME_BATCH_SAVED =
-            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại: {2}.";
+            "Đã tạo thành công {0} suất chiếu cho phim \"{1}\" tại phòng {2}, tối đa {3} vé.";
+    public static final String SHOWTIME_BATCH_RANGE_TOO_LONG = "Khoảng thời gian tạo hàng loạt tối đa là 31 ngày.";
+    public static final String SHOWTIME_BATCH_START_PAST =
+            "Ngày bắt đầu không được là ngày trong quá khứ. Vui lòng chọn từ ngày hôm nay trở đi.";
+    // Tạo hàng loạt theo đợt: mỗi đợt là một phòng và một khoảng ngày; {0} là số thứ tự đợt
+    public static final String SHOWTIME_BATCH_PERIOD_REQUIRED =
+            "Vui lòng thêm ít nhất một đợt chiếu (phòng, từ ngày, đến ngày).";
+    public static final String SHOWTIME_BATCH_PERIOD_ERROR = "Đợt {0}: {1}";
+    public static final String SHOWTIME_BATCH_PERIOD_ROOM_REQUIRED = "Vui lòng chọn phòng chiếu.";
+    public static final String SHOWTIME_BATCH_PERIOD_OVERLAP =
+            "Phòng {0} có hai đợt chiếu trùng ngày (đợt {1} và đợt {2}). Hãy gộp hoặc tách khoảng ngày.";
+    public static final String SHOWTIME_MOVIE_LOCKED =
+            "Không được đổi phim của suất chiếu đã tạo. Muốn chiếu phim khác, hãy hủy hoặc xóa suất này rồi tạo suất mới.";
     public static final String SHOWTIME_BATCH_EMPTY =
             "Không có suất chiếu hợp lệ nào để tạo. Vui lòng kiểm tra lại khoảng ngày và khung giờ.";
     public static final String SHOWTIME_BATCH_DATE_INVALID =
-            "Ngày kết thúc phải từ ngày bắt đầu trở đi và không quá 30 ngày.";
+            "Vui lòng nhập đủ từ ngày và đến ngày; ngày kết thúc không được trước ngày bắt đầu.";
     public static final String SHOWTIME_BATCH_SLOTS_REQUIRED =
             "Vui lòng chọn ít nhất một khung giờ chiếu trong ngày.";
     public static final String SHOWTIME_BATCH_DAYS_REQUIRED =

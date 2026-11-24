@@ -4,6 +4,7 @@
 <%@ attribute name="name" required="true" description="Tên tham số gửi lên server, mỗi phòng được chọn là 1 giá trị" %>
 <%@ attribute name="pickerId" required="true" description="id của khung chọn phòng, JS dùng để đọc các phòng đã chọn" %>
 <%@ attribute name="selectedIds" type="java.util.List" description="Mã phòng (chuỗi) đã chọn khi hiển thị lại form bị lỗi" %>
+<%@ attribute name="sellableSeats" type="java.util.Map" description="Số vé tối đa một suất theo mã phòng (khóa chuỗi), để JS tính tổng số vé" %>
 <%-- UC-24: chọn nhiều phòng chiếu cùng lúc khi lên lịch suất chiếu --%>
 <div id="${pickerId}" data-room-picker>
     <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
@@ -24,14 +25,16 @@
             <c:if test="${room.status == 'Active'}">
                 <c:set var="activeRoomCount" value="${activeRoomCount + 1}"/>
                 <c:set var="roomFormat" value="${empty room.format ? '2D' : room.format}"/>
+                <c:set var="roomSeats" value="${empty sellableSeats or empty sellableSeats[''.concat(room.roomId)] ? 0 : sellableSeats[''.concat(room.roomId)]}"/>
                 <label data-room-card
                        class="flex items-start gap-2.5 p-2.5 rounded-lg bg-surface-container-high border border-white/5 cursor-pointer transition hover:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary/10">
                     <input type="checkbox" name="${name}" value="${room.roomId}" class="accent-primary mt-1 shrink-0"
                            data-format="<c:out value='${roomFormat}'/>" data-name="<c:out value='${room.roomName}'/>"
+                           data-seats="${roomSeats}"
                            ${not empty selectedIds and selectedIds.contains(''.concat(room.roomId)) ? 'checked' : ''}/>
                     <span class="min-w-0">
                         <span class="block text-body-sm font-bold text-on-surface truncate"><c:out value="${room.roomName}"/></span>
-                        <span class="block text-[11px] text-outline"><c:out value="${roomFormat}"/> · ${room.totalSeats} ghế</span>
+                        <span class="block text-[11px] text-outline"><c:out value="${roomFormat}"/> · ${room.totalSeats} ghế<c:if test="${not empty sellableSeats}"> · ${roomSeats} vé/suất</c:if></span>
                         <span class="hidden text-[11px] text-rose-300" data-room-mismatch>Phim không hỗ trợ định dạng này</span>
                     </span>
                 </label>

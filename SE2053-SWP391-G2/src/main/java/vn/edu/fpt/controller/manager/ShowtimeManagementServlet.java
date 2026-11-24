@@ -104,9 +104,9 @@ public class ShowtimeManagementServlet extends HttpServlet {
             throws SQLException, IOException {
         BatchShowtimeForm form = new BatchShowtimeForm();
         form.setMovieId(trim(request.getParameter("batchMovieId")));
-        form.setRoomIds(parameterList(request, "batchRoomId"));
-        form.setStartDate(trim(request.getParameter("startDate")));
-        form.setEndDate(trim(request.getParameter("endDate")));
+        // Mỗi dòng của bảng đợt chiếu gửi 3 ô cùng chỉ số: phòng, từ ngày, đến ngày
+        form.setPeriods(parameterList(request, "periodRoomId"), parameterList(request, "periodStart"),
+                parameterList(request, "periodEnd"));
         form.setBasePrice(trim(request.getParameter("batchBasePrice")));
         form.setSkipCollisions("1".equals(request.getParameter("skipCollisions")));
         form.setTranslationType(trim(request.getParameter("batchTranslationType")));
@@ -135,9 +135,21 @@ public class ShowtimeManagementServlet extends HttpServlet {
         }
 
         try {
-            int count = showtimeService.saveBatch(form);
+            ShowtimeService.SaveResult result = showtimeService.saveBatch(form);
+            // UC-32: ghi nhật ký như tạo suất đơn lẻ, một dòng cho cả lần tạo
+            List<String> periodTexts = new ArrayList<>();
+            for (BatchShowtimeForm.Period period : form.getPeriods()) {
+                periodTexts.add("phòng #" + period.roomId() + " " + period.startDate() + " đến " + period.endDate());
+            }
+            ActivityLogger.info(request, LogEventType.CATALOG, "Thêm suất chiếu hàng loạt", "Showtime", null,
+                    "Tạo " + result.showtimes() + " suất (tối đa " + result.maxTickets() + " vé): phim #"
+                            + form.getMovieId() + ", đợt: " + String.join("; ", periodTexts)
+                            + ", thứ " + form.getDaysOfWeek() + ", khung giờ " + form.getTimeSlots()
+                            + ", giá " + (form.getBasePrice().isEmpty() ? "tự tính theo phòng" : form.getBasePrice())
+                            + ", bản chiếu " + form.getTranslationType());
             request.getSession().setAttribute(FLASH_SUCCESS, Messages.format(Messages.SHOWTIME_BATCH_SAVED,
-                    count, movieTitle(form.getMovieId()), roomNames(form.getRoomIds())));
+                    formatCount(result.showtimes()), movieTitle(form.getMovieId()), roomNames(form.getRoomIds()),
+                    formatCount(result.maxTickets())));
         } catch (ValidationException e) {
             request.getSession().setAttribute(FLASH_ERROR, e.getErrors().values().iterator().next());
         }
@@ -156,15 +168,17 @@ public class ShowtimeManagementServlet extends HttpServlet {
         try {
             if (created) {
                 // Tạo mới: cùng phim, cùng giờ chiếu ở tất cả các phòng đã chọn
-                int count = showtimeService.createMany(form);
+                ShowtimeService.SaveResult result = showtimeService.createMany(form);
                 ActivityLogger.info(request, LogEventType.CATALOG, "Thêm suất chiếu", "Showtime", null,
                         "Phim #" + form.getMovieId() + ", phòng #" + String.join(", #", form.getRoomIds())
                                 + ", bắt đầu " + form.getStartTime() + ", giá "
                                 + (form.getBasePrice().isEmpty() ? "tự tính theo phòng" : form.getBasePrice())
-                                + ", bản chiếu " + form.getTranslationType());
-                request.getSession().setAttribute(FLASH_SUCCESS, count == 1 ? Messages.SHOWTIME_SAVED
-                        : Messages.format(Messages.SHOWTIME_MULTI_SAVED, count, movieTitle(form.getMovieId()),
-                                roomNames(form.getRoomIds())));
+                                + ", bản chiếu " + form.getTranslationType()
+                                + ", tối đa " + result.maxTickets() + " vé");
+                request.getSession().setAttribute(FLASH_SUCCESS, result.showtimes() == 1 ? Messages.SHOWTIME_SAVED
+                        : Messages.format(Messages.SHOWTIME_MULTI_SAVED, formatCount(result.showtimes()),
+                                movieTitle(form.getMovieId()), roomNames(form.getRoomIds()),
+                                formatCount(result.maxTickets())));
             } else {
                 showtimeService.save(showtimeId, form);
                 ActivityLogger.info(request, LogEventType.CATALOG, "Cập nhật suất chiếu", "Showtime", showtimeId,
@@ -246,6 +260,8 @@ public class ShowtimeManagementServlet extends HttpServlet {
         request.setAttribute("statusCounts", statusCounts);
         request.setAttribute("movies", movies);
         request.setAttribute("rooms", rooms);
+        // Số vé tối đa một suất của từng phòng, để form tạo suất tính tổng số vé trước khi lưu
+        request.setAttribute("sellableSeats", showtimeService.sellableSeatsByRoom());
         request.setAttribute("selectedDate", dateStr);
         request.setAttribute("selectedMovieId", movieId);
         request.setAttribute("selectedRoomId", roomId);
@@ -358,5 +374,10 @@ public class ShowtimeManagementServlet extends HttpServlet {
 
     private String trim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    // Số có dấu chấm ngăn hàng nghìn kiểu Việt Nam (6960 -> "6.960"), không phụ thuộc locale của máy chủ
+    private String formatCount(int value) {
+        return String.format("%,d", value).replace(',', '.');
     }
 }

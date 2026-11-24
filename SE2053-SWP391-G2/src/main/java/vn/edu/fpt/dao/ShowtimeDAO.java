@@ -27,7 +27,9 @@ public class ShowtimeDAO {
             + "m.Title AS MovieTitle, m.DurationMinutes, m.AgeRating, m.PosterUrl, m.Formats AS MovieFormats, "
             + "m.ReleaseDate, m.Status AS MovieStatus, "
             + "(SELECT COUNT(*) FROM Ticket t WHERE t.ShowtimeID = s.ShowtimeID AND t.Status <> 'Cancelled') AS BookedTickets, "
-            + "(SELECT COUNT(*) FROM Seat_Hold sh WHERE sh.ShowtimeID = s.ShowtimeID AND sh.ExpiryTime > GETDATE()) AS HeldSeats "
+            + "(SELECT COUNT(*) FROM Seat_Hold sh WHERE sh.ShowtimeID = s.ShowtimeID AND sh.ExpiryTime > GETDATE()) AS HeldSeats, "
+            // Số vé tối đa bán được: ghế đang hoạt động của phòng (ghế đôi là 1 vé)
+            + "(SELECT COUNT(*) FROM Seat se WHERE se.RoomID = s.RoomID AND se.Status = 'Active') AS SellableSeats "
             + "FROM Showtime s "
             + "JOIN Room r ON r.RoomID = s.RoomID "
             + "JOIN Movie m ON m.MovieID = s.MovieID ";
@@ -194,6 +196,22 @@ public class ShowtimeDAO {
             Integer excludeShowtimeId) throws SQLException {
         try (Connection conn = DBContext.getConnection()) {
             return findCollisions(conn, roomId, startTime, endTime, excludeShowtimeId);
+        }
+    }
+
+    // UC-24 BR-24-02: khóa dòng Room của các phòng sắp xếp suất tới hết transaction. Hai thao tác xếp suất
+    // cùng phòng phải chờ nhau, nên người sau kiểm tra trùng sẽ thấy suất người trước vừa lưu.
+    // Khóa theo RoomID tăng dần để hai giao dịch chọn cùng các phòng không chờ nhau vòng tròn (deadlock).
+    // UPDLOCK không chặn SELECT thường (khóa S vẫn đọc được phòng).
+    public void lockRooms(Connection conn, List<Integer> roomIds) throws SQLException {
+        String sql = "SELECT RoomID FROM Room WITH (UPDLOCK, ROWLOCK) WHERE RoomID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int roomId : roomIds.stream().distinct().sorted().toList()) {
+                ps.setInt(1, roomId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    rs.next();
+                }
+            }
         }
     }
 
@@ -419,6 +437,10 @@ public class ShowtimeDAO {
 
         try {
             showtime.setBookedTickets(rs.getInt("BookedTickets"));
+        } catch (SQLException ignored) {
+        }
+        try {
+            showtime.setSellableSeats(rs.getInt("SellableSeats"));
         } catch (SQLException ignored) {
         }
 
