@@ -126,7 +126,7 @@
             <c:when test="${empty schedule.groups}">
                 <div class="movie-empty">
                     <span class="material-symbols-outlined text-4xl text-[#8e919f]">event_busy</span>
-                    <p><c:out value="${emptyMessage}"/></p>
+                    <p><c:choose><c:when test="${not empty selTrans}">Không có suất chiếu phù hợp với các bộ lọc đã chọn.</c:when><c:otherwise><c:out value="${emptyMessage}"/></c:otherwise></c:choose></p>
                 </div>
             </c:when>
             <c:otherwise>
