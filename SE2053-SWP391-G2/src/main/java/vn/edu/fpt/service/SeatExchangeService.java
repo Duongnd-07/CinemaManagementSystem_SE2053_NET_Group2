@@ -80,7 +80,7 @@ public class SeatExchangeService {
     private static final DateTimeFormatter OPEN_TIME = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
     private static final String TARGET_REQUIRED = "Vui lòng chọn ghế mới.";
     private static final String TARGET_TAKEN = "Ghế vừa chọn không còn trống, vui lòng chọn lại.";
-    private static final String SHIFT_REQUIRED = "Cần mở ca bán vé để lấy tiền trong két trả cho khách.";
+    private static final String SHIFT_REQUIRED = "Cần mở ca bán vé trước khi đổi ghế hoặc hoàn vé cho khách.";
     private static final String REASON_REQUIRED = "Vui lòng ghi tình trạng ghế hỏng.";
     private static final String REASON_INVALID = "Tình trạng ghế phải từ 5 đến 500 ký tự và có chữ.";
     private static final int MIN_REASON = 5;
@@ -135,12 +135,13 @@ public class SeatExchangeService {
                 String type = kind == 'S' ? TYPE_SAME : kind == 'U' ? TYPE_UPGRADE
                         : kind == 'D' ? TYPE_DOWNGRADE : TYPE_SPLIT;
 
-                // Xuống hạng / tách ghế đôi: đền bù tiền mặt cố định lấy từ két nên phải đang trong ca
+                // Mọi lần đổi đều phải đang trong ca để biết ca nào xử lý; xuống hạng / tách ghế đôi còn đền bù
+                // tiền mặt cố định lấy từ két nên tiền đó ghi vào ca (RefundShiftID)
+                Shift shift = requireShift(conn, staffId);
                 BigDecimal cash = TYPE_DOWNGRADE.equals(type) || TYPE_SPLIT.equals(type)
                         ? options.compensationCash : BigDecimal.ZERO;
-                Shift shift = cash.signum() > 0 ? requireShift(conn, staffId) : null;
                 if (!exchangeDAO.closeTicket(conn, ticket.getTicketId(), TicketStatus.EXCHANGED,
-                        cash.signum() > 0 ? cash : null, shift == null ? null : shift.getShiftId())) {
+                        cash.signum() > 0 ? cash : null, cash.signum() > 0 ? shift.getShiftId() : null)) {
                     throw error(ERROR_GENERAL, TICKET_NOT_VALID);
                 }
 
@@ -156,7 +157,7 @@ public class SeatExchangeService {
                 Integer voucherId = giveVoucher(conn, ticket, options);
                 int exchangeId = exchangeDAO.insertExchange(conn, ticket.getTicketId(), type, newTicketIds.get(0),
                         newTicketIds.size() > 1 ? newTicketIds.get(1) : null, cleanReason, cash, 0, voucherId,
-                        staffId, shift == null ? null : shift.getShiftId());
+                        staffId, shift.getShiftId());
                 conn.commit();
                 return exchangeId;
             } catch (SQLException | ValidationException | RuntimeException e) {
