@@ -71,7 +71,7 @@ public class ShowtimeService {
         schedule.setRooms(roomsOf(showtimes));
         schedule.setTranslationTypes(translationTypesOf(showtimes));
 
-        // Lựa chọn không hợp lệ (sai định dạng, ngoài khung, không có suất) thì bỏ qua bộ lọc đó
+        // Bỏ qua lựa chọn không hợp lệ; bản chiếu hợp lệ vẫn được giữ khi không có suất phù hợp.
         LocalDate selectedDate = parseDate(date);
         schedule.setSelectedDate(schedule.getDays().contains(selectedDate) ? selectedDate : null);
         String selectedFormat = format == null ? "" : format.trim();
@@ -80,7 +80,7 @@ public class ShowtimeService {
         boolean roomExists = schedule.getRooms().stream().anyMatch(r -> r.getRoomId() == selectedRoom);
         schedule.setSelectedRoomId(roomExists ? selectedRoom : 0);
         String selectedTrans = translationType == null ? "" : translationType.trim();
-        schedule.setSelectedTranslationType(schedule.getTranslationTypes().contains(selectedTrans) ? selectedTrans : "");
+        schedule.setSelectedTranslationType(List.of("Phụ đề", "Lồng tiếng").contains(selectedTrans) ? selectedTrans : "");
 
         for (Showtime showtime : showtimes) {
             Room room = showtime.getRoom();

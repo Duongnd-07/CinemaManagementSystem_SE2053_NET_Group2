@@ -9,6 +9,7 @@ public final class Messages {
     public static final String MSG03 = "Cập nhật {0} thành công.";
     public static final String MSG04 = "Thêm {0} thành công.";
     public static final String MSG08 = "Vượt quá độ dài tối đa {0} ký tự.";
+    public static final String MSG09 = "Do dai it nhat 10 ki tu";
 
     // UC-23 Manage Movies
     public static final String MOVIE_SAVED = "Phim lưu lại thành công!";
