@@ -35,6 +35,10 @@ public class GenreService {
             errors.put("name", Messages.format(Messages.MSG02, "Tên thể loại"));
         } else if (trimmed.length() > MAX_NAME) {
             errors.put("name", Messages.format(Messages.MSG08, MAX_NAME));
+        }
+        else if (trimmed.length() < 3){
+            errors.put("name", Messages.format(Messages.MSG09, 3));
+        
         } else if (genreDAO.existsByName(trimmed, genreId)) {
             // BR-GEN-01
             errors.put("name", Messages.GENRE_NAME_DUPLICATE);

@@ -48,7 +48,7 @@ try {
         check(await page.locator('#from').inputValue() === from && await page.locator('#to').inputValue() === today, 'Preset date boundaries: ' + label);
         const monthly = ['Quý này', 'Năm này'].includes(label);
         const chart = page.getByRole('region', { name: monthly ? 'Thực thu theo tháng' : 'Thực thu theo ngày', exact: true });
-        const expectedBars = monthly ? month - Number(from.slice(5, 7)) + 1
+        const expectedBars = monthly ? (year - Number(from.slice(0, 4))) * 12 + month - Number(from.slice(5, 7)) + 1
             : Math.round((Date.parse(today) - Date.parse(from)) / 86400000) + 1;
         check(await chart.locator('.or-bar').count() === expectedBars, 'Correct day/month chart buckets: ' + label);
         const labels = await chart.locator('.or-bar span').allTextContents();

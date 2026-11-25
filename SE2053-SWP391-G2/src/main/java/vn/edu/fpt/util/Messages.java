@@ -9,6 +9,7 @@ public final class Messages {
     public static final String MSG03 = "Cập nhật {0} thành công.";
     public static final String MSG04 = "Thêm {0} thành công.";
     public static final String MSG08 = "Vượt quá độ dài tối đa {0} ký tự.";
+    public static final String MSG09 = "Do dai it nhat 10 ki tu";
 
     // UC-23 Manage Movies
     public static final String MOVIE_SAVED = "Phim lưu lại thành công!";
@@ -103,6 +104,9 @@ public final class Messages {
     public static final String SHOWTIME_BATCH_PERIOD_REQUIRED =
             "Vui lòng thêm ít nhất một đợt chiếu (phòng, từ ngày, đến ngày).";
     public static final String SHOWTIME_BATCH_PERIOD_ERROR = "Đợt {0}: {1}";
+    // Mỗi đợt của tạo hàng loạt có giá riêng; báo qua SHOWTIME_BATCH_PERIOD_ERROR ("Đợt 2: ...")
+    public static final String SHOWTIME_BATCH_PERIOD_PRICE_INVALID =
+            "Giá vé phải từ 10.000đ trở lên và là bội số của 1.000đ (để trống = tự tính giá gợi ý).";
     public static final String SHOWTIME_BATCH_PERIOD_ROOM_REQUIRED = "Vui lòng chọn phòng chiếu.";
     public static final String SHOWTIME_BATCH_PERIOD_OVERLAP =
             "Phòng {0} có hai đợt chiếu trùng ngày (đợt {1} và đợt {2}). Hãy gộp hoặc tách khoảng ngày.";

@@ -86,11 +86,12 @@ public class TicketPrintServlet extends HttpServlet {
                     request.setAttribute("autoPrint", session.getAttribute(SESSION_AUTO_PRINT) != null);
                     session.removeAttribute(SESSION_AUTO_PRINT);
                 }
-                if (door) {
-                    loadDoor(request, session);
-                } else {
-                    loadBooking(request, session);
-                }
+            }
+            // BR-36-07: soát vé vào phòng không cần ca; in vé cần ca đang mở
+            if (door) {
+                loadDoor(request, session);
+            } else if (shift != null) {
+                loadBooking(request, session);
             }
             request.getRequestDispatcher(VIEW).forward(request, response);
         } catch (SQLException e) {

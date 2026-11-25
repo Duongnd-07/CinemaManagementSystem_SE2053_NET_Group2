@@ -34,7 +34,8 @@ public class GenreDAO {
 
     public List<Genre> search(String keyword, int offset, int limit) throws SQLException {
         String sql = SELECT_WITH_COUNT + buildWhere(keyword)
-                + "ORDER BY g.GenreName OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        + "ORDER BY MovieCount DESC, g.GenreName ASC, g.GenreID ASC "
+        + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
         List<Genre> genres = new ArrayList<>();
         try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             int idx = bindFilter(ps, keyword);

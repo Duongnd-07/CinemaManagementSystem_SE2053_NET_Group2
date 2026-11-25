@@ -50,17 +50,8 @@
         </a>
     </nav>
 
+    <%-- BR-36-07: in vé (tại quầy) cần ca đang mở; soát vé vào phòng (A7) không cần nên xét trước --%>
     <c:choose>
-        <c:when test="${empty shift}">
-            <div class="bg-surface-container-low border border-amber-500/40 rounded-xl p-space-xl text-center space-y-space-md">
-                <span class="material-symbols-outlined text-[40px] text-amber-400">lock_clock</span>
-                <p class="font-headline-sm text-on-surface">Bạn cần mở ca làm việc trước khi soát vé.</p>
-                <a class="inline-flex items-center gap-1 px-5 py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary/90 font-label-lg"
-                   href="${ctx}/staff/counter">
-                    <span class="material-symbols-outlined text-[18px]">point_of_sale</span>Mở ca tại Bán vé tại quầy
-                </a>
-            </div>
-        </c:when>
         <c:when test="${doorMode}">
             <%-- A7: soát vé tại cửa phòng chiếu. Chọn suất đang soát rồi quét vé giấy (hoặc QR vé điện tử) --%>
             <section class="bg-surface-container-low border border-white/5 rounded-xl p-space-lg mb-space-lg space-y-space-md">
@@ -126,6 +117,17 @@
                     </div>
                 </section>
             </c:if>
+        </c:when>
+        <c:when test="${empty shift}">
+            <div class="bg-surface-container-low border border-amber-500/40 rounded-xl p-space-xl text-center space-y-space-md">
+                <span class="material-symbols-outlined text-[40px] text-amber-400">lock_clock</span>
+                <p class="font-headline-sm text-on-surface">Bạn cần mở ca làm việc trước khi quét và in vé.</p>
+                <p class="text-body-sm text-on-surface-variant">Soát vé vào phòng chiếu không cần mở ca.</p>
+                <a class="inline-flex items-center gap-1 px-5 py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary/90 font-label-lg"
+                   href="${ctx}/staff/counter">
+                    <span class="material-symbols-outlined text-[18px]">point_of_sale</span>Mở ca tại Bán vé tại quầy
+                </a>
+            </div>
         </c:when>
         <c:otherwise>
             <section class="bg-surface-container-low border border-white/5 rounded-xl p-space-lg mb-space-lg">

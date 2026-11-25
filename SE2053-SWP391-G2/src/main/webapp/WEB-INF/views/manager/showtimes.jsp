@@ -583,14 +583,15 @@
                                 </select>
                             </div>
 
-                            <%-- UC-24: các đợt chiếu. Mỗi đợt = 1 phòng + khoảng ngày, mỗi phòng chạy số ngày riêng
-                                 (VD phòng 1 chiếu 7 ngày, phòng 2 chiếu 14 ngày). Một phòng có thể có nhiều đợt để chiếu
-                                 ngắt quãng (01–07 rồi 15–30). Thứ, khung giờ, giá, bản chiếu bên dưới dùng chung cho mọi đợt.
-                                 Ba ô của một dòng gửi lên cùng chỉ số: periodRoomId[i], periodStart[i], periodEnd[i] --%>
+                            <%-- UC-24: các đợt chiếu. Mỗi đợt = 1 phòng + khoảng ngày + bản chiếu + giá riêng, mỗi phòng
+                                 chạy số ngày riêng (VD phòng 1 chiếu 7 ngày, phòng 2 chiếu 14 ngày). Một phòng có thể có nhiều
+                                 đợt để chiếu ngắt quãng (01–07 phụ đề 50.000đ rồi 15–30 lồng tiếng rẻ hơn). Thứ và khung giờ
+                                 bên dưới dùng chung cho mọi đợt. Năm ô của một dòng gửi lên cùng chỉ số: periodRoomId[i],
+                                 periodStart[i], periodEnd[i], periodTranslationType[i], periodPrice[i] --%>
                             <div>
                                 <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                                     <span class="text-label-md text-on-surface-variant font-medium">
-                                        Đợt chiếu (phòng + khoảng ngày) <span class="text-primary">*</span>
+                                        Đợt chiếu (phòng, khoảng ngày, bản chiếu, giá) <span class="text-primary">*</span>
                                     </span>
                                     <button type="button" onclick="addPeriodRow()"
                                             class="px-2.5 py-1 rounded bg-surface-container-high hover:bg-surface-bright text-label-sm text-primary flex items-center gap-1">
@@ -600,6 +601,7 @@
                                 </div>
                                 <p class="text-outline text-label-sm mb-2">
                                     Mỗi phòng một đợt nếu các phòng chạy số ngày khác nhau. Chiếu ngắt quãng thì thêm 2 đợt cho cùng phòng (VD 01–07 và 15–30).
+                                    Mỗi đợt chọn bản chiếu và giá riêng; để trống giá = mỗi suất tự tính theo ngày thường / cuối tuần, khung giờ và định dạng phòng.
                                 </p>
                                 <div id="periodRows" class="space-y-2"></div>
                             </div>
@@ -643,6 +645,21 @@
                                             <input type="date" name="periodEnd" class="${inputClass}" required min="${today}" onchange="onBatchParamsChange()"/>
                                         </label>
                                     </div>
+                                    <%-- Bản chiếu và giá riêng của đợt (áp dụng cho mọi suất trong đợt) --%>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                        <label class="block">
+                                            <span class="block text-[11px] text-outline mb-0.5">Bản chiếu</span>
+                                            <select name="periodTranslationType" class="${inputClass}" onchange="onBatchParamsChange()">
+                                                <option value="Phụ đề">Phụ đề (ngôn ngữ gốc + phụ đề)</option>
+                                                <option value="Lồng tiếng">Lồng tiếng Việt</option>
+                                            </select>
+                                        </label>
+                                        <label class="block">
+                                            <span class="block text-[11px] text-outline mb-0.5">Giá vé (VND, tùy chọn)</span>
+                                            <input type="number" name="periodPrice" class="${inputClass} font-mono" min="10000" step="1000"
+                                                   placeholder="Để trống = tự tính giá gợi ý" oninput="onBatchParamsChange()"/>
+                                        </label>
+                                    </div>
                                     <p data-period-summary class="text-label-sm text-outline mt-1.5"></p>
                                 </div>
                             </template>
@@ -651,27 +668,6 @@
                             <div id="batchFormatWarning" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-body-sm flex items-center gap-2">
                                 <span class="material-symbols-outlined text-[18px]">warning</span>
                                 <span id="batchFormatWarningText"></span>
-                            </div>
-
-                            <%-- Hình thức bản chiếu --%>
-                            <div>
-                                <label class="block text-label-md text-on-surface-variant mb-1.5 font-medium">Hình thức bản chiếu <span class="text-primary">*</span></label>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
-                                        <input type="radio" name="batchTranslationType" value="Phụ đề" checked class="accent-primary"/>
-                                        <div>
-                                            <div class="text-body-sm font-bold text-on-surface">Phụ đề</div>
-                                            <div class="text-[11px] text-outline">Ngôn ngữ gốc + Phụ đề</div>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-surface-container-high cursor-pointer hover:border-primary/50 transition">
-                                        <input type="radio" name="batchTranslationType" value="Lồng tiếng" class="accent-primary"/>
-                                        <div>
-                                            <div class="text-body-sm font-bold text-on-surface">Lồng tiếng</div>
-                                            <div class="text-[11px] text-outline">Lồng tiếng Việt</div>
-                                        </div>
-                                    </label>
-                                </div>
                             </div>
 
                             <%-- Chọn thứ trong tuần --%>
@@ -718,7 +714,7 @@
                                 </div>
                             </div>
 
-                            <%-- Khung giờ chiếu trong ngày --%>
+                            <%-- Khung giờ chiếu trong ngày (dùng chung cho mọi đợt) --%>
                             <div>
                                 <label class="block text-label-md text-on-surface-variant mb-1 font-medium">Khung giờ chiếu trong ngày <span class="text-primary">*</span></label>
                                 <div class="flex flex-wrap items-center gap-2 mb-2">
@@ -738,24 +734,14 @@
                                 </div>
                             </div>
 
-                            <%-- Giá vé cố định (tùy chọn) & Bỏ qua trùng lặp --%>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md pt-2 border-t border-white/5">
-                                <div>
-                                    <label class="block text-label-md text-on-surface-variant mb-1 font-medium" for="batchBasePrice">
-                                        Giá vé áp dụng (Tùy chọn)
-                                    </label>
-                                    <input type="number" id="batchBasePrice" name="batchBasePrice" class="${inputClass} font-mono" min="10000" step="1000"
-                                           placeholder="Để trống = Tự tính theo giá gợi ý từng suất" oninput="onBatchParamsChange()"/>
-                                    <p class="text-outline text-label-sm mt-1">Để trống để hệ thống tự định giá theo Ngày thường / Cuối tuần / Khung giờ.</p>
-                                </div>
-                                <div class="flex flex-col justify-center">
-                                    <label class="flex items-start gap-2.5 cursor-pointer mt-2">
-                                        <input type="checkbox" name="skipCollisions" value="1" checked class="accent-primary mt-1"/>
-                                        <span class="text-body-sm text-on-surface">
-                                            <strong>Tự động bỏ qua suất bị trùng phòng:</strong> Nếu có suất bị trùng lịch đã có trước đó, chỉ tạo các suất hợp lệ và không báo lỗi hủy cả đợt.
-                                        </span>
-                                    </label>
-                                </div>
+                            <%-- Bỏ qua trùng lặp --%>
+                            <div class="pt-2 border-t border-white/5">
+                                <label class="flex items-start gap-2.5 cursor-pointer mt-2">
+                                    <input type="checkbox" name="skipCollisions" value="1" checked class="accent-primary mt-1"/>
+                                    <span class="text-body-sm text-on-surface">
+                                        <strong>Tự động bỏ qua suất bị trùng phòng:</strong> Nếu có suất bị trùng lịch đã có trước đó, chỉ tạo các suất hợp lệ và không báo lỗi hủy cả đợt.
+                                    </span>
+                                </label>
                             </div>
 
                             <%-- Bảng xem trước thống kê số suất chiếu --%>
@@ -960,7 +946,7 @@ function switchCreateTab(tab) {
     }
 }
 
-// Danh sách các mốc giờ chiếu trong batch
+// Danh sách các mốc giờ chiếu trong batch (dùng chung cho mọi đợt)
 var currentBatchSlots = [];
 
 function addTimeSlot(timeVal) {
@@ -1321,8 +1307,17 @@ function onBatchParamsChange() {
         var tickets = count * room.seats;
         totalShowtimes += count;
         totalTickets += tickets;
+        // Bản chiếu và giá riêng của đợt; giá để trống = mỗi suất tự tính giá gợi ý (server kiểm tra lại)
+        var translation = row.querySelector('[name="periodTranslationType"]').value;
+        var priceText = row.querySelector('[name="periodPrice"]').value;
+        var price = parseInt(priceText, 10);
+        var priceLabel = priceText === '' ? 'giá tự tính' : formatNumber(price) + 'đ/vé';
         summary.textContent = days + ' ngày · ' + formatNumber(count) + ' suất × ' + formatNumber(room.seats)
-                + ' vé/suất = tối đa ' + formatNumber(tickets) + ' vé';
+                + ' vé/suất = tối đa ' + formatNumber(tickets) + ' vé · ' + translation + ' · ' + priceLabel;
+        if (priceText !== '' && (isNaN(price) || price < 10000 || price % 1000 !== 0)) {
+            summary.classList.add('text-rose-300');
+            problems.push('Đợt ' + number + ': giá vé phải từ 10.000đ trở lên và là bội số của 1.000đ.');
+        }
     });
 
     showFormatWarning(movieSelect, rooms, formatWarning, formatWarningText, true);
@@ -1339,7 +1334,7 @@ function onBatchParamsChange() {
     batchCountBadge.textContent = formatNumber(totalShowtimes) + ' suất · tối đa ' + formatNumber(totalTickets) + ' vé';
     batchDetailText.textContent = planned.length + ' đợt ở ' + rooms.length + ' phòng. Số vé tối đa = số suất × số ghế đang bán được'
             + ' của phòng (ghế bảo trì không tính, ghế đôi tính 1 vé). Nếu bỏ qua suất trùng lịch đã có thì số thực tế có thể ít hơn;'
-            + ' hệ thống tự tính giờ kết thúc (+15p dọn rạp) và giá.';
+            + ' hệ thống tự tính giờ kết thúc (+15p dọn rạp) và giá của đợt để trống giá.';
 }
 
 // Logic tính toán cho form đơn: form sửa chọn 1 phòng (select), form tạo mới chọn nhiều phòng (room-picker)

@@ -71,7 +71,7 @@ public class ShowtimeService {
         schedule.setRooms(roomsOf(showtimes));
         schedule.setTranslationTypes(translationTypesOf(showtimes));
 
-        // Lựa chọn không hợp lệ (sai định dạng, ngoài khung, không có suất) thì bỏ qua bộ lọc đó
+        // Bỏ qua lựa chọn không hợp lệ; bản chiếu hợp lệ vẫn được giữ khi không có suất phù hợp.
         LocalDate selectedDate = parseDate(date);
         schedule.setSelectedDate(schedule.getDays().contains(selectedDate) ? selectedDate : null);
         String selectedFormat = format == null ? "" : format.trim();
@@ -80,7 +80,7 @@ public class ShowtimeService {
         boolean roomExists = schedule.getRooms().stream().anyMatch(r -> r.getRoomId() == selectedRoom);
         schedule.setSelectedRoomId(roomExists ? selectedRoom : 0);
         String selectedTrans = translationType == null ? "" : translationType.trim();
-        schedule.setSelectedTranslationType(schedule.getTranslationTypes().contains(selectedTrans) ? selectedTrans : "");
+        schedule.setSelectedTranslationType(List.of("Phụ đề", "Lồng tiếng").contains(selectedTrans) ? selectedTrans : "");
 
         for (Showtime showtime : showtimes) {
             Room room = showtime.getRoom();
@@ -474,7 +474,8 @@ public class ShowtimeService {
     /**
      * Lên lịch suất chiếu hàng loạt (Batch Scheduling) cho 1 phim theo nhiều đợt. Mỗi đợt là một phòng và
      * một khoảng ngày; một phòng có thể có nhiều đợt (ví dụ phòng 1 chiếu 01–07, nghỉ, rồi 15–30), các phòng
-     * khác nhau có thể chiếu số ngày khác nhau. Thứ trong tuần, khung giờ, giá và bản chiếu dùng chung.
+     * khác nhau có thể chiếu số ngày khác nhau. Mỗi đợt có bản chiếu và giá riêng (ví dụ đợt 1 phụ đề 50.000đ,
+     * đợt 2 lồng tiếng rẻ hơn); thứ trong tuần và khung giờ dùng chung.
      * Toàn bộ suất của mọi đợt được kiểm tra chống trùng lịch và lưu trong cùng 1 transaction.
      *
      * @return số suất chiếu đã tạo và số vé tối đa bán được của các suất đó
@@ -502,22 +503,20 @@ public class ShowtimeService {
             errors.put("daysOfWeek", Messages.SHOWTIME_BATCH_DAYS_REQUIRED);
         }
 
-        // Validate Time slots
+        // Khung giờ dùng chung cho mọi đợt; giờ sai định dạng bị bỏ qua, giờ trùng chỉ tính một lần
         List<LocalTime> validSlots = new ArrayList<>();
         for (String slotStr : form.getTimeSlots()) {
-            if (slotStr != null && !slotStr.trim().isEmpty()) {
-                try {
-                    validSlots.add(LocalTime.parse(slotStr.trim()));
-                } catch (DateTimeParseException ignored) {
+            try {
+                LocalTime slot = LocalTime.parse(slotStr);
+                if (!validSlots.contains(slot)) {
+                    validSlots.add(slot);
                 }
+            } catch (DateTimeParseException ignored) {
             }
         }
         if (validSlots.isEmpty()) {
             errors.put("timeSlots", Messages.SHOWTIME_BATCH_SLOTS_REQUIRED);
         }
-
-        // Validate optional base price
-        BigDecimal customBasePrice = parseOptionalPrice(form.getBasePrice(), errors);
 
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
@@ -525,17 +524,17 @@ public class ShowtimeService {
 
         Collections.sort(validSlots);
         int duration = movie.getDurationMinutes();
-        String translationType = normalizeTranslationType(form.getTranslationType());
         Map<Integer, Room> roomById = new LinkedHashMap<>();
         for (Room room : rooms) {
             roomById.put(room.getRoomId(), room);
         }
 
-        // 1. Sinh giờ bắt đầu cho từng phòng từ các đợt của phòng đó
-        Map<Integer, List<LocalDateTime>> startsByRoom = new LinkedHashMap<>();
+        // 1. Sinh giờ bắt đầu cho từng phòng từ các đợt của phòng đó; mỗi giờ nhớ đợt sinh ra nó
+        // để lấy bản chiếu và giá của đợt khi lưu
+        Map<Integer, List<PlannedStart>> startsByRoom = new LinkedHashMap<>();
         LocalDateTime now = LocalDateTime.now();
         for (PlannedPeriod period : periods) {
-            List<LocalDateTime> starts = startsByRoom.computeIfAbsent(period.roomId(), id -> new ArrayList<>());
+            List<PlannedStart> starts = startsByRoom.computeIfAbsent(period.roomId(), id -> new ArrayList<>());
             for (LocalDate d = period.start(); !d.isAfter(period.end()); d = d.plusDays(1)) {
                 int dayVal = d.getDayOfWeek().getValue(); // 1=Mon, 7=Sun
                 if (!form.getDaysOfWeek().contains(dayVal)) {
@@ -551,7 +550,7 @@ public class ShowtimeService {
                 for (LocalTime slot : validSlots) {
                     LocalDateTime start = LocalDateTime.of(d, slot);
                     if (start.isAfter(now)) { // bỏ qua các mốc giờ trong quá khứ
-                        starts.add(start);
+                        starts.add(new PlannedStart(start, period));
                     }
                 }
             }
@@ -563,13 +562,13 @@ public class ShowtimeService {
 
         // 2. Kiểm tra xung đột nội bộ giữa các suất trong đợt tạo của từng phòng (đã sắp theo thời gian,
         // cùng một phim nên chỉ cần so từng cặp liền nhau)
-        for (Map.Entry<Integer, List<LocalDateTime>> entry : startsByRoom.entrySet()) {
-            List<LocalDateTime> starts = entry.getValue();
-            Collections.sort(starts);
+        for (Map.Entry<Integer, List<PlannedStart>> entry : startsByRoom.entrySet()) {
+            List<PlannedStart> starts = entry.getValue();
+            starts.sort(Comparator.comparing(PlannedStart::start));
             for (int i = 0; i < starts.size() - 1; i++) {
-                LocalDateTime s1Start = starts.get(i);
+                LocalDateTime s1Start = starts.get(i).start();
                 LocalDateTime s1End = ShowtimePricing.calculateEndTime(s1Start, duration);
-                LocalDateTime s2Start = starts.get(i + 1);
+                LocalDateTime s2Start = starts.get(i + 1).start();
                 if (s1End.isAfter(s2Start)) {
                     LocalDateTime s2End = ShowtimePricing.calculateEndTime(s2Start, duration);
                     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm dd/MM");
@@ -592,10 +591,11 @@ public class ShowtimeService {
             try {
                 showtimeDAO.lockRooms(conn, new ArrayList<>(startsByRoom.keySet()));
                 List<Showtime> toInsert = new ArrayList<>();
-                for (Map.Entry<Integer, List<LocalDateTime>> entry : startsByRoom.entrySet()) {
+                for (Map.Entry<Integer, List<PlannedStart>> entry : startsByRoom.entrySet()) {
                     Room room = roomById.get(entry.getKey());
                     String roomFormat = roomFormatOf(room);
-                    for (LocalDateTime start : entry.getValue()) {
+                    for (PlannedStart planned : entry.getValue()) {
+                        LocalDateTime start = planned.start();
                         LocalDateTime end = ShowtimePricing.calculateEndTime(start, duration);
                         List<Showtime> collisions = showtimeDAO.findCollisions(conn, room.getRoomId(), start, end, null);
                         if (!collisions.isEmpty()) {
@@ -613,9 +613,13 @@ public class ShowtimeService {
                             }
                             throw new ValidationException(Map.of("general", msg));
                         }
-                        BigDecimal price = customBasePrice != null ? customBasePrice
+                        // Bản chiếu và giá lấy theo đợt của suất; đợt để trống giá thì mỗi suất tự tính
+                        // theo ngày thường/cuối tuần, khung giờ và định dạng phòng
+                        PlannedPeriod period = planned.period();
+                        BigDecimal price = period.price() != null ? period.price()
                                 : ShowtimePricing.calculateSuggestedPrice(start, roomFormat);
-                        toInsert.add(newShowtime(movie.getMovieId(), room.getRoomId(), start, end, price, translationType));
+                        toInsert.add(newShowtime(movie.getMovieId(), room.getRoomId(), start, end, price,
+                                period.translationType()));
                     }
                 }
 
@@ -639,8 +643,14 @@ public class ShowtimeService {
     public record SaveResult(int showtimes, int maxTickets) {
     }
 
-    // Một đợt chiếu đã kiểm tra: số thứ tự trên form (để báo lỗi), phòng và khoảng ngày
-    private record PlannedPeriod(int number, int roomId, LocalDate start, LocalDate end) {
+    // Một đợt chiếu đã kiểm tra: số thứ tự trên form (để báo lỗi), phòng, khoảng ngày, bản chiếu
+    // và giá (price null = mỗi suất tự tính giá gợi ý)
+    private record PlannedPeriod(int number, int roomId, LocalDate start, LocalDate end, String translationType,
+                                 BigDecimal price) {
+    }
+
+    // Một suất sắp tạo: giờ bắt đầu và đợt sinh ra nó
+    private record PlannedStart(LocalDateTime start, PlannedPeriod period) {
     }
 
     /**
@@ -663,8 +673,8 @@ public class ShowtimeService {
         return total;
     }
 
-    // Kiểm tra từng đợt: có phòng, khoảng ngày đúng (tối đa 31 ngày, không bắt đầu trong quá khứ),
-    // các đợt của cùng một phòng không trùng ngày. Lỗi đầu tiên được báo kèm số thứ tự đợt.
+    // Kiểm tra từng đợt: có phòng, khoảng ngày đúng (tối đa 31 ngày, không bắt đầu trong quá khứ), giá đúng
+    // (nếu có nhập), các đợt của cùng một phòng không trùng ngày. Lỗi đầu tiên được báo kèm số thứ tự đợt.
     private List<PlannedPeriod> validatePeriods(List<BatchShowtimeForm.Period> periods, List<Room> rooms,
                                                 Map<String, String> errors) {
         Map<Integer, String> roomNames = new LinkedHashMap<>();
@@ -689,6 +699,15 @@ public class ShowtimeService {
             } else if (start.plusDays(31).isBefore(end)) {
                 problem = Messages.SHOWTIME_BATCH_RANGE_TOO_LONG;
             }
+            // Giá của đợt: để trống = tự tính; có nhập thì >= 10.000đ và là bội số của 1.000đ
+            BigDecimal price = null;
+            if (problem == null) {
+                Map<String, String> priceErrors = new LinkedHashMap<>();
+                price = parseOptionalPrice(period.price(), priceErrors);
+                if (!priceErrors.isEmpty()) {
+                    problem = Messages.SHOWTIME_BATCH_PERIOD_PRICE_INVALID;
+                }
+            }
             if (problem != null) {
                 errors.putIfAbsent("periods",
                         Messages.format(Messages.SHOWTIME_BATCH_PERIOD_ERROR, String.valueOf(number), problem));
@@ -702,7 +721,8 @@ public class ShowtimeService {
                             String.valueOf(other.number()), String.valueOf(number)));
                 }
             }
-            valid.add(new PlannedPeriod(number, roomId, start, end));
+            valid.add(new PlannedPeriod(number, roomId, start, end,
+                    normalizeTranslationType(period.translationType()), price));
         }
         return valid;
     }
